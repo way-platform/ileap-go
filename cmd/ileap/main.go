@@ -25,12 +25,13 @@ func newRootCommand() *cobra.Command {
 	cmd.AddCommand(auth.NewCommand())
 	cmd.AddCommand(newGetFootprintCommand())
 	cmd.AddCommand(newListFootprintsCommand())
+	cmd.AddCommand(newListTADsCommand())
 	return cmd
 }
 
 func newGetFootprintCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get-footprint",
+		Use:   "footprint",
 		Short: "Get a product carbon footprint",
 		Args:  cobra.ExactArgs(1),
 	}
@@ -53,7 +54,7 @@ func newGetFootprintCommand() *cobra.Command {
 
 func newListFootprintsCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list-footprints",
+		Use:   "footprints",
 		Short: "List product carbon footprints",
 	}
 	limit := cmd.Flags().Int("limit", 100, "max footprints queried")
@@ -76,11 +77,34 @@ func newListFootprintsCommand() *cobra.Command {
 	return cmd
 }
 
+func newListTADsCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "tad",
+		Short: "List transport activity data (TAD)",
+	}
+	limit := cmd.Flags().Int("limit", 100, "max TADs queried")
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		client, err := auth.NewClient()
+		if err != nil {
+			return err
+		}
+		response, err := client.ListTADs(cmd.Context(), &ileap.ListTADsRequest{
+			Limit: *limit,
+		})
+		if err != nil {
+			return err
+		}
+		printJSON(cmd, response)
+		return nil
+	}
+	return cmd
+}
+
 func printJSON(cmd *cobra.Command, msg any) error {
 	data, err := json.MarshalIndent(msg, "", "  ")
 	if err != nil {
 		return err
 	}
-	cmd.Println(string(data))
+	fmt.Println(string(data))
 	return nil
 }
