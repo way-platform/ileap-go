@@ -63,6 +63,8 @@ $ go tool mage
 go install github.com/way-platform/ileap-go/cmd/ileap@latest
 ```
 
+Prebuilt binaries for Linux, Windows, and Mac are available from the [Releases](https://github.com/way-platform/ileap-go/releases).
+
 ### Using
 
 The following example logs in to the [SINE Foundation]()'s demo API.
