@@ -55,7 +55,7 @@ $ go tool mage
 
 ## CLI tool
 
-<img src="docs/cli.gif />
+<img src="docs/cli.gif" />
 
 ### Installing
 
