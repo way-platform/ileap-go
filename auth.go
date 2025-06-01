@@ -19,7 +19,7 @@ type TokenCredentials struct {
 	// TokenType is the type of token.
 	TokenType string `json:"token_type"`
 	// ExpireTime is the time when the token expires.
-	ExpireTime time.Time `json:"expires_in"`
+	ExpireTime time.Time `json:"expires_in,omitzero"`
 }
 
 // TokenAuthenticator is a pluggable interface for authenticating requests to an iLEAP API.
@@ -79,6 +79,15 @@ func (t *reuseTokenCredentialsTransport) RoundTrip(req *http.Request) (_ *http.R
 	}()
 	req.Header.Set("Authorization", "Bearer "+t.credentials.AccessToken)
 	return t.transport.RoundTrip(req)
+}
+
+func NewOAuth2TokenAuthenticator(clientID, clientSecret, baseURL string) TokenAuthenticator {
+	return &oauth2TokenAuthenticator{
+		clientID:     clientID,
+		clientSecret: clientSecret,
+		baseURL:      baseURL,
+		httpClient:   http.DefaultClient,
+	}
 }
 
 type oauth2TokenAuthenticator struct {
