@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: ileapv0
+
+output: api.gen.go
+
+generate:
+  models: true
+
+compatibility:
+  always-prefix-enum-values: true
+
+output-options:
+  skip-prune: true
+  name-normalizer: ToCamelCaseWithInitialisms
+  initialism-overrides: true
+  additional-initialisms:
+    - VIN
+    - OEM
+    - GNSS

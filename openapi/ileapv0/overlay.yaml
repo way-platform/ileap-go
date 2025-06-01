@@ -1,0 +1,26 @@
+overlay: 1.0.0
+
+info:
+  title: Overlay for iLEAP 0.2.0-wip
+  version: 1.0.0
+
+actions:
+
+- target: $.paths
+  description: "Skip code generation for requests"
+  remove: true
+
+- target: $.components.responses
+  description: "Skip code generation for responses"
+  remove: true
+
+- target: $.components.securitySchemes
+  description: "Skip code generation for security schemes"
+  remove: true
+
+- target: $.components.parameters
+  description: "Skip code generation for request parameters"
+  remove: true
+
+- target: $..[?(@.format == "uuid")].format
+  remove: true
