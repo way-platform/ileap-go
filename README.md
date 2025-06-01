@@ -55,6 +55,8 @@ $ go tool mage
 
 ## CLI tool
 
+<img src="docs/cli.gif />
+
 ### Installing
 
 ```bash
@@ -66,7 +68,10 @@ go install github.com/way-platform/ileap-go/cmd/ileap@latest
 The following example logs in to the [SINE Foundation]()'s demo API.
 
 ```bash
-$ ileap auth login --base-url https://api.ileap.sine.dev --client-id hello --client-secret pathfinder
+$ ileap auth login \
+  --base-url https://api.ileap.sine.dev \
+  --client-id hello \
+  --client-secret pathfinder
 
 Logged in to https://api.ileap.sine.dev.
 ```
