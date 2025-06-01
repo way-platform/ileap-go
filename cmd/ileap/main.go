@@ -24,6 +24,7 @@ func newRootCommand() *cobra.Command {
 	}
 	cmd.AddCommand(auth.NewCommand())
 	cmd.AddCommand(newGetFootprintCommand())
+	cmd.AddCommand(newListFootprintsCommand())
 	return cmd
 }
 
@@ -45,6 +46,31 @@ func newGetFootprintCommand() *cobra.Command {
 			return err
 		}
 		printJSON(cmd, footprint)
+		return nil
+	}
+	return cmd
+}
+
+func newListFootprintsCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list-footprints",
+		Short: "List product carbon footprints",
+	}
+	limit := cmd.Flags().Int("limit", 100, "max footprints queried")
+	filter := cmd.Flags().String("filter", "", "filter footprints by OData filter")
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		client, err := auth.NewClient()
+		if err != nil {
+			return err
+		}
+		response, err := client.ListFootprints(cmd.Context(), &ileap.ListFootprintsRequest{
+			Limit:  *limit,
+			Filter: *filter,
+		})
+		if err != nil {
+			return err
+		}
+		printJSON(cmd, response)
 		return nil
 	}
 	return cmd
