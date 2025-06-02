@@ -2,7 +2,7 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/way-platform/ileap-go)](https://pkg.go.dev/github.com/way-platform/ileap-go)
 [![GoReportCard](https://goreportcard.com/badge/github.com/way-platform/ileap-go)](https://goreportcard.com/report/github.com/way-platform/ileap-go)
-[![CI](https://github.com/way-platform/ileap-go/actions/workflows/ci.yaml/badge.svg)](https://github.com/way-platform/ileap-go/actions/workflows/ci.yaml)
+[![CI](https://github.com/way-platform/ileap-go/actions/workflows/release.yaml/badge.svg)](https://github.com/way-platform/ileap-go/actions/workflows/release.yaml)
 
 A Go SDK for logistics emissions data compatible with the [iLEAP Technical
 Specifications](https://sine-fdn.github.io/ileap-extension/).
