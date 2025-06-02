@@ -67,7 +67,7 @@ Prebuilt binaries for Linux, Windows, and Mac are available from the [Releases](
 
 ### Using
 
-The following example logs in to the [SINE Foundation]()'s demo API.
+The following example logs in to the [SINE Foundation](https://sine.foundation/)'s demo API.
 
 ```bash
 $ ileap auth login \
