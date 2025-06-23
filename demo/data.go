@@ -12,8 +12,8 @@ import (
 //go:embed data/footprints.json
 var footprintsJSON []byte
 
-// Footprints loads example iLEAP footprints.
-func Footprints() ([]ileapv0.ProductFootprintForILeapType, error) {
+// LoadFootprints loads example iLEAP footprints.
+func LoadFootprints() ([]ileapv0.ProductFootprintForILeapType, error) {
 	var data struct {
 		Footprints []ileapv0.ProductFootprintForILeapType `json:"footprints"`
 	}
@@ -30,8 +30,8 @@ func Footprints() ([]ileapv0.ProductFootprintForILeapType, error) {
 //go:embed data/tad.json
 var tadJSON []byte
 
-// TADs loads example iLEAP TADs.
-func TADs() ([]ileapv0.TAD, error) {
+// LoadTADs loads example iLEAP LoadTADs.
+func LoadTADs() ([]ileapv0.TAD, error) {
 	var data struct {
 		TADs []ileapv0.TAD `json:"tads"`
 	}

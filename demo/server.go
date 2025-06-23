@@ -1,11 +1,18 @@
 package demo
 
 import (
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/openapi/ileapv0"
@@ -13,27 +20,37 @@ import (
 
 // Server is an example iLEAP server.
 type Server struct {
+	baseURL    string
 	footprints []ileapv0.ProductFootprintForILeapType
 	tads       []ileapv0.TAD
+	keypair    *KeyPair
 	serveMux   *http.ServeMux
 }
 
 // NewServer creates a new example iLEAP server.
 func NewServer() (*Server, error) {
-	footprints, err := Footprints()
+	footprints, err := LoadFootprints()
 	if err != nil {
 		return nil, fmt.Errorf("load footprints: %w", err)
 	}
-	tads, err := TADs()
+	tads, err := LoadTADs()
 	if err != nil {
 		return nil, fmt.Errorf("load tads: %w", err)
 	}
+	keypair, err := LoadKeyPair()
+	if err != nil {
+		return nil, fmt.Errorf("load keypair: %w", err)
+	}
 	server := &Server{
+		baseURL:    "https://ileap-demo-server-504882905500.europe-north1.run.app",
 		footprints: footprints,
 		tads:       tads,
+		keypair:    keypair,
 		serveMux:   http.NewServeMux(),
 	}
 	server.registerRoute(server.authTokenRoute())
+	server.registerRoute(server.openIDConnectConfigRoute())
+	server.registerRoute(server.jwksRoute())
 	server.registerAuthenticatedRoute(server.listFootprintsRoute())
 	server.registerAuthenticatedRoute(server.getFootprintRoute())
 	server.registerAuthenticatedRoute(server.listTADsRoute())
@@ -61,7 +78,14 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "missing access token", http.StatusUnauthorized)
 			return
 		}
-		// TODO: Validate access token.
+		// Validate access token.
+		payload, err := s.validateJWT(token)
+		if err != nil {
+			slog.Debug("JWT validation failed", "error", err)
+			http.Error(w, "invalid access token", http.StatusUnauthorized)
+			return
+		}
+		slog.Debug("JWT validated successfully", "username", payload.Username)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -97,16 +121,29 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 		// Validate HTTP Basic Auth credentials.
 		username, password, ok := r.BasicAuth()
 		if !ok {
-			http.Error(w, "invalid credentials", http.StatusUnauthorized)
+			http.Error(w, "missing HTTP basic authorization", http.StatusBadRequest)
 			return
 		}
-		if username != "hello" || password != "pathfinder" {
-			http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		var authorized bool
+		for _, user := range Users() {
+			if username == user.Username && password == user.Password {
+				authorized = true
+				break
+			}
+		}
+		if !authorized {
+			http.Error(w, "invalid HTTP basic authorization", http.StatusUnauthorized)
+			return
+		}
+		// TODO: Generate and sign a JWT for the user.
+		accessToken, err := s.createJWT(username)
+		if err != nil {
+			http.Error(w, "failed to create JWT", http.StatusInternalServerError)
 			return
 		}
 		// Return client credentials.
 		clientCredentials := ileap.ClientCredentials{
-			AccessToken: "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ1c2VybmFtZSI6ImhlbGxvIn0.p3qamb1KAOwE3clLDykok1fL7WDI5bQYziYUIP_XYRY_ysZC0SeKw_n3EO7sgxB26Bh33UdJDGcchZKw3oM6NfjCbT4lG8tECIPoZC1Vg-2RUl-wCLhNQzcBXX3i3UKWMn9z9TBv-KBeAq7Y6mwaeD4DSnlYAFIo0r_iON_9emMmTUf09iOnOlXjzRrbIfLOlrrc5wi4rIz0tRR-563yBGVpSokXag8LfSj5S_Nj7LOgFIGtRDUKoqZvZuyRMz_wQYXC5T9pz2h58D2ImkpoANLH7669FdO71dX_cCMgju7vTp9UjZuj_Xi73HU4mJQaFh2_g6iSCZl-wxOWJpo_Qw",
+			AccessToken: accessToken,
 			TokenType:   "bearer",
 		}
 		if err := json.NewEncoder(w).Encode(clientCredentials); err != nil {
@@ -168,4 +205,175 @@ func (s *Server) listTADsRoute() (string, http.HandlerFunc) {
 			return
 		}
 	}
+}
+
+func (s *Server) openIDConnectConfigRoute() (string, http.HandlerFunc) {
+	return "GET /.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := OpenIDConfiguration{
+			IssuerURL:  s.baseURL,
+			AuthURL:    s.baseURL + "/auth/token",
+			TokenURL:   s.baseURL + "/auth/token",
+			JWKSURL:    s.baseURL + "/jwks",
+			Algorithms: []string{"RS256"},
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+func (s *Server) jwksRoute() (string, http.HandlerFunc) {
+	return "GET /jwks", func(w http.ResponseWriter, r *http.Request) {
+		jwk := JWK{
+			KeyType:   "RSA",
+			Use:       "sig",
+			Algorithm: "RS256",
+			KeyID:     "Public key",
+			N: base64.RawURLEncoding.EncodeToString(
+				s.keypair.PublicKey.N.Bytes(),
+			),
+			E: base64.RawURLEncoding.EncodeToString(
+				big.NewInt(int64(s.keypair.PublicKey.E)).Bytes(),
+			),
+		}
+		jwks := JWKSet{
+			Keys: []JWK{jwk},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(jwks); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// createJWT creates and signs a JWT token using RS256 algorithm
+func (s *Server) createJWT(username string) (string, error) {
+	// Create header
+	header := JWTHeader{
+		Type:      "JWT",
+		Algorithm: "RS256",
+	}
+	headerBytes, err := json.Marshal(header)
+	if err != nil {
+		return "", fmt.Errorf("marshal header: %w", err)
+	}
+	headerEncoded := base64.RawURLEncoding.EncodeToString(headerBytes)
+	// Create payload
+	payload := JWT{
+		Username: username,
+		IssuedAt: time.Now().Unix(),
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("marshal payload: %w", err)
+	}
+	payloadEncoded := base64.RawURLEncoding.EncodeToString(payloadBytes)
+	// Create signing input
+	signingInput := headerEncoded + "." + payloadEncoded
+	// Sign with RSA-SHA256
+	hash := sha256.Sum256([]byte(signingInput))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, s.keypair.PrivateKey, crypto.SHA256, hash[:])
+	if err != nil {
+		return "", fmt.Errorf("sign JWT: %w", err)
+	}
+	signatureEncoded := base64.RawURLEncoding.EncodeToString(signature)
+	// Combine all parts
+	token := signingInput + "." + signatureEncoded
+	return token, nil
+}
+
+func (s *Server) validateJWT(tokenString string) (*JWT, error) {
+	// Split token into parts
+	parts := strings.Split(tokenString, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid JWT format")
+	}
+	headerPart, payloadPart, signaturePart := parts[0], parts[1], parts[2]
+	// Verify signature
+	signingInput := headerPart + "." + payloadPart
+	hash := sha256.Sum256([]byte(signingInput))
+	signature, err := base64.RawURLEncoding.DecodeString(signaturePart)
+	if err != nil {
+		return nil, fmt.Errorf("decode signature: %w", err)
+	}
+	if err := rsa.VerifyPKCS1v15(s.keypair.PublicKey, crypto.SHA256, hash[:], signature); err != nil {
+		return nil, fmt.Errorf("verify signature: %w", err)
+	}
+	// Decode and parse payload
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadPart)
+	if err != nil {
+		return nil, fmt.Errorf("decode payload: %w", err)
+	}
+	var payload JWT
+	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
+		return nil, fmt.Errorf("unmarshal payload: %w", err)
+	}
+	return &payload, nil
+}
+
+type JWKSet struct {
+	Keys []JWK `json:"keys"`
+}
+
+type JWK struct {
+	// KeyType specifies the cryptographic algorithm family used with the key
+	KeyType string `json:"kty"`
+	// Use identifies the intended use of the public key
+	Use string `json:"use,omitempty"`
+	// Algorithm identifies the algorithm intended for use with the key
+	Algorithm string `json:"alg,omitempty"`
+	// KeyID is a hint indicating which key was used to secure the JWS
+	KeyID string `json:"kid,omitempty"`
+	// N is the modulus for the RSA public key (base64url encoded).
+	N string `json:"n"`
+	// E is the exponent for the RSA public key (base64url encoded).
+	E string `json:"e"`
+}
+
+type OpenIDConfiguration struct {
+	// IssuerURL is the identity of the provider, and the string it uses to sign
+	// ID tokens with. For example "https://accounts.google.com". This value MUST
+	// match ID tokens exactly.
+	IssuerURL string `json:"issuer"`
+
+	// AuthURL is the endpoint used by the provider to support the OAuth 2.0
+	// authorization endpoint.
+	AuthURL string `json:"authorization_endpoint"`
+
+	// TokenURL is the endpoint used by the provider to support the OAuth 2.0
+	// token endpoint.
+	TokenURL string `json:"token_endpoint"`
+
+	// DeviceAuthURL is the endpoint used by the provider to support the OAuth 2.0
+	// device authorization endpoint.
+	DeviceAuthURL string `json:"device_authorization_endpoint"`
+
+	// UserInfoURL is the endpoint used by the provider to support the OpenID
+	// Connect UserInfo flow.
+	//
+	// https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+	UserInfoURL string `json:"userinfo_endpoint"`
+
+	// JWKSURL is the endpoint used by the provider to advertise public keys to
+	// verify issued ID tokens. This endpoint is polled as new keys are made
+	// available.
+	JWKSURL string `json:"jwks_uri"`
+
+	// Algorithms, if provided, indicate a list of JWT algorithms allowed to sign
+	// ID tokens. If not provided, this defaults to the algorithms advertised by
+	// the JWK endpoint, then the set of algorithms supported by this package.
+	Algorithms []string `json:"id_token_signing_alg_values_supported"`
+}
+
+type JWTHeader struct {
+	Type      string `json:"typ"`
+	Algorithm string `json:"alg"`
+}
+
+type JWT struct {
+	Username string `json:"username"`
+	IssuedAt int64  `json:"iat,omitempty"`
 }
