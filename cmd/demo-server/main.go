@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -17,21 +18,32 @@ func main() {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	})))
-	if err := run(ctx); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	if err := run(ctx, port); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context) error {
+func run(ctx context.Context, port string) error {
 	server, err := demo.NewServer()
 	if err != nil {
 		return err
 	}
-	slog.InfoContext(ctx, "iLEAP demo server listening", "address", ":8080")
-	lis, err := (&net.ListenConfig{}).Listen(ctx, "tcp", ":8080")
+	address := fmt.Sprintf(":%s", port)
+	slog.InfoContext(ctx, "iLEAP demo server listening", "address", address)
+	lis, err := (&net.ListenConfig{}).Listen(ctx, "tcp", address)
 	if err != nil {
 		return err
 	}
-	return (&http.Server{Handler: server.Handler()}).Serve(lis)
+	if err := (&http.Server{Handler: server.Handler()}).Serve(lis); err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
