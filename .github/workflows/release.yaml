@@ -36,3 +36,5 @@ jobs:
 
       - name: Docker Push
         run: go tool mage dockerPush
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
