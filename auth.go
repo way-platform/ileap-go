@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// TokenCredentials for an authenticated iLEAP API client.
-type TokenCredentials struct {
+// ClientCredentials for an authenticated iLEAP API client.
+type ClientCredentials struct {
 	// Token is the bearer token for the authenticated client.
 	AccessToken string `json:"access_token"`
 	// TokenType is the type of token.
@@ -25,14 +25,14 @@ type TokenCredentials struct {
 // TokenAuthenticator is a pluggable interface for authenticating requests to an iLEAP API.
 type TokenAuthenticator interface {
 	// Authenticate the client and return a set of [TokenCredentials].
-	Authenticate(ctx context.Context) (TokenCredentials, error)
+	Authenticate(ctx context.Context) (ClientCredentials, error)
 }
 
 type tokenAuthenticatorTransport struct {
 	tokenAuthenticator TokenAuthenticator
 	transport          http.RoundTripper
 	mu                 sync.Mutex
-	credentials        TokenCredentials
+	credentials        ClientCredentials
 }
 
 func (t *tokenAuthenticatorTransport) RoundTrip(req *http.Request) (_ *http.Response, err error) {
@@ -68,7 +68,7 @@ func (t *tokenAuthenticatorTransport) getToken(ctx context.Context) (string, err
 
 type reuseTokenCredentialsTransport struct {
 	transport   http.RoundTripper
-	credentials TokenCredentials
+	credentials ClientCredentials
 }
 
 func (t *reuseTokenCredentialsTransport) RoundTrip(req *http.Request) (_ *http.Response, err error) {
@@ -105,7 +105,7 @@ func (t *oauth2TokenAuthenticator) newRequest(ctx context.Context, method, path 
 	return req, nil
 }
 
-func (t *oauth2TokenAuthenticator) Authenticate(ctx context.Context) (_ TokenCredentials, err error) {
+func (t *oauth2TokenAuthenticator) Authenticate(ctx context.Context) (_ ClientCredentials, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("authenticate: %w", err)
@@ -113,7 +113,7 @@ func (t *oauth2TokenAuthenticator) Authenticate(ctx context.Context) (_ TokenCre
 	}()
 	req, err := t.newRequest(ctx, http.MethodPost, "/auth/token", nil)
 	if err != nil {
-		return TokenCredentials{}, err
+		return ClientCredentials{}, err
 	}
 	req.SetBasicAuth(t.clientID, t.clientSecret)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -122,15 +122,15 @@ func (t *oauth2TokenAuthenticator) Authenticate(ctx context.Context) (_ TokenCre
 	req.Body = io.NopCloser(bytes.NewBufferString(body.Encode()))
 	res, err := t.httpClient.Do(req)
 	if err != nil {
-		return TokenCredentials{}, fmt.Errorf("send request: %w", err)
+		return ClientCredentials{}, fmt.Errorf("send request: %w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return TokenCredentials{}, fmt.Errorf("response status code: %d", res.StatusCode)
+		return ClientCredentials{}, fmt.Errorf("response status code: %d", res.StatusCode)
 	}
-	var response TokenCredentials
+	var response ClientCredentials
 	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return TokenCredentials{}, fmt.Errorf("decode response: %w", err)
+		return ClientCredentials{}, fmt.Errorf("decode response: %w", err)
 	}
 	return response, nil
 }

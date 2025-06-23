@@ -45,8 +45,8 @@ func WithOAuth2(clientID string, clientSecret string) ClientOption {
 	}
 }
 
-// WithReuseTokenAuth authenticates requests by re-using existing [TokenCredentials].
-func WithReuseTokenAuth(credentials TokenCredentials) ClientOption {
+// WithReuseTokenAuth authenticates requests by re-using existing [ClientCredentials].
+func WithReuseTokenAuth(credentials ClientCredentials) ClientOption {
 	return func(cc *ClientConfig) {
 		cc.transport = &reuseTokenCredentialsTransport{
 			transport:   cc.transport,

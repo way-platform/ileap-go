@@ -1,0 +1,464 @@
+{
+  "tads": [
+    {
+      "activityId": "1",
+      "arrivalAt": "2025-03-24T09:39:09.717782864Z",
+      "consignmentIds": [
+        "1"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717782532Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "2",
+      "arrivalAt": "2025-03-24T09:39:09.717785453Z",
+      "consignmentIds": [
+        "2"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717785388Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "3",
+      "arrivalAt": "2025-03-24T09:39:09.717786493Z",
+      "consignmentIds": [
+        "3"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717786429Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "4",
+      "arrivalAt": "2025-03-24T09:39:09.717787535Z",
+      "consignmentIds": [
+        "4"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717787473Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "5",
+      "arrivalAt": "2025-03-24T09:39:09.717788509Z",
+      "consignmentIds": [
+        "5"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717788446Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "6",
+      "arrivalAt": "2025-03-24T09:39:09.717790574Z",
+      "consignmentIds": [
+        "6"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717790491Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "7",
+      "arrivalAt": "2025-03-24T09:39:09.717791689Z",
+      "consignmentIds": [
+        "7"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717791625Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "8",
+      "arrivalAt": "2025-03-24T09:39:09.717792875Z",
+      "consignmentIds": [
+        "8"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717792809Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "9",
+      "arrivalAt": "2025-03-24T09:39:09.717793925Z",
+      "consignmentIds": [
+        "9"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717793861Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Fossil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    },
+    {
+      "activityId": "10",
+      "arrivalAt": "2025-03-24T09:39:09.71779614Z",
+      "consignmentIds": [
+        "10"
+      ],
+      "departureAt": "2025-03-14T09:39:09.717796076Z",
+      "destination": {
+        "city": "Amsterdam",
+        "country": "NL",
+        "iata": null,
+        "lat": "52.37403",
+        "lng": "4.88969",
+        "locode": "NLAMS",
+        "street": "Keizersgracht",
+        "uic": null,
+        "zip": "1017"
+      },
+      "distance": {
+        "actual": "656.0"
+      },
+      "emptyDistanceFactor": "0.1",
+      "feedstocks": [
+        {
+          "feedstock": "Cooking oil",
+          "feedstockPercentage": "0.8",
+          "regionProvenance": null
+        }
+      ],
+      "loadFactor": "0.8",
+      "mass": "1000.0",
+      "mode": "Road",
+      "origin": {
+        "city": "Berlin",
+        "country": "DE",
+        "iata": null,
+        "lat": "52.52437",
+        "lng": "13.41053",
+        "locode": "DEBER",
+        "street": "Bredowstraße",
+        "uic": null,
+        "zip": "10551"
+      },
+      "packagingOrTrEqAmount": 10,
+      "packagingOrTrEqType": "Pallet"
+    }
+  ]
+}

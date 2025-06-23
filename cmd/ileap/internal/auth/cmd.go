@@ -2,7 +2,9 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/adrg/xdg"
 	"github.com/spf13/cobra"
@@ -11,8 +13,8 @@ import (
 
 // Credentials for the rFMS CLI.
 type Credentials struct {
-	BaseURL          string                 `json:"baseUrl"`
-	TokenCredentials ileap.TokenCredentials `json:"tokenCredentials,omitzero"`
+	BaseURL           string                  `json:"baseUrl"`
+	ClientCredentials ileap.ClientCredentials `json:"clientCredentials,omitzero"`
 }
 
 func resolveCredentialsFilepath() (string, error) {
@@ -47,7 +49,7 @@ func NewClient() (*ileap.Client, error) {
 	}
 	return ileap.NewClient(
 		ileap.WithBaseURL(auth.BaseURL),
-		ileap.WithReuseTokenAuth(auth.TokenCredentials),
+		ileap.WithReuseTokenAuth(auth.ClientCredentials),
 	), nil
 }
 
@@ -94,14 +96,17 @@ func newLoginCommand() *cobra.Command {
 	baseURL := cmd.Flags().String("base-url", "", "base URL to use for authentication")
 	cmd.MarkFlagRequired("base-url")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		if !strings.HasPrefix(*baseURL, "http://") && !strings.HasPrefix(*baseURL, "https://") {
+			return fmt.Errorf("--base-url must start with http:// or https://")
+		}
 		authenticator := ileap.NewOAuth2TokenAuthenticator(*clientID, *clientSecret, *baseURL)
-		tokenCredentials, err := authenticator.Authenticate(cmd.Context())
+		clientCredentials, err := authenticator.Authenticate(cmd.Context())
 		if err != nil {
 			return err
 		}
 		auth := &Credentials{
-			BaseURL:          *baseURL,
-			TokenCredentials: tokenCredentials,
+			BaseURL:           *baseURL,
+			ClientCredentials: clientCredentials,
 		}
 		if err := writeCredentials(auth); err != nil {
 			return err

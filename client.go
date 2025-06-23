@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"runtime/debug"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -26,7 +27,6 @@ func NewClient(opts ...ClientOption) *Client {
 		httpClient.HTTPClient.Transport = config.transport
 	}
 	httpClient.RetryMax = config.retryCount
-	// TODO: Add custom retry logic for non-standard rFMS retry headers.
 	if config.logger != nil {
 		httpClient.Logger = config.logger
 	}
@@ -36,13 +36,17 @@ func NewClient(opts ...ClientOption) *Client {
 	}
 }
 
-func (c *Client) newRequest(ctx context.Context, method, path string, body io.Reader) (_ *retryablehttp.Request, err error) {
+func (c *Client) newRequest(ctx context.Context, method, requestPath string, body io.Reader) (_ *retryablehttp.Request, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("new request: %w", err)
 		}
 	}()
-	request, err := retryablehttp.NewRequestWithContext(ctx, method, c.config.baseURL+path, body)
+	requestURL, err := url.JoinPath(c.config.baseURL, requestPath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid request URL: %w", err)
+	}
+	request, err := retryablehttp.NewRequestWithContext(ctx, method, requestURL, body)
 	if err != nil {
 		return nil, err
 	}
