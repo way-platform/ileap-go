@@ -11,237 +11,87 @@ import (
 	"github.com/way-platform/ileap-go"
 )
 
-func TestJWTCreationAndValidation(t *testing.T) {
-	// Create a new server instance
-	server, err := NewServer()
+func TestServer_Route_AuthToken(t *testing.T) {
+	server, err := NewServer("http://localhost:8080")
 	if err != nil {
-		t.Fatalf("Failed to create server: %v", err)
+		t.Fatalf("failed to create server: %v", err)
 	}
-
-	// Test JWT creation
-	username := "hello"
-	token, err := server.createJWT(username)
-	if err != nil {
-		t.Fatalf("Failed to create JWT: %v", err)
-	}
-
-	if token == "" {
-		t.Fatal("Generated JWT is empty")
-	}
-
-	t.Logf("Generated JWT: %s", token)
-
-	// Verify JWT format (should have 3 parts separated by dots)
-	parts := strings.Split(token, ".")
-	if len(parts) != 3 {
-		t.Fatalf("Invalid JWT format: expected 3 parts, got %d", len(parts))
-	}
-
-	// Decode and verify header
-	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
-	if err != nil {
-		t.Fatalf("Failed to decode JWT header: %v", err)
-	}
-
-	var header JWTHeader
-	if err := json.Unmarshal(headerBytes, &header); err != nil {
-		t.Fatalf("Failed to unmarshal JWT header: %v", err)
-	}
-
-	if header.Type != "JWT" {
-		t.Errorf("Expected header type 'JWT', got '%s'", header.Type)
-	}
-	if header.Algorithm != "RS256" {
-		t.Errorf("Expected algorithm 'RS256', got '%s'", header.Algorithm)
-	}
-
-	t.Logf("Header: %s", string(headerBytes))
-
-	// Decode and verify payload
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		t.Fatalf("Failed to decode JWT payload: %v", err)
-	}
-
-	var payload JWT
-	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
-		t.Fatalf("Failed to unmarshal JWT payload: %v", err)
-	}
-
-	if payload.Username != username {
-		t.Errorf("Expected username '%s', got '%s'", username, payload.Username)
-	}
-	if payload.IssuedAt == 0 {
-		t.Error("Expected IssuedAt to be set")
-	}
-
-	t.Logf("Payload: %s", string(payloadBytes))
-
-	// Test JWT validation
-	validatedPayload, err := server.validateJWT(token)
-	if err != nil {
-		t.Fatalf("Failed to validate JWT: %v", err)
-	}
-
-	if validatedPayload.Username != username {
-		t.Errorf("Expected validated username '%s', got '%s'", username, validatedPayload.Username)
-	}
-
-	t.Logf("Validated username: %s", validatedPayload.Username)
-}
-
-func TestJWTValidationFailures(t *testing.T) {
-	server, err := NewServer()
-	if err != nil {
-		t.Fatalf("Failed to create server: %v", err)
-	}
-	testCases := []struct {
-		name  string
-		token string
-	}{
-		{
-			name:  "empty token",
-			token: "",
-		},
-		{
-			name:  "invalid format - too few parts",
-			token: "header.payload",
-		},
-		{
-			name:  "invalid format - too many parts",
-			token: "header.payload.signature.extra",
-		},
-		{
-			name:  "invalid base64 encoding",
-			token: "invalid_base64.payload.signature",
-		},
-		{
-			name:  "tampered payload",
-			token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ1c2VybmFtZSI6InRhbXBlcmVkIn0.signature",
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := server.validateJWT(tc.token)
-			if err == nil {
-				t.Errorf("Expected validation to fail for %s, but it succeeded", tc.name)
-			}
-			t.Logf("Validation correctly failed for %s: %v", tc.name, err)
-		})
-	}
-}
-
-func TestJWTRoundTrip(t *testing.T) {
-	server, err := NewServer()
-	if err != nil {
-		t.Fatalf("Failed to create server: %v", err)
-	}
-
-	usernames := []string{"hello", "martin", "test_user", "admin"}
-
-	for _, username := range usernames {
-		t.Run("username_"+username, func(t *testing.T) {
-			// Create JWT
-			token, err := server.createJWT(username)
-			if err != nil {
-				t.Fatalf("Failed to create JWT for username '%s': %v", username, err)
-			}
-
-			// Validate JWT
-			payload, err := server.validateJWT(token)
-			if err != nil {
-				t.Fatalf("Failed to validate JWT for username '%s': %v", username, err)
-			}
-
-			// Verify username matches
-			if payload.Username != username {
-				t.Errorf("Username mismatch: expected '%s', got '%s'", username, payload.Username)
-			}
-		})
-	}
-}
-
-func TestAuthTokenEndpoint(t *testing.T) {
-	server, err := NewServer()
-	if err != nil {
-		t.Fatalf("Failed to create server: %v", err)
-	}
-
-	// Test valid credentials
 	req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.SetBasicAuth("hello", "pathfinder") // Using demo credentials from users.go
-
+	req.SetBasicAuth("hello", "pathfinder")
 	w := httptest.NewRecorder()
 	server.Handler().ServeHTTP(w, req)
-
 	if w.Code != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
-
 	var credentials ileap.ClientCredentials
 	if err := json.NewDecoder(w.Body).Decode(&credentials); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if credentials.AccessToken == "" {
-		t.Fatal("Access token is empty")
+		t.Fatalf("failed to decode response: %v", err)
 	}
 	if credentials.TokenType != "bearer" {
 		t.Errorf("Expected token type 'bearer', got '%s'", credentials.TokenType)
 	}
-
-	t.Logf("Received access token: %s", credentials.AccessToken)
-
-	// Verify the token can be validated
-	payload, err := server.validateJWT(credentials.AccessToken)
-	if err != nil {
-		t.Fatalf("Failed to validate generated token: %v", err)
+	parts := strings.Split(credentials.AccessToken, ".")
+	if len(parts) != 3 {
+		t.Fatalf("expected 3 parts in JWT, got %d", len(parts))
 	}
-	if payload.Username != "hello" {
-		t.Errorf("Expected username 'hello', got '%s'", payload.Username)
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatalf("failed to decode payload: %v", err)
+	}
+	var claims JWTClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		t.Fatalf("failed to unmarshal payload: %v", err)
+	}
+	if claims.Username != "hello" {
+		t.Errorf("expected username 'hello', got '%s'", claims.Username)
 	}
 }
 
-func TestAuthenticatedEndpoints(t *testing.T) {
-	server, err := NewServer()
+func TestServer_Route_ListFootprints(t *testing.T) {
+	server, err := NewServer("http://localhost:8080")
 	if err != nil {
-		t.Fatalf("Failed to create server: %v", err)
+		t.Fatalf("failed to create server: %v", err)
 	}
 
-	// First get a valid token
-	token, err := server.createJWT("hello")
-	if err != nil {
-		t.Fatalf("Failed to create JWT: %v", err)
-	}
+	t.Run("unauthenticated", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/2/footprints", nil)
+		w := httptest.NewRecorder()
+		server.Handler().ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected status 401, got %d", w.Code)
+		}
+	})
 
-	// Test authenticated endpoint with valid token
-	req := httptest.NewRequest("GET", "/2/footprints", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	t.Run("invalid token", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/2/footprints", nil)
+		req.Header.Set("Authorization", "Bearer invalid.token.here")
+		w := httptest.NewRecorder()
+		server.Handler().ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected status 401, got %d", w.Code)
+		}
+	})
 
-	w := httptest.NewRecorder()
-	server.Handler().ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d: %s", w.Code, w.Body.String())
-	}
-
-	// Test authenticated endpoint without token
-	req = httptest.NewRequest("GET", "/2/footprints", nil)
-	w = httptest.NewRecorder()
-	server.Handler().ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("Expected status 401, got %d", w.Code)
-	}
-
-	// Test authenticated endpoint with invalid token
-	req = httptest.NewRequest("GET", "/2/footprints", nil)
-	req.Header.Set("Authorization", "Bearer invalid.token.here")
-	w = httptest.NewRecorder()
-	server.Handler().ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("Expected status 401, got %d", w.Code)
-	}
+	t.Run("authenticated", func(t *testing.T) {
+		tokenRequest := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+		tokenRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		tokenRequest.SetBasicAuth("hello", "pathfinder")
+		tokenResponse := httptest.NewRecorder()
+		server.Handler().ServeHTTP(tokenResponse, tokenRequest)
+		if tokenResponse.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", tokenResponse.Code, tokenResponse.Body.String())
+		}
+		var credentials ileap.ClientCredentials
+		if err := json.NewDecoder(tokenResponse.Body).Decode(&credentials); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		request := httptest.NewRequest("GET", "/2/footprints", nil)
+		request.Header.Set("Authorization", "Bearer "+credentials.AccessToken)
+		response := httptest.NewRecorder()
+		server.Handler().ServeHTTP(response, request)
+		if response.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", response.Code, response.Body.String())
+		}
+	})
 }

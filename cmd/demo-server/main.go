@@ -29,7 +29,7 @@ func main() {
 }
 
 func run(ctx context.Context, port string) error {
-	server, err := demo.NewServer()
+	server, err := demo.NewServer("https://ileap-demo-server-504882905500.europe-north1.run.app")
 	if err != nil {
 		return err
 	}
