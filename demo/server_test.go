@@ -63,7 +63,7 @@ func TestJWTCreationAndValidation(t *testing.T) {
 		t.Fatalf("Failed to decode JWT payload: %v", err)
 	}
 
-	var payload JWT
+	var payload Claims
 	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
 		t.Fatalf("Failed to unmarshal JWT payload: %v", err)
 	}

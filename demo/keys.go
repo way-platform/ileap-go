@@ -1,11 +1,16 @@
 package demo
 
 import (
+	"crypto"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	_ "embed"
 )
@@ -43,4 +48,30 @@ func LoadKeyPair() (*KeyPair, error) {
 		PrivateKey: privateKey,
 		PublicKey:  &privateKey.PublicKey,
 	}, nil
+}
+
+func (k *KeyPair) ValidateJWT(token string) (*Claims, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid JWT format")
+	}
+	headerPart, payloadPart, signaturePart := parts[0], parts[1], parts[2]
+	signingInput := headerPart + "." + payloadPart
+	hash := sha256.Sum256([]byte(signingInput))
+	signature, err := base64.RawURLEncoding.DecodeString(signaturePart)
+	if err != nil {
+		return nil, fmt.Errorf("decode signature: %w", err)
+	}
+	if err := rsa.VerifyPKCS1v15(k.PublicKey, crypto.SHA256, hash[:], signature); err != nil {
+		return nil, fmt.Errorf("verify signature: %w", err)
+	}
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadPart)
+	if err != nil {
+		return nil, fmt.Errorf("decode payload: %w", err)
+	}
+	var claims Claims
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+		return nil, fmt.Errorf("unmarshal payload: %w", err)
+	}
+	return &claims, nil
 }

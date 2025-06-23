@@ -262,7 +262,7 @@ func (s *Server) createJWT(username string) (string, error) {
 	}
 	headerEncoded := base64.RawURLEncoding.EncodeToString(headerBytes)
 	// Create payload
-	payload := JWT{
+	payload := Claims{
 		Username: username,
 		IssuedAt: time.Now().Unix(),
 	}
@@ -283,35 +283,6 @@ func (s *Server) createJWT(username string) (string, error) {
 	// Combine all parts
 	token := signingInput + "." + signatureEncoded
 	return token, nil
-}
-
-func (s *Server) validateJWT(tokenString string) (*JWT, error) {
-	// Split token into parts
-	parts := strings.Split(tokenString, ".")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid JWT format")
-	}
-	headerPart, payloadPart, signaturePart := parts[0], parts[1], parts[2]
-	// Verify signature
-	signingInput := headerPart + "." + payloadPart
-	hash := sha256.Sum256([]byte(signingInput))
-	signature, err := base64.RawURLEncoding.DecodeString(signaturePart)
-	if err != nil {
-		return nil, fmt.Errorf("decode signature: %w", err)
-	}
-	if err := rsa.VerifyPKCS1v15(s.keypair.PublicKey, crypto.SHA256, hash[:], signature); err != nil {
-		return nil, fmt.Errorf("verify signature: %w", err)
-	}
-	// Decode and parse payload
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(payloadPart)
-	if err != nil {
-		return nil, fmt.Errorf("decode payload: %w", err)
-	}
-	var payload JWT
-	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
-		return nil, fmt.Errorf("unmarshal payload: %w", err)
-	}
-	return &payload, nil
 }
 
 type JWKSet struct {
@@ -373,7 +344,7 @@ type JWTHeader struct {
 	Algorithm string `json:"alg"`
 }
 
-type JWT struct {
+type Claims struct {
 	Username string `json:"username"`
 	IssuedAt int64  `json:"iat,omitempty"`
 }
