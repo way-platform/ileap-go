@@ -39,7 +39,11 @@ func DockerPush() error {
 		map[string]string{
 			"KO_DOCKER_REPO": "ghcr.io/way-platform/ileap-go",
 		},
-		"go", "tool", "ko", "build", "--platform", "linux/amd64", "./cmd/demo-server")
+		"go", "tool", "ko", "build",
+		"--base-import-paths",
+		"--platform", "linux/amd64",
+		"./cmd/demo-server",
+	)
 }
 
 // DockerBuildLocal builds the demo server Docker image locally.
@@ -48,5 +52,9 @@ func DockerBuild() error {
 		map[string]string{
 			"KO_DOCKER_REPO": "ko.local",
 		},
-		"go", "tool", "ko", "build", "--platform", "linux/amd64", "./cmd/demo-server")
+		"go", "tool", "ko", "build",
+		"--base-import-paths",
+		"--platform", "linux/amd64",
+		"./cmd/demo-server",
+	)
 }
