@@ -32,3 +32,21 @@ func Test() error {
 func Generate() error {
 	return sh.RunV("go", "generate", "./...")
 }
+
+// DockerPush pushes the demo server Docker image to the registry.
+func DockerPush() error {
+	return sh.RunWith(
+		map[string]string{
+			"KO_DOCKER_REPO": "ghcr.io/way-platform/ileap-go",
+		},
+		"go", "tool", "ko", "build", "--platform", "linux/amd64", "./cmd/demo-server")
+}
+
+// DockerBuildLocal builds the demo server Docker image locally.
+func DockerBuild() error {
+	return sh.RunWith(
+		map[string]string{
+			"KO_DOCKER_REPO": "ko.local",
+		},
+		"go", "tool", "ko", "build", "--platform", "linux/amd64", "./cmd/demo-server")
+}
