@@ -293,16 +293,5 @@ func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid event type: %s", event.Type)
 			return
 		}
-		var response struct {
-			Status  string `json:"status"`
-			Message string `json:"message"`
-		}
-		response.Status = "accepted"
-		response.Message = "Event successfully processed"
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
-			return
-		}
 	}
 }
