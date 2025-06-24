@@ -2,6 +2,7 @@ package ileap
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,11 +16,11 @@ type FilterV2 struct {
 }
 
 // UnmarshalString unmarshals a filter from a string.
-func (f *FilterV2) UnmarshalString(data string) error {
-	data = strings.Trim(data, "() ")
+func (f *FilterV2) UnmarshalString(filter string) error {
 	f.Conjuctions = f.Conjuctions[:0]
+	data := strings.TrimSpace(filter)
 	for conjuction := range strings.SplitSeq(data, " and ") {
-		conjuction = strings.Trim(conjuction, "() ")
+		conjuction = strings.TrimSpace(conjuction)
 		if conjuction == "" {
 			continue
 		}
@@ -44,7 +45,6 @@ func (f *FilterV2) MatchesFootprint(footprint *ileapv0.ProductFootprintForILeapT
 
 // FilterPredicateV2 is a single filter predicate.
 type FilterPredicateV2 struct {
-	// LHS is the left hand side of the predicate.
 	LHS string `json:"lhs"`
 	// Operator is the operator of the predicate.
 	Operator string `json:"operator"`
@@ -53,7 +53,23 @@ type FilterPredicateV2 struct {
 }
 
 // UnmarshalString unmarshals a filter predicate from a string.
-func (f *FilterPredicateV2) UnmarshalString(data string) error {
+func (f *FilterPredicateV2) UnmarshalString(predicate string) error {
+	data := strings.TrimSpace(predicate)
+	if strings.HasPrefix(data, "(") && strings.HasSuffix(data, ")") {
+		data = data[1 : len(data)-1]
+	}
+	if strings.HasPrefix(data, "productIds/any(productId:(productId eq ") && strings.HasSuffix(data, "))") {
+		f.LHS = "productIds"
+		f.Operator = "any/eq"
+		f.RHS = data[len("productIds/any(productId:(productId eq ") : len(data)-len("))")]
+		return nil
+	}
+	if strings.HasPrefix(data, "companyIds/any(companyId:(companyId eq ") && strings.HasSuffix(data, "))") {
+		f.LHS = "companyIds"
+		f.Operator = "any/eq"
+		f.RHS = data[len("companyIds/any(companyId:(companyId eq ") : len(data)-len("))")]
+		return nil
+	}
 	fields := strings.Fields(data)
 	if len(fields) != 3 {
 		return fmt.Errorf("invalid predicate: `%s`", data)
@@ -79,6 +95,9 @@ func (f *FilterPredicateV2) UnmarshalString(data string) error {
 
 // MatchesFootprint returns true if the predicate matches the provided footprint.
 func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv0.ProductFootprintForILeapType) bool {
+	if f.Operator == "any/eq" {
+		return f.matchesAnyEq(footprint)
+	}
 	var lhsValue string
 	switch f.LHS {
 	case "pcf/geographyCountry":
@@ -106,4 +125,21 @@ func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv0.ProductFootprint
 	default:
 		return false
 	}
+}
+
+func (f *FilterPredicateV2) matchesAnyEq(footprint *ileapv0.ProductFootprintForILeapType) bool {
+	var lhsValue []string
+	switch f.LHS {
+	case "productIds":
+		lhsValue = footprint.ProductIds
+	case "companyIds":
+		lhsValue = footprint.CompanyIds
+	default:
+		return false
+	}
+	if !strings.HasPrefix(f.RHS, "'") || !strings.HasSuffix(f.RHS, "'") {
+		return false
+	}
+	rhsValue := strings.Trim(f.RHS, "'")
+	return slices.Contains(lhsValue, rhsValue)
 }

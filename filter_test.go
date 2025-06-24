@@ -68,6 +68,34 @@ func TestFilterV2_UnmarshalString(t *testing.T) {
 		},
 
 		{
+			name: "productIds, any eq",
+			data: "productIds/any(productId:(productId eq 'urn:gtin:5695872369587'))",
+			want: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "productIds",
+						Operator: "any/eq",
+						RHS:      "'urn:gtin:5695872369587'",
+					},
+				},
+			},
+		},
+
+		{
+			name: "companyIds, any eq",
+			data: "companyIds/any(companyId:(companyId eq '12345'))",
+			want: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "companyIds",
+						Operator: "any/eq",
+						RHS:      "'12345'",
+					},
+				},
+			},
+		},
+
+		{
 			name: "productCategoryCpc and created",
 			data: "(productCategoryCpc eq '6398') and (created gt '1900-01-01T00:00:00.000Z')",
 			want: FilterV2{
@@ -209,12 +237,46 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 			},
 			want: true,
 		},
+
+		{
+			name: "productIds, any eq",
+			footprint: &ileapv0.ProductFootprintForILeapType{
+				ProductIds: []string{"urn:gtin:1234"},
+			},
+			filter: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "productIds",
+						Operator: "any/eq",
+						RHS:      "'urn:gtin:1234'",
+					},
+				},
+			},
+			want: true,
+		},
+
+		{
+			name: "productIds, any eq, no match",
+			footprint: &ileapv0.ProductFootprintForILeapType{
+				ProductIds: []string{"urn:gtin:1234"},
+			},
+			filter: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "productIds",
+						Operator: "any/eq",
+						RHS:      "'urn:gtin:5678'",
+					},
+				},
+			},
+			want: false,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			got := testCase.filter.MatchesFootprint(testCase.footprint)
 			if got != testCase.want {
-				t.Fatalf("MatchesFootprint(%v) = %v, want %v", testCase.footprint, got, testCase.want)
+				t.Fatalf("got %v, want %v", got, testCase.want)
 			}
 		})
 	}
