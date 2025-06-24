@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -172,13 +173,32 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 	}
 }
 
+func (s *Server) parseLimit(r *http.Request) (int, error) {
+	limitStr := r.URL.Query().Get("limit")
+	if limitStr == "" {
+		return 0, nil
+	}
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		return 0, err
+	}
+	if limit <= 0 {
+		return 0, fmt.Errorf("limit must be positive")
+	}
+	return limit, nil
+}
+
 func (s *Server) listFootprintsRoute() (string, http.HandlerFunc) {
 	return "GET /2/footprints", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Handle limit and offset.
+		limit, err := s.parseLimit(r)
+		if err != nil {
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid limit: %v", err)
+			return
+		}
 		var filter ileap.FilterV2
 		filterQuery := r.URL.Query().Get("$filter")
 		if err := filter.UnmarshalString(filterQuery); err != nil {
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid filter `%s`: %s", filterQuery, err)
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "$filter: %v", err)
 			return
 		}
 		filteredFootprints := make([]ileapv0.ProductFootprintForILeapType, 0, len(s.footprints))
@@ -186,6 +206,9 @@ func (s *Server) listFootprintsRoute() (string, http.HandlerFunc) {
 			if filter.MatchesFootprint(&footprint) {
 				filteredFootprints = append(filteredFootprints, footprint)
 			}
+		}
+		if limit > 0 && len(filteredFootprints) > limit {
+			filteredFootprints = filteredFootprints[:limit]
 		}
 		w.Header().Set("Content-Type", "application/json")
 		response := ileapv0.PfListingResponseInner{
@@ -225,7 +248,14 @@ func (s *Server) getFootprintRoute() (string, http.HandlerFunc) {
 
 func (s *Server) listTADsRoute() (string, http.HandlerFunc) {
 	return "GET /2/ileap/tad", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Handle limit.
+		limit, err := s.parseLimit(r)
+		if err != nil {
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid limit: %v", err)
+			return
+		}
+		if limit > 0 && len(s.tads) > limit {
+			s.tads = s.tads[:limit]
+		}
 		w.Header().Set("Content-Type", "application/json")
 		response := ileapv0.TadListingResponseInner{
 			Data: s.tads,
