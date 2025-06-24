@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"mime"
 	"net/http"
 	"strings"
 	"time"
@@ -48,6 +49,7 @@ func NewServer(baseURL string) (*Server, error) {
 	server.registerAuthenticatedRoute(server.listFootprintsRoute())
 	server.registerAuthenticatedRoute(server.getFootprintRoute())
 	server.registerAuthenticatedRoute(server.listTADsRoute())
+	server.registerAuthenticatedRoute(server.eventsRoute())
 	return server, nil
 }
 
@@ -250,6 +252,52 @@ func (s *Server) jwksRoute() (string, http.HandlerFunc) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(jwks); err != nil {
+			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			return
+		}
+	}
+}
+
+func (s *Server) eventsRoute() (string, http.HandlerFunc) {
+	return "POST /2/events", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") == "" {
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing content type")
+			return
+		}
+		if mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err == nil {
+			if mediaType != "application/cloudevents+json" {
+				s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
+				return
+			}
+		} else {
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
+		}
+		// Parse the event from request body.
+		var event ileap.Event
+		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
+			return
+		}
+		switch event.Type {
+		case ileap.EventTypeRequestCreated:
+			// TODO: Handle RequestCreated.
+		case ileap.EventTypeRequestFulfilled:
+			// TODO: Handle RequestFulfilled.
+		case ileap.EventTypeRequestRejected:
+			// TODO: Handle RequestRejected.
+		case ileap.EventTypePublished:
+			// TODO: Handle Published.
+		default:
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid event type")
+		}
+		var response struct {
+			Status  string `json:"status"`
+			Message string `json:"message"`
+		}
+		response.Status = "accepted"
+		response.Message = "Event successfully processed"
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
 			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
