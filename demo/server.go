@@ -265,7 +265,9 @@ func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 			return
 		}
 		if mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err == nil {
-			if mediaType != "application/cloudevents+json" {
+			// TODO: PACT specification requires "application/cloudevents+json",
+			// but the conformance checker currently sends application/json.
+			if mediaType != "application/cloudevents+json" && mediaType != "application/json" {
 				s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type: %s", mediaType)
 				return
 			}
