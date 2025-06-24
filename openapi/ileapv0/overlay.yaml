@@ -24,3 +24,17 @@ actions:
 
 - target: $..[?(@.format == "uuid")].format
   remove: true
+
+- target: $.components.schemas.CarbonFootprint.oneOf
+  description: "Inline the oneOf schema on CarbonFootprint"
+  remove: true
+
+- target: $.components.schemas.CarbonFootprint.properties
+  description: "Inline the oneOf schema on CarbonFootprint"
+  update:
+    geographyRegionOrSubregion:
+      $ref: "#/components/schemas/UNRegionOrSubregion"
+    geographyCountry:
+      $ref: "#/components/schemas/ISO3166CC"
+    geographyCountrySubdivision:
+      $ref: "#/components/schemas/NonEmptyString"

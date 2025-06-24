@@ -174,11 +174,22 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 
 func (s *Server) listFootprintsRoute() (string, http.HandlerFunc) {
 	return "GET /2/footprints", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Handle limit.
-		// TODO: Handle filter.
+		// TODO: Handle limit and offset.
+		var filter ileap.FilterV2
+		filterQuery := r.URL.Query().Get("$filter")
+		if err := filter.UnmarshalString(filterQuery); err != nil {
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid filter `%s`: %s", filterQuery, err)
+			return
+		}
+		filteredFootprints := make([]ileapv0.ProductFootprintForILeapType, 0, len(s.footprints))
+		for _, footprint := range s.footprints {
+			if filter.MatchesFootprint(&footprint) {
+				filteredFootprints = append(filteredFootprints, footprint)
+			}
+		}
 		w.Header().Set("Content-Type", "application/json")
 		response := ileapv0.PfListingResponseInner{
-			Data: s.footprints,
+			Data: filteredFootprints,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
 			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
