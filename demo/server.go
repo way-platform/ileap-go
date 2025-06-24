@@ -290,7 +290,8 @@ func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 		case ileap.EventTypePublished:
 			// TODO: Handle Published.
 		default:
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid event type")
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid event type: %s", event.Type)
+			return
 		}
 		var response struct {
 			Status  string `json:"status"`
