@@ -33,7 +33,7 @@ func (c *Client) GetFootprint(ctx context.Context, request *GetFootprintRequest)
 	}
 	defer httpResponse.Body.Close()
 	if httpResponse.StatusCode != http.StatusOK {
-		return nil, newHTTPError(httpResponse)
+		return nil, newClientError(httpResponse)
 	}
 	data, err := io.ReadAll(httpResponse.Body)
 	if err != nil {

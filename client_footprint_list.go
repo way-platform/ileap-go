@@ -51,7 +51,7 @@ func (c *Client) ListFootprints(ctx context.Context, request *ListFootprintsRequ
 	}
 	defer httpResponse.Body.Close()
 	if httpResponse.StatusCode != http.StatusOK {
-		return nil, newHTTPError(httpResponse)
+		return nil, newClientError(httpResponse)
 	}
 	data, err := io.ReadAll(httpResponse.Body)
 	if err != nil {

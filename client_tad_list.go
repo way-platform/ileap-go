@@ -46,7 +46,7 @@ func (c *Client) ListTADs(ctx context.Context, request *ListTADsRequest) (_ *Lis
 	}
 	defer httpResponse.Body.Close()
 	if httpResponse.StatusCode != http.StatusOK {
-		return nil, newHTTPError(httpResponse)
+		return nil, newClientError(httpResponse)
 	}
 	data, err := io.ReadAll(httpResponse.Body)
 	if err != nil {

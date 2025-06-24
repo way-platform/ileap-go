@@ -60,21 +60,21 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
-			http.Error(w, "missing authorization", http.StatusUnauthorized)
+			s.error(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "missing authorization")
 			return
 		}
 		if !strings.HasPrefix(auth, "Bearer ") {
-			http.Error(w, "unsupported authorization scheme", http.StatusUnauthorized)
+			s.error(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "unsupported authentication scheme")
 			return
 		}
 		token := strings.TrimPrefix(auth, "Bearer ")
 		if token == "" {
-			http.Error(w, "missing access token", http.StatusUnauthorized)
+			s.error(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "missing access token")
 			return
 		}
 		if _, err := s.keypair.ValidateJWT(token); err != nil {
 			// TODO: ACT conformance test requires 400, but semantically this should be 401.
-			http.Error(w, "invalid access token", http.StatusBadRequest)
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid access token")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -91,28 +91,40 @@ func (s *Server) registerRoute(pattern string, handler http.Handler) {
 	s.serveMux.Handle(pattern, handler)
 }
 
+func (s *Server) error(w http.ResponseWriter, status int, errorCode ileap.ErrorCode, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(ileap.Error{
+		Code:    errorCode,
+		Message: message,
+	}); err != nil {
+		slog.Error("failed to encode error response", "error", err)
+		return
+	}
+}
+
 func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 	return "POST /auth/token", func(w http.ResponseWriter, r *http.Request) {
 		// Validate content type.
 		if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-			http.Error(w, "invalid content type", http.StatusBadRequest)
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
 			return
 		}
 		// Parse URL values from request body.
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "invalid request body", http.StatusBadRequest)
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
 			return
 		}
 		// Validate grant type.
 		grantType := r.Form.Get("grant_type")
 		if grantType != "client_credentials" {
-			http.Error(w, "unsupported grant type", http.StatusBadRequest)
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "unsupported grant type")
 			return
 		}
 		// Validate HTTP Basic Auth credentials.
 		username, password, ok := r.BasicAuth()
 		if !ok {
-			http.Error(w, "missing HTTP basic authorization", http.StatusBadRequest)
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing HTTP basic authorization")
 			return
 		}
 		var authorized bool
@@ -124,7 +136,7 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 		}
 		if !authorized {
 			// TODO: ACT conformance test requires 400, but semantically this should be 401.
-			http.Error(w, "invalid HTTP basic auth", http.StatusBadRequest)
+			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid HTTP basic auth")
 			return
 		}
 		accessToken, err := s.keypair.CreateJWT(JWTClaims{
@@ -132,7 +144,7 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 			IssuedAt: time.Now().Unix(),
 		})
 		if err != nil {
-			http.Error(w, "failed to create JWT", http.StatusInternalServerError)
+			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to create JWT")
 			return
 		}
 		clientCredentials := ileap.ClientCredentials{
@@ -140,7 +152,7 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 			TokenType:   "bearer",
 		}
 		if err := json.NewEncoder(w).Encode(clientCredentials); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -155,7 +167,7 @@ func (s *Server) listFootprintsRoute() (string, http.HandlerFunc) {
 			Data: s.footprints,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -172,7 +184,7 @@ func (s *Server) getFootprintRoute() (string, http.HandlerFunc) {
 			}
 		}
 		if footprint == nil {
-			http.Error(w, "not found", http.StatusNotFound)
+			s.error(w, http.StatusNotFound, ileap.ErrorCodeNotFound, "not found")
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -180,7 +192,7 @@ func (s *Server) getFootprintRoute() (string, http.HandlerFunc) {
 			Data: *footprint,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -194,7 +206,7 @@ func (s *Server) listTADsRoute() (string, http.HandlerFunc) {
 			Data: s.tads,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -211,7 +223,7 @@ func (s *Server) openIDConnectConfigRoute() (string, http.HandlerFunc) {
 			Algorithms: []string{"RS256"},
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -224,7 +236,7 @@ func (s *Server) jwksRoute() (string, http.HandlerFunc) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(jwks); err != nil {
-			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
