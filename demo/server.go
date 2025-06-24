@@ -103,12 +103,12 @@ func (s *Server) error(w http.ResponseWriter, status int, errorCode ileap.ErrorC
 	}
 }
 
-func (s *Server) oauthError(w http.ResponseWriter, status int, errorCode ileap.OAuthErrorCode, message string) {
+func (s *Server) oauthError(w http.ResponseWriter, status int, code ileap.OAuthErrorCode, description string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(ileap.OAuthError{
-		Code:        errorCode,
-		Description: message,
+		Code:        code,
+		Description: description,
 	}); err != nil {
 		slog.Error("failed to encode OAuth error response", "error", err)
 		return
@@ -228,11 +228,13 @@ func (s *Server) openIDConnectConfigRoute() (string, http.HandlerFunc) {
 	return "GET /.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := OpenIDConfiguration{
-			IssuerURL:  s.baseURL,
-			AuthURL:    s.baseURL + "/auth/token",
-			TokenURL:   s.baseURL + "/auth/token",
-			JWKSURL:    s.baseURL + "/jwks",
-			Algorithms: []string{"RS256"},
+			IssuerURL:              s.baseURL,
+			AuthURL:                s.baseURL + "/auth/token",
+			TokenURL:               s.baseURL + "/auth/token",
+			JWKSURL:                s.baseURL + "/jwks",
+			Algorithms:             []string{"RS256"},
+			ResponseTypesSupported: []string{"token"},
+			SubjectTypesSupported:  []string{"public"},
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
 			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")

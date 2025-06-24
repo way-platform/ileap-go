@@ -9,7 +9,7 @@ type OAuthError struct {
 	// Code is the OAuth 2.0 error code identifier.
 	Code OAuthErrorCode `json:"error"`
 	// Description is a human readable description of the error.
-	Description string `json:"error_description"`
+	Description string `json:"error_description,omitempty"`
 }
 
 // Error implements the error interface.

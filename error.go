@@ -54,7 +54,7 @@ type ClientError struct {
 
 // Error implements the error interface.
 func (e *ClientError) Error() string {
-	return fmt.Sprintf("%s %s: HTTP %s: (%s)", e.Method, e.URL, e.Status, e.Body.Error())
+	return fmt.Sprintf("%s %s: HTTP error %s: %s", e.Method, e.URL, e.Status, e.Body.Error())
 }
 
 func newClientError(resp *http.Response) *ClientError {

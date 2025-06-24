@@ -34,4 +34,12 @@ type OpenIDConfiguration struct {
 	// ID tokens. If not provided, this defaults to the algorithms advertised by
 	// the JWK endpoint, then the set of algorithms supported by this package.
 	Algorithms []string `json:"id_token_signing_alg_values_supported"`
+
+	// ResponseTypesSupported is a list of OAuth 2.0 response types supported by the
+	// provider.
+	ResponseTypesSupported []string `json:"response_types_supported"`
+
+	// SubjectTypesSupported is a list of OpenID Connect subject types supported by
+	// the provider.
+	SubjectTypesSupported []string `json:"subject_types_supported"`
 }
