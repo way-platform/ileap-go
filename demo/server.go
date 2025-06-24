@@ -103,28 +103,40 @@ func (s *Server) error(w http.ResponseWriter, status int, errorCode ileap.ErrorC
 	}
 }
 
+func (s *Server) oauthError(w http.ResponseWriter, status int, errorCode ileap.OAuthErrorCode, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(ileap.OAuthError{
+		Code:        errorCode,
+		Description: message,
+	}); err != nil {
+		slog.Error("failed to encode OAuth error response", "error", err)
+		return
+	}
+}
+
 func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 	return "POST /auth/token", func(w http.ResponseWriter, r *http.Request) {
 		// Validate content type.
 		if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
+			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid content type")
 			return
 		}
 		// Parse URL values from request body.
 		if err := r.ParseForm(); err != nil {
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
+			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid request body")
 			return
 		}
 		// Validate grant type.
 		grantType := r.Form.Get("grant_type")
 		if grantType != "client_credentials" {
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "unsupported grant type")
+			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeUnsupportedGrantType, "unsupported grant type")
 			return
 		}
 		// Validate HTTP Basic Auth credentials.
 		username, password, ok := r.BasicAuth()
 		if !ok {
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing HTTP basic authorization")
+			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "missing HTTP basic authorization")
 			return
 		}
 		var authorized bool
@@ -136,7 +148,7 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 		}
 		if !authorized {
 			// TODO: ACT conformance test requires 400, but semantically this should be 401.
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid HTTP basic auth")
+			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid HTTP basic auth")
 			return
 		}
 		accessToken, err := s.keypair.CreateJWT(JWTClaims{
@@ -144,7 +156,7 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 			IssuedAt: time.Now().Unix(),
 		})
 		if err != nil {
-			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to create JWT")
+			s.oauthError(w, http.StatusInternalServerError, ileap.OAuthErrorCodeServerError, "failed to create JWT")
 			return
 		}
 		clientCredentials := ileap.ClientCredentials{
@@ -152,7 +164,7 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 			TokenType:   "bearer",
 		}
 		if err := json.NewEncoder(w).Encode(clientCredentials); err != nil {
-			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.oauthError(w, http.StatusInternalServerError, ileap.OAuthErrorCodeServerError, "failed to encode response")
 			return
 		}
 	}

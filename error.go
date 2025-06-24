@@ -35,7 +35,7 @@ const (
 
 // Error implements the error interface.
 func (e *Error) Error() string {
-	return fmt.Sprintf("%s: %s", e.Code, e.Message)
+	return fmt.Sprintf("iLEAP error %s: %s", e.Code, e.Message)
 }
 
 // ClientError is an HTTP response error received by an iLEAP client.
@@ -48,13 +48,13 @@ type ClientError struct {
 	Status string `json:"status"`
 	// StatusCode is the HTTP status code.
 	StatusCode int `json:"statusCode"`
-	// Body is the PACT error body.
-	Body Error `json:"error"`
+	// Body is the error body.
+	Body error `json:"error"`
 }
 
 // Error implements the error interface.
 func (e *ClientError) Error() string {
-	return fmt.Sprintf("%s %s: HTTP %s: (%s)", e.Method, e.URL, e.Status, e.Body)
+	return fmt.Sprintf("%s %s: HTTP %s: (%s)", e.Method, e.URL, e.Status, e.Body.Error())
 }
 
 func newClientError(resp *http.Response) *ClientError {
@@ -73,6 +73,6 @@ func newClientError(resp *http.Response) *ClientError {
 		URL:        resp.Request.URL.String(),
 		Status:     resp.Status,
 		StatusCode: resp.StatusCode,
-		Body:       errorBody,
+		Body:       &errorBody,
 	}
 }

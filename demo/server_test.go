@@ -57,7 +57,7 @@ func TestServer(t *testing.T) {
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
 		})
 
 		t.Run("invalid request body", func(t *testing.T) {
@@ -66,7 +66,7 @@ func TestServer(t *testing.T) {
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
 		})
 
 		t.Run("unsupported grant type", func(t *testing.T) {
@@ -75,7 +75,7 @@ func TestServer(t *testing.T) {
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeUnsupportedGrantType)
 		})
 
 		t.Run("missing basic auth", func(t *testing.T) {
@@ -84,7 +84,7 @@ func TestServer(t *testing.T) {
 			// No basic auth set
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
 		})
 
 		t.Run("invalid credentials", func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestServer(t *testing.T) {
 			req.SetBasicAuth("invalid", "credentials")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
 		})
 	})
 
@@ -212,6 +212,27 @@ func checkErrorResponse(t *testing.T, w *httptest.ResponseRecorder, expectedStat
 	}
 	if errorResp.Message == "" {
 		t.Error("expected non-empty error message")
+	}
+}
+
+func checkOAuthErrorResponse(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, expectedCode ileap.OAuthErrorCode) {
+	t.Helper()
+	if w.Code != expectedStatus {
+		t.Fatalf("expected status %d, got %d: %s", expectedStatus, w.Code, w.Body.String())
+	}
+	contentType := w.Header().Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("expected Content-Type 'application/json', got '%s'", contentType)
+	}
+	var errorResp ileap.OAuthError
+	if err := json.NewDecoder(w.Body).Decode(&errorResp); err != nil {
+		t.Fatalf("failed to decode OAuth error response: %v", err)
+	}
+	if errorResp.Code != expectedCode {
+		t.Errorf("expected OAuth error code '%s', got '%s'", expectedCode, errorResp.Code)
+	}
+	if errorResp.Description == "" {
+		t.Error("expected non-empty OAuth error description")
 	}
 }
 

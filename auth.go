@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"sync"
@@ -98,11 +99,12 @@ type oauth2TokenAuthenticator struct {
 }
 
 func (t *oauth2TokenAuthenticator) newRequest(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, method, t.baseURL+path, body)
+	request, err := http.NewRequestWithContext(ctx, method, t.baseURL+path, body)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
-	return req, nil
+	request.Header.Set("User-Agent", getUserAgent())
+	return request, nil
 }
 
 func (t *oauth2TokenAuthenticator) Authenticate(ctx context.Context) (_ ClientCredentials, err error) {
@@ -126,11 +128,25 @@ func (t *oauth2TokenAuthenticator) Authenticate(ctx context.Context) (_ ClientCr
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return ClientCredentials{}, fmt.Errorf("response status code: %d", res.StatusCode)
+		return ClientCredentials{}, newOAuthError(res)
 	}
 	var response ClientCredentials
 	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
 		return ClientCredentials{}, fmt.Errorf("decode response: %w", err)
 	}
 	return response, nil
+}
+
+func newOAuthError(res *http.Response) error {
+	var errorBody OAuthError
+	if err := json.NewDecoder(res.Body).Decode(&errorBody); err != nil {
+		slog.Debug("failed to decode OAuth error response", "error", err)
+	}
+	return &ClientError{
+		Method:     res.Request.Method,
+		URL:        res.Request.URL.String(),
+		Status:     res.Status,
+		StatusCode: res.StatusCode,
+		Body:       &errorBody,
+	}
 }

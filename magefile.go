@@ -25,7 +25,7 @@ func Lint() error {
 // Test runs the Go tests.
 func Test() error {
 	mg.Deps(Generate)
-	return sh.RunV("go", "test", "-v", "./...")
+	return sh.RunV("go", "test", "-v", "-cover", "./...")
 }
 
 // Generate runs all code generators.
