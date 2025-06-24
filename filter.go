@@ -3,6 +3,7 @@ package ileap
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/way-platform/ileap-go/openapi/ileapv0"
 )
@@ -58,13 +59,13 @@ func (f *FilterPredicateV2) UnmarshalString(data string) error {
 		return fmt.Errorf("invalid predicate: `%s`", data)
 	}
 	switch lhs := fields[0]; lhs {
-	case "pcf/geographyCountry", "productCategoryCpc":
+	case "pcf/geographyCountry", "productCategoryCpc", "created":
 		f.LHS = lhs
 	default:
 		return fmt.Errorf("invalid predicate LHS: `%s`", lhs)
 	}
 	switch operator := fields[1]; operator {
-	case "eq":
+	case "eq", "gt", "lt":
 		f.Operator = operator
 	default:
 		return fmt.Errorf("invalid predicate operator: `%s`", operator)
@@ -86,6 +87,8 @@ func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv0.ProductFootprint
 		}
 	case "productCategoryCpc":
 		lhsValue = footprint.ProductCategoryCpc
+	case "created":
+		lhsValue = footprint.Created.Format(time.RFC3339)
 	default:
 		return false
 	}
@@ -93,8 +96,14 @@ func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv0.ProductFootprint
 		return false
 	}
 	rhsValue := strings.Trim(f.RHS, "'")
-	if f.Operator == "eq" {
+	switch f.Operator {
+	case "eq":
 		return lhsValue == rhsValue
+	case "gt":
+		return lhsValue > rhsValue
+	case "lt":
+		return lhsValue < rhsValue
+	default:
+		return false
 	}
-	return false
 }

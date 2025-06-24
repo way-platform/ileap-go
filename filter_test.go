@@ -3,6 +3,7 @@ package ileap
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/way-platform/ileap-go/openapi/ileapv0"
 )
@@ -61,6 +62,25 @@ func TestFilterV2_UnmarshalString(t *testing.T) {
 						LHS:      "productCategoryCpc",
 						Operator: "eq",
 						RHS:      "'6398'",
+					},
+				},
+			},
+		},
+
+		{
+			name: "productCategoryCpc and created",
+			data: "(productCategoryCpc eq '6398') and (created gt '1900-01-01T00:00:00.000Z')",
+			want: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "productCategoryCpc",
+						Operator: "eq",
+						RHS:      "'6398'",
+					},
+					{
+						LHS:      "created",
+						Operator: "gt",
+						RHS:      "'1900-01-01T00:00:00.000Z'",
 					},
 				},
 			},
@@ -125,6 +145,40 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 						LHS:      "pcf/geographyCountry",
 						Operator: "eq",
 						RHS:      "'US'",
+					},
+				},
+			},
+			want: false,
+		},
+
+		{
+			name: "created gt",
+			footprint: &ileapv0.ProductFootprintForILeapType{
+				Created: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			filter: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "created",
+						Operator: "gt",
+						RHS:      "'2024-01-01T00:00:00.000Z'",
+					},
+				},
+			},
+			want: true,
+		},
+
+		{
+			name: "created gt, no match",
+			footprint: &ileapv0.ProductFootprintForILeapType{
+				Created: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			filter: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "created",
+						Operator: "gt",
+						RHS:      "'2024-01-01T00:00:00.000Z'",
 					},
 				},
 			},
