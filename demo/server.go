@@ -281,13 +281,13 @@ func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 			return
 		}
 		switch event.Type {
-		case ileap.EventTypeRequestCreated:
+		case ileap.EventTypeRequestCreatedV1:
 			// TODO: Handle RequestCreated.
-		case ileap.EventTypeRequestFulfilled:
+		case ileap.EventTypeRequestFulfilledV1:
 			// TODO: Handle RequestFulfilled.
-		case ileap.EventTypeRequestRejected:
+		case ileap.EventTypeRequestRejectedV1:
 			// TODO: Handle RequestRejected.
-		case ileap.EventTypePublished:
+		case ileap.EventTypePublishedV1:
 			// TODO: Handle Published.
 		default:
 			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid event type: %s", event.Type)
