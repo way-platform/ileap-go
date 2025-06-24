@@ -62,21 +62,21 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
-			s.error(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "missing authorization")
+			s.errorf(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "missing authorization")
 			return
 		}
 		if !strings.HasPrefix(auth, "Bearer ") {
-			s.error(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "unsupported authentication scheme")
+			s.errorf(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "unsupported authentication scheme")
 			return
 		}
 		token := strings.TrimPrefix(auth, "Bearer ")
 		if token == "" {
-			s.error(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "missing access token")
+			s.errorf(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "missing access token")
 			return
 		}
 		if _, err := s.keypair.ValidateJWT(token); err != nil {
 			// TODO: ACT conformance test requires 400, but semantically this should be 401.
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid access token")
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid access token")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -93,12 +93,12 @@ func (s *Server) registerRoute(pattern string, handler http.Handler) {
 	s.serveMux.Handle(pattern, handler)
 }
 
-func (s *Server) error(w http.ResponseWriter, status int, errorCode ileap.ErrorCode, message string) {
+func (s *Server) errorf(w http.ResponseWriter, status int, errorCode ileap.ErrorCode, format string, args ...any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(ileap.Error{
 		Code:    errorCode,
-		Message: message,
+		Message: fmt.Sprintf(format, args...),
 	}); err != nil {
 		slog.Error("failed to encode error response", "error", err)
 		return
@@ -181,7 +181,7 @@ func (s *Server) listFootprintsRoute() (string, http.HandlerFunc) {
 			Data: s.footprints,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -198,7 +198,7 @@ func (s *Server) getFootprintRoute() (string, http.HandlerFunc) {
 			}
 		}
 		if footprint == nil {
-			s.error(w, http.StatusNotFound, ileap.ErrorCodeNotFound, "not found")
+			s.errorf(w, http.StatusNotFound, ileap.ErrorCodeNotFound, "not found")
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -206,7 +206,7 @@ func (s *Server) getFootprintRoute() (string, http.HandlerFunc) {
 			Data: *footprint,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -220,7 +220,7 @@ func (s *Server) listTADsRoute() (string, http.HandlerFunc) {
 			Data: s.tads,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -239,7 +239,7 @@ func (s *Server) openIDConnectConfigRoute() (string, http.HandlerFunc) {
 			SubjectTypesSupported:  []string{"public"},
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -252,7 +252,7 @@ func (s *Server) jwksRoute() (string, http.HandlerFunc) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(jwks); err != nil {
-			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
@@ -261,21 +261,21 @@ func (s *Server) jwksRoute() (string, http.HandlerFunc) {
 func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 	return "POST /2/events", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") == "" {
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing content type")
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing content type")
 			return
 		}
 		if mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err == nil {
 			if mediaType != "application/cloudevents+json" {
-				s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
+				s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type: %s", mediaType)
 				return
 			}
 		} else {
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
 		}
 		// Parse the event from request body.
 		var event ileap.Event
 		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
 			return
 		}
 		switch event.Type {
@@ -288,7 +288,7 @@ func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 		case ileap.EventTypePublished:
 			// TODO: Handle Published.
 		default:
-			s.error(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid event type")
+			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid event type")
 		}
 		var response struct {
 			Status  string `json:"status"`
@@ -298,7 +298,7 @@ func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 		response.Message = "Event successfully processed"
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.error(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
 			return
 		}
 	}
