@@ -843,6 +843,92 @@
       "extensions": [
         {
           "data": {
+            "co2eIntensityTTW": "0.089",
+            "co2eIntensityThroughput": "tkm",
+            "co2eIntensityWTW": "0.116",
+            "emptyDistanceFactor": "0.3",
+            "energyCarriers": [
+              {
+                "emissionFactorTTW": "3.17",
+                "emissionFactorWTW": "4.13",
+                "energyCarrier": "Diesel",
+                "energyConsumptionUnit": "kg",
+                "feedstocks": [
+                  {
+                    "feedstock": "Fossil",
+                    "regionProvenance": "Europe"
+                  }
+                ]
+              }
+            ],
+            "isAccredited": true,
+            "isVerified": true,
+            "loadFactor": "0.6",
+            "mode": "Road",
+            "temperatureControl": "refrigerated",
+            "tocId": "truck-40t-euro5-de",
+            "truckLoadingSequence": "FTL"
+          },
+          "dataSchema": "https://api.ileap.sine.dev/toc.json",
+          "documentation": "https://sine-fdn.github.io/ileap-extension/",
+          "specVersion": "2.0.0"
+        }
+      ],
+      "id": "f9526d98-de57-4d24-a131-95fcef75defb",
+      "pcf": {
+        "biogenicCarbonContent": "0",
+        "boundaryProcessesDescription": "SFC GLEC Framework-conforming (W2W CO2e emissions)",
+        "characterizationFactors": "AR6",
+        "crossSectoralStandardsUsed": [
+          "GHG Protocol Product standard"
+        ],
+        "declaredUnit": "ton kilometer",
+        "exemptedEmissionsDescription": "",
+        "exemptedEmissionsPercent": 0,
+        "fossilCarbonContent": "0.116",
+        "fossilGhgEmissions": "0.116",
+        "ipccCharacterizationFactorsSources": [
+          "AR6"
+        ],
+        "pCfExcludingBiogenic": "0.116",
+        "packagingEmissionsIncluded": false,
+        "primaryDataShare": 56.12,
+        "productOrSectorSpecificRules": [],
+        "referencePeriodEnd": "2022-01-01T00:00:00Z",
+        "referencePeriodStart": "2021-01-01T00:00:00Z",
+        "secondaryEmissionFactorSources": [
+          {
+            "name": "Ecoinvent",
+            "version": "3.9.1"
+          }
+        ],
+        "unitaryProductAmount": "1"
+      },
+      "precedingPfIds": null,
+      "productCategoryCpc": "83117",
+      "productDescription": "Logistics emissions related to TOC with ID truck-40t-euro5-de",
+      "productIds": [
+        "urn:pathfinder:product:customcode:vendor-assigned:toc:truck-40t-euro5-de"
+      ],
+      "productNameCompany": "TOC with ID truck-40t-euro5-de",
+      "specVersion": "2.0.0",
+      "status": "Active",
+      "statusComment": null,
+      "updated": null,
+      "validityPeriodEnd": null,
+      "validityPeriodStart": null,
+      "version": 0
+    },
+    {
+      "comment": "",
+      "companyIds": [
+        "urn:epc:id:sgln:4063973.00000.8"
+      ],
+      "companyName": "Super Duper Transport Co.",
+      "created": "2022-05-22T21:47:32Z",
+      "extensions": [
+        {
+          "data": {
             "co2eIntensityTTW": "0.609",
             "co2eIntensityThroughput": "tkm",
             "co2eIntensityWTW": "0.793",

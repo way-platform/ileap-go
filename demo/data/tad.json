@@ -2,11 +2,11 @@
   "tads": [
     {
       "activityId": "1",
-      "arrivalAt": "2025-03-24T09:39:09.717782864Z",
+      "arrivalAt": "2025-07-04T15:06:29.687750896Z",
       "consignmentIds": [
         "1"
       ],
-      "departureAt": "2025-03-14T09:39:09.717782532Z",
+      "departureAt": "2025-06-24T15:06:29.687748692Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -48,11 +48,11 @@
     },
     {
       "activityId": "2",
-      "arrivalAt": "2025-03-24T09:39:09.717785453Z",
+      "arrivalAt": "2025-07-04T15:06:29.687765073Z",
       "consignmentIds": [
         "2"
       ],
-      "departureAt": "2025-03-14T09:39:09.717785388Z",
+      "departureAt": "2025-06-24T15:06:29.687764873Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -94,11 +94,11 @@
     },
     {
       "activityId": "3",
-      "arrivalAt": "2025-03-24T09:39:09.717786493Z",
+      "arrivalAt": "2025-07-04T15:06:29.687767608Z",
       "consignmentIds": [
         "3"
       ],
-      "departureAt": "2025-03-14T09:39:09.717786429Z",
+      "departureAt": "2025-06-24T15:06:29.687767398Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -140,11 +140,11 @@
     },
     {
       "activityId": "4",
-      "arrivalAt": "2025-03-24T09:39:09.717787535Z",
+      "arrivalAt": "2025-07-04T15:06:29.687769933Z",
       "consignmentIds": [
         "4"
       ],
-      "departureAt": "2025-03-14T09:39:09.717787473Z",
+      "departureAt": "2025-06-24T15:06:29.687769742Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -186,11 +186,11 @@
     },
     {
       "activityId": "5",
-      "arrivalAt": "2025-03-24T09:39:09.717788509Z",
+      "arrivalAt": "2025-07-04T15:06:29.687772407Z",
       "consignmentIds": [
         "5"
       ],
-      "departureAt": "2025-03-14T09:39:09.717788446Z",
+      "departureAt": "2025-06-24T15:06:29.687772247Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -232,11 +232,11 @@
     },
     {
       "activityId": "6",
-      "arrivalAt": "2025-03-24T09:39:09.717790574Z",
+      "arrivalAt": "2025-07-04T15:06:29.687778429Z",
       "consignmentIds": [
         "6"
       ],
-      "departureAt": "2025-03-14T09:39:09.717790491Z",
+      "departureAt": "2025-06-24T15:06:29.687778229Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -278,11 +278,11 @@
     },
     {
       "activityId": "7",
-      "arrivalAt": "2025-03-24T09:39:09.717791689Z",
+      "arrivalAt": "2025-07-04T15:06:29.687781074Z",
       "consignmentIds": [
         "7"
       ],
-      "departureAt": "2025-03-14T09:39:09.717791625Z",
+      "departureAt": "2025-06-24T15:06:29.687780864Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -324,11 +324,11 @@
     },
     {
       "activityId": "8",
-      "arrivalAt": "2025-03-24T09:39:09.717792875Z",
+      "arrivalAt": "2025-07-04T15:06:29.687783358Z",
       "consignmentIds": [
         "8"
       ],
-      "departureAt": "2025-03-14T09:39:09.717792809Z",
+      "departureAt": "2025-06-24T15:06:29.687783188Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -370,11 +370,11 @@
     },
     {
       "activityId": "9",
-      "arrivalAt": "2025-03-24T09:39:09.717793925Z",
+      "arrivalAt": "2025-07-04T15:06:29.687785613Z",
       "consignmentIds": [
         "9"
       ],
-      "departureAt": "2025-03-14T09:39:09.717793861Z",
+      "departureAt": "2025-06-24T15:06:29.687785422Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
@@ -416,11 +416,11 @@
     },
     {
       "activityId": "10",
-      "arrivalAt": "2025-03-24T09:39:09.71779614Z",
+      "arrivalAt": "2025-07-04T15:06:29.68779477Z",
       "consignmentIds": [
         "10"
       ],
-      "departureAt": "2025-03-14T09:39:09.717796076Z",
+      "departureAt": "2025-06-24T15:06:29.68779459Z",
       "destination": {
         "city": "Amsterdam",
         "country": "NL",
