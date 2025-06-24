@@ -73,7 +73,8 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if _, err := s.keypair.ValidateJWT(token); err != nil {
-			http.Error(w, "invalid access token", http.StatusUnauthorized)
+			// TODO: ACT conformance test requires 400, but semantically this should be 401.
+			http.Error(w, "invalid access token", http.StatusBadRequest)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -122,7 +123,8 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 			}
 		}
 		if !authorized {
-			http.Error(w, "invalid HTTP basic authorization", http.StatusUnauthorized)
+			// TODO: ACT conformance test requires 400, but semantically this should be 401.
+			http.Error(w, "invalid HTTP basic auth", http.StatusBadRequest)
 			return
 		}
 		accessToken, err := s.keypair.CreateJWT(JWTClaims{

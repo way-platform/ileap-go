@@ -58,8 +58,9 @@ func TestServer_Route_ListFootprints(t *testing.T) {
 		req := httptest.NewRequest("GET", "/2/footprints", nil)
 		w := httptest.NewRecorder()
 		server.Handler().ServeHTTP(w, req)
-		if w.Code != http.StatusUnauthorized {
-			t.Fatalf("expected status 401, got %d", w.Code)
+		expected := http.StatusUnauthorized
+		if w.Code != expected {
+			t.Fatalf("expected status %d, got %d", expected, w.Code)
 		}
 	})
 
@@ -68,8 +69,9 @@ func TestServer_Route_ListFootprints(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer invalid.token.here")
 		w := httptest.NewRecorder()
 		server.Handler().ServeHTTP(w, req)
-		if w.Code != http.StatusUnauthorized {
-			t.Fatalf("expected status 401, got %d", w.Code)
+		expected := http.StatusBadRequest
+		if w.Code != expected {
+			t.Fatalf("expected status %d, got %d", expected, w.Code)
 		}
 	})
 
