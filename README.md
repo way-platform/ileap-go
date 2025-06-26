@@ -71,7 +71,7 @@ The following example logs in to the [SINE Foundation](https://sine.foundation/)
 
 ```bash
 $ ileap auth login \
-  --base-url https://api.ileap.sine.dev \
+  --base-url https://ileap.wayplatform.com \
   --client-id hello \
   --client-secret pathfinder
 

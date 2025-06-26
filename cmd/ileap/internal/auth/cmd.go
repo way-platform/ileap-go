@@ -111,7 +111,7 @@ func newLoginCommand() *cobra.Command {
 		if err := writeCredentials(auth); err != nil {
 			return err
 		}
-		cmd.Printf("Logged in to %s.", *baseURL)
+		cmd.Printf("Logged in to %s.\n", *baseURL)
 		return nil
 	}
 	return cmd
