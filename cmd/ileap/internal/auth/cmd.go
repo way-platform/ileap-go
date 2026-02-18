@@ -90,11 +90,12 @@ func newLoginCommand() *cobra.Command {
 		Short: "Login to an iLEAP API",
 	}
 	clientID := cmd.Flags().String("client-id", "", "client ID to use for authentication")
-	cmd.MarkFlagRequired("client-id")
-	clientSecret := cmd.Flags().String("client-secret", "", "client secret to use for authentication")
-	cmd.MarkFlagRequired("client-secret")
+	_ = cmd.MarkFlagRequired("client-id")
+	clientSecret := cmd.Flags().
+		String("client-secret", "", "client secret to use for authentication")
+	_ = cmd.MarkFlagRequired("client-secret")
 	baseURL := cmd.Flags().String("base-url", "", "base URL to use for authentication")
-	cmd.MarkFlagRequired("base-url")
+	_ = cmd.MarkFlagRequired("base-url")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		if !strings.HasPrefix(*baseURL, "http://") && !strings.HasPrefix(*baseURL, "https://") {
 			return fmt.Errorf("--base-url must start with http:// or https://")

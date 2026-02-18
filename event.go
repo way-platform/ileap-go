@@ -14,8 +14,8 @@ type Event struct {
 	Type EventType `json:"type"`
 	// Specversion is the version of the CloudEvents specification that the event uses.
 	Specversion string `json:"specversion"`
-	// Id is a unique identifier for the event.
-	Id string `json:"id"`
+	// ID is a unique identifier for the event.
+	ID string `json:"id"`
 	// Source is the source of the event.
 	Source string `json:"source"`
 	// Time is the time the event occurred.

@@ -58,13 +58,15 @@ func (f *FilterPredicateV2) UnmarshalString(predicate string) error {
 	if strings.HasPrefix(data, "(") && strings.HasSuffix(data, ")") {
 		data = data[1 : len(data)-1]
 	}
-	if strings.HasPrefix(data, "productIds/any(productId:(productId eq ") && strings.HasSuffix(data, "))") {
+	if strings.HasPrefix(data, "productIds/any(productId:(productId eq ") &&
+		strings.HasSuffix(data, "))") {
 		f.LHS = "productIds"
 		f.Operator = "any/eq"
 		f.RHS = data[len("productIds/any(productId:(productId eq ") : len(data)-len("))")]
 		return nil
 	}
-	if strings.HasPrefix(data, "companyIds/any(companyId:(companyId eq ") && strings.HasSuffix(data, "))") {
+	if strings.HasPrefix(data, "companyIds/any(companyId:(companyId eq ") &&
+		strings.HasSuffix(data, "))") {
 		f.LHS = "companyIds"
 		f.Operator = "any/eq"
 		f.RHS = data[len("companyIds/any(companyId:(companyId eq ") : len(data)-len("))")]

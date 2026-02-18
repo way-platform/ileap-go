@@ -1,3 +1,4 @@
+// Package ileap provides the client for the iLEAP API.
 package ileap
 
 import (
@@ -72,7 +73,9 @@ type reuseTokenCredentialsTransport struct {
 	credentials ClientCredentials
 }
 
-func (t *reuseTokenCredentialsTransport) RoundTrip(req *http.Request) (_ *http.Response, err error) {
+func (t *reuseTokenCredentialsTransport) RoundTrip(
+	req *http.Request,
+) (_ *http.Response, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("reuse token credentials transport: %w", err)
@@ -82,6 +85,7 @@ func (t *reuseTokenCredentialsTransport) RoundTrip(req *http.Request) (_ *http.R
 	return t.transport.RoundTrip(req)
 }
 
+// NewOAuth2TokenAuthenticator creates a new OAuth2 TokenAuthenticator.
 func NewOAuth2TokenAuthenticator(clientID, clientSecret, baseURL string) TokenAuthenticator {
 	return &oauth2TokenAuthenticator{
 		clientID:     clientID,
@@ -98,7 +102,11 @@ type oauth2TokenAuthenticator struct {
 	httpClient   *http.Client
 }
 
-func (t *oauth2TokenAuthenticator) newRequest(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
+func (t *oauth2TokenAuthenticator) newRequest(
+	ctx context.Context,
+	method, path string,
+	body io.Reader,
+) (*http.Request, error) {
 	request, err := http.NewRequestWithContext(ctx, method, t.baseURL+path, body)
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
@@ -107,7 +115,9 @@ func (t *oauth2TokenAuthenticator) newRequest(ctx context.Context, method, path 
 	return request, nil
 }
 
-func (t *oauth2TokenAuthenticator) Authenticate(ctx context.Context) (_ ClientCredentials, err error) {
+func (t *oauth2TokenAuthenticator) Authenticate(
+	ctx context.Context,
+) (_ ClientCredentials, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("authenticate: %w", err)
@@ -126,7 +136,7 @@ func (t *oauth2TokenAuthenticator) Authenticate(ctx context.Context) (_ ClientCr
 	if err != nil {
 		return ClientCredentials{}, fmt.Errorf("send request: %w", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	if res.StatusCode != http.StatusOK {
 		return ClientCredentials{}, newOAuthError(res)
 	}

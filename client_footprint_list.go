@@ -27,7 +27,10 @@ type ListFootprintsResponse struct {
 }
 
 // ListFootprints fetches a list of product carbon footprints.
-func (c *Client) ListFootprints(ctx context.Context, request *ListFootprintsRequest) (_ *ListFootprintsResponse, err error) {
+func (c *Client) ListFootprints(
+	ctx context.Context,
+	request *ListFootprintsRequest,
+) (_ *ListFootprintsResponse, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("get iLEAP footprint: %w", err)
@@ -49,7 +52,7 @@ func (c *Client) ListFootprints(ctx context.Context, request *ListFootprintsRequ
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer httpResponse.Body.Close()
+	defer func() { _ = httpResponse.Body.Close() }()
 	if httpResponse.StatusCode != http.StatusOK {
 		return nil, newClientError(httpResponse)
 	}

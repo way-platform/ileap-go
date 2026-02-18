@@ -1,3 +1,4 @@
+// Package demo provides a demo server implementation.
 package demo
 
 import (

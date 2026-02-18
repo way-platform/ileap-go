@@ -1,3 +1,4 @@
+// Package main runs the demo server.
 package main
 
 import (

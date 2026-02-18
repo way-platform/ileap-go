@@ -17,7 +17,10 @@ type GetFootprintRequest struct {
 }
 
 // GetFootprint fetches a product carbon footprint by ID.
-func (c *Client) GetFootprint(ctx context.Context, request *GetFootprintRequest) (_ *ileapv0.ProductFootprintForILeapType, err error) {
+func (c *Client) GetFootprint(
+	ctx context.Context,
+	request *GetFootprintRequest,
+) (_ *ileapv0.ProductFootprintForILeapType, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("get iLEAP footprint: %w", err)
@@ -31,7 +34,7 @@ func (c *Client) GetFootprint(ctx context.Context, request *GetFootprintRequest)
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer httpResponse.Body.Close()
+	defer func() { _ = httpResponse.Body.Close() }()
 	if httpResponse.StatusCode != http.StatusOK {
 		return nil, newClientError(httpResponse)
 	}

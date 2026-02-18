@@ -6,24 +6,18 @@ on:
 
 permissions: write-all
 
-env:
-  GO_VERSION: "1.24.x"
-
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Go ${{ env.GO_VERSION }}
+      - name: Setup Go
         uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
 
       - name: Build
-        run: go tool mage build
+        run: ./tools/mage build
 
       - name: Run Go Semantic Release
         uses: go-semantic-release/action@v1
@@ -31,10 +25,5 @@ jobs:
           allow-initial-development-versions: true
           hooks: goreleaser
           github-token: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Docker Push
-        run: go tool mage dockerPush
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

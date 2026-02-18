@@ -67,7 +67,12 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if !strings.HasPrefix(auth, "Bearer ") {
-			s.errorf(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "unsupported authentication scheme")
+			s.errorf(
+				w,
+				http.StatusUnauthorized,
+				ileap.ErrorCodeBadRequest,
+				"unsupported authentication scheme",
+			)
 			return
 		}
 		token := strings.TrimPrefix(auth, "Bearer ")
@@ -94,7 +99,13 @@ func (s *Server) registerRoute(pattern string, handler http.Handler) {
 	s.serveMux.Handle(pattern, handler)
 }
 
-func (s *Server) errorf(w http.ResponseWriter, status int, errorCode ileap.ErrorCode, format string, args ...any) {
+func (s *Server) errorf(
+	w http.ResponseWriter,
+	status int,
+	errorCode ileap.ErrorCode,
+	format string,
+	args ...any,
+) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(ileap.Error{
@@ -106,7 +117,12 @@ func (s *Server) errorf(w http.ResponseWriter, status int, errorCode ileap.Error
 	}
 }
 
-func (s *Server) oauthError(w http.ResponseWriter, status int, code ileap.OAuthErrorCode, description string) {
+func (s *Server) oauthError(
+	w http.ResponseWriter,
+	status int,
+	code ileap.OAuthErrorCode,
+	description string,
+) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(ileap.OAuthError{
@@ -122,24 +138,44 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 	return "POST /auth/token", func(w http.ResponseWriter, r *http.Request) {
 		// Validate content type.
 		if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid content type")
+			s.oauthError(
+				w,
+				http.StatusBadRequest,
+				ileap.OAuthErrorCodeInvalidRequest,
+				"invalid content type",
+			)
 			return
 		}
 		// Parse URL values from request body.
 		if err := r.ParseForm(); err != nil {
-			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid request body")
+			s.oauthError(
+				w,
+				http.StatusBadRequest,
+				ileap.OAuthErrorCodeInvalidRequest,
+				"invalid request body",
+			)
 			return
 		}
 		// Validate grant type.
 		grantType := r.Form.Get("grant_type")
 		if grantType != "client_credentials" {
-			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeUnsupportedGrantType, "unsupported grant type")
+			s.oauthError(
+				w,
+				http.StatusBadRequest,
+				ileap.OAuthErrorCodeUnsupportedGrantType,
+				"unsupported grant type",
+			)
 			return
 		}
 		// Validate HTTP Basic Auth credentials.
 		username, password, ok := r.BasicAuth()
 		if !ok {
-			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "missing HTTP basic authorization")
+			s.oauthError(
+				w,
+				http.StatusBadRequest,
+				ileap.OAuthErrorCodeInvalidRequest,
+				"missing HTTP basic authorization",
+			)
 			return
 		}
 		var authorized bool
@@ -151,7 +187,12 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 		}
 		if !authorized {
 			// TODO: ACT conformance test requires 400, but semantically this should be 401.
-			s.oauthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid HTTP basic auth")
+			s.oauthError(
+				w,
+				http.StatusBadRequest,
+				ileap.OAuthErrorCodeInvalidRequest,
+				"invalid HTTP basic auth",
+			)
 			return
 		}
 		accessToken, err := s.keypair.CreateJWT(JWTClaims{
@@ -159,7 +200,12 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 			IssuedAt: time.Now().Unix(),
 		})
 		if err != nil {
-			s.oauthError(w, http.StatusInternalServerError, ileap.OAuthErrorCodeServerError, "failed to create JWT")
+			s.oauthError(
+				w,
+				http.StatusInternalServerError,
+				ileap.OAuthErrorCodeServerError,
+				"failed to create JWT",
+			)
 			return
 		}
 		clientCredentials := ileap.ClientCredentials{
@@ -167,7 +213,12 @@ func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
 			TokenType:   "bearer",
 		}
 		if err := json.NewEncoder(w).Encode(clientCredentials); err != nil {
-			s.oauthError(w, http.StatusInternalServerError, ileap.OAuthErrorCodeServerError, "failed to encode response")
+			s.oauthError(
+				w,
+				http.StatusInternalServerError,
+				ileap.OAuthErrorCodeServerError,
+				"failed to encode response",
+			)
 			return
 		}
 	}
@@ -215,7 +266,12 @@ func (s *Server) listFootprintsRoute() (string, http.HandlerFunc) {
 			Data: filteredFootprints,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(
+				w,
+				http.StatusInternalServerError,
+				ileap.ErrorCodeInternalError,
+				"failed to encode response",
+			)
 			return
 		}
 	}
@@ -240,7 +296,12 @@ func (s *Server) getFootprintRoute() (string, http.HandlerFunc) {
 			Data: *footprint,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(
+				w,
+				http.StatusInternalServerError,
+				ileap.ErrorCodeInternalError,
+				"failed to encode response",
+			)
 			return
 		}
 	}
@@ -261,14 +322,19 @@ func (s *Server) listTADsRoute() (string, http.HandlerFunc) {
 			Data: s.tads,
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(
+				w,
+				http.StatusInternalServerError,
+				ileap.ErrorCodeInternalError,
+				"failed to encode response",
+			)
 			return
 		}
 	}
 }
 
 func (s *Server) openIDConnectConfigRoute() (string, http.HandlerFunc) {
-	return "GET /.well-known/openid-configuration", func(w http.ResponseWriter, r *http.Request) {
+	return "GET /.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := OpenIDConfiguration{
 			IssuerURL:              s.baseURL,
@@ -280,20 +346,30 @@ func (s *Server) openIDConnectConfigRoute() (string, http.HandlerFunc) {
 			SubjectTypesSupported:  []string{"public"},
 		}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(
+				w,
+				http.StatusInternalServerError,
+				ileap.ErrorCodeInternalError,
+				"failed to encode response",
+			)
 			return
 		}
 	}
 }
 
 func (s *Server) jwksRoute() (string, http.HandlerFunc) {
-	return "GET /jwks", func(w http.ResponseWriter, r *http.Request) {
+	return "GET /jwks", func(w http.ResponseWriter, _ *http.Request) {
 		jwks := JWKSet{
 			Keys: []JWK{s.keypair.JWK()},
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(jwks); err != nil {
-			s.errorf(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "failed to encode response")
+			s.errorf(
+				w,
+				http.StatusInternalServerError,
+				ileap.ErrorCodeInternalError,
+				"failed to encode response",
+			)
 			return
 		}
 	}
@@ -309,7 +385,13 @@ func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 			// TODO: PACT specification requires "application/cloudevents+json",
 			// but the conformance checker currently sends application/json.
 			if mediaType != "application/cloudevents+json" && mediaType != "application/json" {
-				s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type: %s", mediaType)
+				s.errorf(
+					w,
+					http.StatusBadRequest,
+					ileap.ErrorCodeBadRequest,
+					"invalid content type: %s",
+					mediaType,
+				)
 				return
 			}
 		} else {
@@ -331,7 +413,13 @@ func (s *Server) eventsRoute() (string, http.HandlerFunc) {
 		case ileap.EventTypePublishedV1:
 			// TODO: Handle Published.
 		default:
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid event type: %s", event.Type)
+			s.errorf(
+				w,
+				http.StatusBadRequest,
+				ileap.ErrorCodeBadRequest,
+				"invalid event type: %s",
+				event.Type,
+			)
 			return
 		}
 	}
