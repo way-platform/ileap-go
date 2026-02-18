@@ -1,0 +1,384 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HOC",
+  "type": "object",
+  "required": [
+    "co2eIntensityTTW",
+    "co2eIntensityWTW",
+    "energyCarriers",
+    "hocId",
+    "hubActivityUnit",
+    "hubType"
+  ],
+  "properties": {
+    "hocId": {
+      "type": "string"
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "certifications": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/NonEmptyVec_for_Certification"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "hubType": {
+      "$ref": "#/definitions/HubType"
+    },
+    "temperatureControl": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TemperatureControl"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "hubLocation": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Location"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "inboundTransportMode": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TransportMode"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outboundTransportMode": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TransportMode"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "packagingOrTrEqType": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/PackagingOrTrEqType"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "packagingOrTrEqAmount": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint",
+      "minimum": 0.0
+    },
+    "energyCarriers": {
+      "$ref": "#/definitions/NonEmptyVec_for_EnergyCarrier"
+    },
+    "co2eIntensityWTW": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "co2eIntensityTTW": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "hubActivityUnit": {
+      "$ref": "#/definitions/HubActivityUnit"
+    }
+  },
+  "definitions": {
+    "NonEmptyVec_for_Certification": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Certification"
+      }
+    },
+    "Certification": {
+      "type": "string",
+      "enum": [
+        "ISO14083:2023",
+        "GLECv2",
+        "GLECv3",
+        "GLECv3.1"
+      ]
+    },
+    "HubType": {
+      "type": "string",
+      "enum": [
+        "Transshipment",
+        "StorageAndTransshipment",
+        "Warehouse",
+        "LiquidBulkTerminal",
+        "MaritimeContainerTerminal"
+      ]
+    },
+    "TemperatureControl": {
+      "type": "string",
+      "enum": [
+        "ambient",
+        "refrigerated",
+        "mixed"
+      ]
+    },
+    "Location": {
+      "type": "object",
+      "required": [
+        "city",
+        "country"
+      ],
+      "properties": {
+        "street": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "zip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "city": {
+          "type": "string"
+        },
+        "country": {
+          "$ref": "#/definitions/ISO3166CC"
+        },
+        "iata": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/IataCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locode": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Locode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uic": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/UicCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lat": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lng": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "ISO3166CC": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "IataCode": {
+      "type": "string"
+    },
+    "Locode": {
+      "type": "string"
+    },
+    "UicCode": {
+      "type": "string"
+    },
+    "Decimal": {
+      "type": "string",
+      "pattern": "^-?\\d+(\\.\\d+)?$"
+    },
+    "TransportMode": {
+      "type": "string",
+      "enum": [
+        "Road",
+        "Rail",
+        "Air",
+        "Sea",
+        "InlandWaterway"
+      ]
+    },
+    "PackagingOrTrEqType": {
+      "type": "string",
+      "enum": [
+        "Box",
+        "Pallet",
+        "Container-TEU",
+        "Container-FEU",
+        "Container"
+      ]
+    },
+    "NonEmptyVec_for_EnergyCarrier": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/EnergyCarrier"
+      }
+    },
+    "EnergyCarrier": {
+      "type": "object",
+      "required": [
+        "emissionFactorTTW",
+        "emissionFactorWTW",
+        "energyCarrier",
+        "relativeShare"
+      ],
+      "properties": {
+        "energyCarrier": {
+          "$ref": "#/definitions/EnergyCarrierType"
+        },
+        "feedstocks": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/Feedstock"
+          }
+        },
+        "energyConsumption": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "energyConsumptionUnit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EnergyConsumptionUnit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "emissionFactorWTW": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "emissionFactorTTW": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "relativeShare": {
+          "$ref": "#/definitions/Decimal"
+        }
+      }
+    },
+    "EnergyCarrierType": {
+      "type": "string",
+      "enum": [
+        "Diesel",
+        "HVO",
+        "Petrol",
+        "CNG",
+        "LNG",
+        "LPG",
+        "HFO",
+        "MGO",
+        "Aviation fuel",
+        "Hydrogen",
+        "Methanol",
+        "Electric"
+      ]
+    },
+    "Feedstock": {
+      "type": "object",
+      "required": [
+        "feedstock"
+      ],
+      "properties": {
+        "feedstock": {
+          "$ref": "#/definitions/FeedstockType"
+        },
+        "feedstockShare": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "regionProvenance": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "FeedstockType": {
+      "type": "string",
+      "enum": [
+        "Fossil",
+        "Natural gas",
+        "Grid",
+        "Renewable electricity",
+        "Cooking oil"
+      ]
+    },
+    "EnergyConsumptionUnit": {
+      "type": "string",
+      "enum": [
+        "l",
+        "kg",
+        "kWh",
+        "MJ"
+      ]
+    },
+    "HubActivityUnit": {
+      "type": "string",
+      "enum": [
+        "TEU",
+        "tonnes"
+      ]
+    }
+  }
+}

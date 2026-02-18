@@ -1,0 +1,1655 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "demo-api",
+    "version": "0.2.0-wip"
+  },
+  "paths": {
+    "/2/footprints/{id}": {
+      "get": {
+        "operationId": "get_pcf",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/PfIdParam"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductFootprintResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "# 400 Bad Request\nThe request given is wrongly formatted or data was missing. ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequest"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "# 404 Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoSuchFootprint"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/2/footprints": {
+      "get": {
+        "operationId": "get_footprints",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0.0,
+              "nullable": true
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "description": "Syntax as defined by the ODatav4 specification",
+            "allowEmptyValue": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {
+              "link": {
+                "description": "Link header to next result set. See Tech Specs section 6.6.1",
+                "schema": {
+                  "type": "string"
+                },
+                "example": "https://api.example.com/2/footprints?[...]"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PfListingResponseInner"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "# 400 Bad Request\nThe request given is wrongly formatted or data was missing. ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequest"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/2/events": {
+      "post": {
+        "operationId": "post_event",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PathfinderEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "400": {
+            "description": "# 400 Bad Request\nThe request given is wrongly formatted or data was missing. ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequest"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "# 403 Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessDenied"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "# 501 Not Implemented\nThe request given is not implemented by the server. ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplemented"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/2/ileap/tad": {
+      "get": {
+        "operationId": "get_tad",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0.0,
+              "nullable": true
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0.0,
+              "nullable": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {
+              "link": {
+                "description": "Link header to next result set.",
+                "schema": {
+                  "type": "string"
+                },
+                "example": "https://api.example.com/2/footprints?[...]"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TadListingResponseInner"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "# 403 Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessDenied"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ProductFootprintResponse": {
+        "description": "HTTP Body of Action `GetFootprint`",
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProductFootprint_for_ILeapType"
+          }
+        }
+      },
+      "ProductFootprint_for_ILeapType": {
+        "description": "Data Type \"ProductFootprint\" of Tech Spec Version 2",
+        "type": "object",
+        "required": [
+          "comment",
+          "companyIds",
+          "companyName",
+          "created",
+          "id",
+          "pcf",
+          "productCategoryCpc",
+          "productDescription",
+          "productIds",
+          "productNameCompany",
+          "specVersion",
+          "status",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/PfId"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/VersionString"
+          },
+          "precedingPfIds": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmptyPfIdVec"
+              }
+            ],
+            "nullable": true
+          },
+          "version": {
+            "$ref": "#/components/schemas/VersionInteger"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/PfStatus"
+          },
+          "statusComment": {
+            "type": "string",
+            "nullable": true
+          },
+          "validityPeriodStart": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "validityPeriodEnd": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "companyName": {
+            "$ref": "#/components/schemas/NonEmptyString"
+          },
+          "companyIds": {
+            "$ref": "#/components/schemas/CompanyIdSet"
+          },
+          "productDescription": {
+            "type": "string"
+          },
+          "productIds": {
+            "$ref": "#/components/schemas/ProductIdSet"
+          },
+          "productCategoryCpc": {
+            "$ref": "#/components/schemas/NonEmptyString"
+          },
+          "productNameCompany": {
+            "$ref": "#/components/schemas/NonEmptyString"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "pcf": {
+            "$ref": "#/components/schemas/CarbonFootprint"
+          },
+          "extensions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DataModelExtension"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "PfId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "VersionString": {
+        "type": "string",
+        "minLength": 5,
+        "pattern": "^\\d+\\.\\d+\\.\\d+(-\\d{8})?$"
+      },
+      "NonEmptyPfIdVec": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "VersionInteger": {
+        "type": "integer",
+        "format": "int32",
+        "maximum": 2147483647.0,
+        "minimum": 0.0
+      },
+      "PfStatus": {
+        "type": "string",
+        "enum": [
+          "Active",
+          "Deprecated"
+        ]
+      },
+      "NonEmptyString": {
+        "type": "string",
+        "minLength": 1
+      },
+      "CompanyIdSet": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^([uU][rR][nN]):"
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "GenericURN": {
+        "type": "string",
+        "pattern": "^([uU][rR][nN]):"
+      },
+      "ProductIdSet": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^([uU][rR][nN]):"
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "CarbonFootprint": {
+        "description": "Data Type \"CarbonFootprint\" of Spec Version 2",
+        "type": "object",
+        "oneOf": [
+          {
+            "type": [
+              "object"
+            ],
+            "required": [
+              "geographyRegionOrSubregion"
+            ],
+            "properties": {
+              "geographyRegionOrSubregion": {
+                "$ref": "#/components/schemas/UNRegionOrSubregion"
+              },
+              "geographyCountry": {
+                "not": {}
+              },
+              "geographyCountrySubdivision": {
+                "not": {}
+              }
+            }
+          },
+          {
+            "type": [
+              "object"
+            ],
+            "required": [
+              "geographyCountry"
+            ],
+            "properties": {
+              "geographyCountry": {
+                "$ref": "#/components/schemas/ISO3166CC"
+              },
+              "geographyRegionOrSubregion": {
+                "not": {}
+              },
+              "geographyCountrySubdivision": {
+                "not": {}
+              }
+            }
+          },
+          {
+            "type": [
+              "object"
+            ],
+            "required": [
+              "geographyCountrySubdivision"
+            ],
+            "properties": {
+              "geographyCountrySubdivision": {
+                "$ref": "#/components/schemas/NonEmptyString"
+              },
+              "geographyRegionOrSubregion": {
+                "not": {}
+              },
+              "geographyCountry": {
+                "not": {}
+              }
+            }
+          },
+          {
+            "type": [
+              "object"
+            ],
+            "properties": {
+              "geographyRegionOrSubregion": {
+                "not": {}
+              },
+              "geographyCountry": {
+                "not": {}
+              },
+              "geographyCountrySubdivision": {
+                "not": {}
+              }
+            }
+          }
+        ],
+        "required": [
+          "biogenicCarbonContent",
+          "boundaryProcessesDescription",
+          "characterizationFactors",
+          "crossSectoralStandardsUsed",
+          "declaredUnit",
+          "exemptedEmissionsDescription",
+          "exemptedEmissionsPercent",
+          "fossilCarbonContent",
+          "fossilGhgEmissions",
+          "ipccCharacterizationFactorsSources",
+          "pCfExcludingBiogenic",
+          "packagingEmissionsIncluded",
+          "referencePeriodEnd",
+          "referencePeriodStart",
+          "unitaryProductAmount"
+        ],
+        "properties": {
+          "declaredUnit": {
+            "$ref": "#/components/schemas/DeclaredUnit"
+          },
+          "unitaryProductAmount": {
+            "$ref": "#/components/schemas/StrictlyPositiveDecimal"
+          },
+          "pCfExcludingBiogenic": {
+            "$ref": "#/components/schemas/PositiveDecimal"
+          },
+          "pCfIncludingBiogenic": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          },
+          "fossilGhgEmissions": {
+            "$ref": "#/components/schemas/PositiveDecimal"
+          },
+          "fossilCarbonContent": {
+            "$ref": "#/components/schemas/PositiveDecimal"
+          },
+          "biogenicCarbonContent": {
+            "$ref": "#/components/schemas/PositiveDecimal"
+          },
+          "dLucGhgEmissions": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PositiveDecimal"
+              }
+            ],
+            "nullable": true
+          },
+          "landManagementGhgEmissions": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PositiveDecimal"
+              }
+            ],
+            "nullable": true
+          },
+          "otherBiogenicGhgEmissions": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PositiveDecimal"
+              }
+            ],
+            "nullable": true
+          },
+          "iLucGhgEmissions": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PositiveDecimal"
+              }
+            ],
+            "nullable": true
+          },
+          "biogenicCarbonWithdrawal": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NegativeDecimal"
+              }
+            ],
+            "nullable": true
+          },
+          "aircraftGhgEmissions": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PositiveDecimal"
+              }
+            ],
+            "nullable": true
+          },
+          "characterizationFactors": {
+            "$ref": "#/components/schemas/CharacterizationFactors"
+          },
+          "ipccCharacterizationFactorsSources": {
+            "$ref": "#/components/schemas/IpccCharacterizationFactorsSources"
+          },
+          "crossSectoralStandardsUsed": {
+            "$ref": "#/components/schemas/CrossSectoralStandardSet"
+          },
+          "productOrSectorSpecificRules": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductOrSectorSpecificRuleSet"
+              }
+            ],
+            "nullable": true
+          },
+          "biogenicAccountingMethodology": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BiogenicAccountingMethodology"
+              }
+            ],
+            "nullable": true
+          },
+          "boundaryProcessesDescription": {
+            "type": "string"
+          },
+          "referencePeriodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "referencePeriodEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "secondaryEmissionFactorSources": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmissionFactorDSSet"
+              }
+            ],
+            "nullable": true
+          },
+          "exemptedEmissionsPercent": {
+            "$ref": "#/components/schemas/ExemptedEmissionsPercent"
+          },
+          "exemptedEmissionsDescription": {
+            "type": "string"
+          },
+          "packagingEmissionsIncluded": {
+            "type": "boolean"
+          },
+          "packagingGhgEmissions": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PositiveDecimal"
+              }
+            ],
+            "nullable": true
+          },
+          "allocationRulesDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "uncertaintyAssessmentDescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "primaryDataShare": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Percent"
+              }
+            ],
+            "nullable": true
+          },
+          "dqi": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DataQualityIndicators"
+              }
+            ],
+            "nullable": true
+          },
+          "assurance": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Assurance"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "DeclaredUnit": {
+        "description": "Data Type \"DeclaredUnit\" of Spec Version 2",
+        "type": "string",
+        "enum": [
+          "liter",
+          "kilogram",
+          "cubic meter",
+          "kilowatt hour",
+          "megajoule",
+          "ton kilometer",
+          "square meter"
+        ]
+      },
+      "StrictlyPositiveDecimal": {
+        "type": "string",
+        "pattern": "^(\\d*[1-9]\\d*([\\.]\\d+)?|\\d+(\\.\\d*[1-9]\\d*)?)$"
+      },
+      "PositiveDecimal": {
+        "type": "string",
+        "pattern": "^\\d+(\\.\\d+)?$"
+      },
+      "Decimal": {
+        "type": "string",
+        "pattern": "^-?\\d+(\\.\\d+)?$"
+      },
+      "NegativeDecimal": {
+        "type": "string",
+        "pattern": "^(-\\d+(\\.\\d+)?)|0$"
+      },
+      "CharacterizationFactors": {
+        "type": "string",
+        "enum": [
+          "AR5",
+          "AR6"
+        ]
+      },
+      "IpccCharacterizationFactorsSources": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^AR\\d+$"
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "IpccCharacterizationFactorsSource": {
+        "type": "string",
+        "pattern": "^AR\\d+$"
+      },
+      "CrossSectoralStandardSet": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/CrossSectoralStandard"
+        }
+      },
+      "CrossSectoralStandard": {
+        "description": "Deprecated Data Type \"CrossSectoralStandard\" of Spec Version 2, to be removed in v3, used in `CrossSectoralStandardsSet`s to populate `crossSectoralSectoralStandardsUsed` (also deprecated).",
+        "type": "string",
+        "enum": [
+          "GHG Protocol Product standard",
+          "ISO Standard 14067",
+          "ISO Standard 14044"
+        ]
+      },
+      "ProductOrSectorSpecificRuleSet": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "operator",
+            "ruleNames"
+          ],
+          "properties": {
+            "operator": {
+              "$ref": "#/components/schemas/ProductOrSectorSpecificRuleOperator"
+            },
+            "ruleNames": {
+              "$ref": "#/components/schemas/NonEmptyStringVec"
+            },
+            "otherOperatorName": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/NonEmptyString"
+                }
+              ],
+              "nullable": true
+            }
+          }
+        },
+        "uniqueItems": true
+      },
+      "ProductOrSectorSpecificRule": {
+        "type": "object",
+        "required": [
+          "operator",
+          "ruleNames"
+        ],
+        "properties": {
+          "operator": {
+            "$ref": "#/components/schemas/ProductOrSectorSpecificRuleOperator"
+          },
+          "ruleNames": {
+            "$ref": "#/components/schemas/NonEmptyStringVec"
+          },
+          "otherOperatorName": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmptyString"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "ProductOrSectorSpecificRuleOperator": {
+        "type": "string",
+        "enum": [
+          "PEF",
+          "EPD International",
+          "Other"
+        ]
+      },
+      "NonEmptyStringVec": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "BiogenicAccountingMethodology": {
+        "type": "string",
+        "enum": [
+          "PEF",
+          "ISO",
+          "GHGP",
+          "Quantis"
+        ]
+      },
+      "EmissionFactorDSSet": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "$ref": "#/components/schemas/NonEmptyString"
+            },
+            "version": {
+              "$ref": "#/components/schemas/NonEmptyString"
+            }
+          }
+        },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "EmissionFactorDS": {
+        "type": "object",
+        "required": [
+          "name",
+          "version"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/NonEmptyString"
+          },
+          "version": {
+            "$ref": "#/components/schemas/NonEmptyString"
+          }
+        }
+      },
+      "ExemptedEmissionsPercent": {
+        "type": "number",
+        "format": "double",
+        "maximum": 5.0,
+        "minimum": 0.0
+      },
+      "Percent": {
+        "type": "number",
+        "format": "double",
+        "maximum": 100.0,
+        "minimum": 0.0
+      },
+      "DataQualityIndicators": {
+        "description": "Data Type \"DataQualityIndicators\" of Spec Version 2",
+        "type": "object",
+        "required": [
+          "completenessDQR",
+          "coveragePercent",
+          "geographicalDQR",
+          "reliabilityDQR",
+          "technologicalDQR",
+          "temporalDQR"
+        ],
+        "properties": {
+          "coveragePercent": {
+            "$ref": "#/components/schemas/Percent"
+          },
+          "technologicalDQR": {
+            "$ref": "#/components/schemas/FloatBetween1And3"
+          },
+          "temporalDQR": {
+            "$ref": "#/components/schemas/FloatBetween1And3"
+          },
+          "geographicalDQR": {
+            "$ref": "#/components/schemas/FloatBetween1And3"
+          },
+          "completenessDQR": {
+            "$ref": "#/components/schemas/FloatBetween1And3"
+          },
+          "reliabilityDQR": {
+            "$ref": "#/components/schemas/FloatBetween1And3"
+          }
+        }
+      },
+      "FloatBetween1And3": {
+        "type": "number",
+        "format": "float",
+        "maximum": 3.0,
+        "minimum": 1.0
+      },
+      "Assurance": {
+        "description": "Data Type \"Assurance\" of Spec Version 2",
+        "type": "object",
+        "required": [
+          "assurance",
+          "providerName"
+        ],
+        "properties": {
+          "assurance": {
+            "type": "boolean"
+          },
+          "coverage": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssuranceCoverage"
+              }
+            ],
+            "nullable": true
+          },
+          "level": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssuranceLevel"
+              }
+            ],
+            "nullable": true
+          },
+          "boundary": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssuranceBoundary"
+              }
+            ],
+            "nullable": true
+          },
+          "providerName": {
+            "type": "string"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "standardName": {
+            "type": "string",
+            "nullable": true
+          },
+          "comments": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AssuranceCoverage": {
+        "type": "string",
+        "enum": [
+          "corporate level",
+          "product line",
+          "PCF system",
+          "product level"
+        ]
+      },
+      "AssuranceLevel": {
+        "type": "string",
+        "enum": [
+          "limited",
+          "reasonable"
+        ]
+      },
+      "AssuranceBoundary": {
+        "type": "string",
+        "enum": [
+          "Gate-to-Gate",
+          "Cradle-to-Gate"
+        ]
+      },
+      "UNRegionOrSubregion": {
+        "description": "List of UN regions and subregions",
+        "type": "string",
+        "enum": [
+          "Africa",
+          "Americas",
+          "Asia",
+          "Europe",
+          "Oceania",
+          "Australia and New Zealand",
+          "Central Asia",
+          "Eastern Asia",
+          "Eastern Europe",
+          "Latin America and the Caribbean",
+          "Melanesia",
+          "Micronesia",
+          "Northern Africa",
+          "Northern America",
+          "Northern Europe",
+          "Polynesia",
+          "South-eastern Asia",
+          "Southern Asia",
+          "Southern Europe",
+          "Sub-Saharan Africa",
+          "Western Asia",
+          "Western Europe"
+        ]
+      },
+      "ISO3166CC": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}$"
+      },
+      "DataModelExtension": {
+        "type": "object",
+        "required": [
+          "data",
+          "dataSchema",
+          "specVersion"
+        ],
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "dataSchema": {
+            "type": "string"
+          },
+          "documentation": {
+            "type": "string"
+          },
+          "specVersion": {
+            "$ref": "#/components/schemas/VersionString"
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Response with an error code of `BadRequest`. See Chapter \"Error Codes\" of the Tech Specs for mor details.",
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "$ref": "#/components/schemas/BadRequestCode"
+          }
+        }
+      },
+      "BadRequestCode": {
+        "description": "Error code enum for BadRequest responses",
+        "type": "string",
+        "enum": [
+          "BadRequest"
+        ]
+      },
+      "NoSuchFootprint": {
+        "description": "Response with an error code of `NoSuchFootprint`. See Chapter \"Error Codes\" of the Tech Specs for mor details.",
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "$ref": "#/components/schemas/NoSuchFootprintCode"
+          }
+        }
+      },
+      "NoSuchFootprintCode": {
+        "description": "Error code enum for NoSuchFootprint responses",
+        "type": "string",
+        "enum": [
+          "NoSuchFootprint"
+        ]
+      },
+      "PfIdParam": {
+        "$ref": "#/components/schemas/PfId"
+      },
+      "PfListingResponseInner": {
+        "description": "HTTP Body of Action `ListFootprints`",
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductFootprint_for_ILeapType"
+            }
+          }
+        }
+      },
+      "AccessDenied": {
+        "description": "Response with an error code of `AccessDenied`. See Chapter \"Error Codes\" of the Tech Specs for mor details.",
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "$ref": "#/components/schemas/AccessDeniedCode"
+          }
+        }
+      },
+      "AccessDeniedCode": {
+        "description": "Error code enum for AccessDenied responses",
+        "type": "string",
+        "enum": [
+          "AccessDenied"
+        ]
+      },
+      "NotImplemented": {
+        "description": "Response with an error code of `NotImplemented`. See Chapter \"Error Codes\" of the Tech Specs for mor details.",
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "$ref": "#/components/schemas/NotImplementedCode"
+          }
+        }
+      },
+      "NotImplementedCode": {
+        "description": "Error code enum for NotImplemented responses",
+        "type": "string",
+        "enum": [
+          "NotImplemented"
+        ]
+      },
+      "PathfinderEvent": {
+        "description": "possible contents of `data` property of events - see tech specs section 6 for details",
+        "type": "object",
+        "oneOf": [
+          {
+            "description": "the contents of the `data` field of a `PF Update Event` – see Tech Specs section 6.8.3",
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "org.wbcsd.pathfinder.ProductFootprint.Published.v1"
+                ]
+              },
+              "data": {
+                "$ref": "#/components/schemas/PFUpdateEventBody"
+              }
+            }
+          },
+          {
+            "description": "the contents of the `data` field of a `PF Request Event` – see Tech Specs section 6.8.4.1",
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "org.wbcsd.pathfinder.ProductFootprintRequest.Created.v1"
+                ]
+              },
+              "data": {
+                "$ref": "#/components/schemas/PFRequestEventBody"
+              }
+            }
+          }
+        ],
+        "required": [
+          "id",
+          "source",
+          "specversion",
+          "time"
+        ],
+        "properties": {
+          "specversion": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PFUpdateEventBody": {
+        "type": "object",
+        "required": [
+          "pfIds"
+        ],
+        "properties": {
+          "pfIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PfId"
+            }
+          }
+        }
+      },
+      "PFRequestEventBody": {
+        "type": "object",
+        "required": [
+          "pf"
+        ],
+        "properties": {
+          "pf": {},
+          "comment": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "TadListingResponseInner": {
+        "description": "HTTP Body of Action `TransportActivityData`",
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TAD"
+            }
+          }
+        }
+      },
+      "TAD": {
+        "description": "Data Type \"Transport Activity Data\" of the iLEAP Technical Specifications",
+        "type": "object",
+        "required": [
+          "activityId",
+          "arrivalAt",
+          "consignmentIds",
+          "departureAt",
+          "destination",
+          "distance",
+          "mode",
+          "origin"
+        ],
+        "properties": {
+          "activityId": {
+            "type": "string"
+          },
+          "consignmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "distance": {
+            "$ref": "#/components/schemas/GlecDistance"
+          },
+          "mass": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          },
+          "loadFactor": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          },
+          "emptyDistanceFactor": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          },
+          "origin": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/Location"
+          },
+          "departureAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "arrivalAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/TransportMode"
+          },
+          "packagingOrTrEqType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PackagingOrTrEqType"
+              }
+            ],
+            "nullable": true
+          },
+          "packagingOrTrEqAmount": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0.0,
+            "nullable": true
+          },
+          "energyCarriers": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmptyVec_for_EnergyCarrier"
+              }
+            ],
+            "nullable": true
+          },
+          "temperatureControl": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TadTempControl"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "GlecDistance": {
+        "type": "object",
+        "anyOf": [
+          {
+            "type": "object",
+            "required": [
+              "actual"
+            ],
+            "properties": {
+              "actual": {
+                "$ref": "#/components/schemas/Decimal"
+              },
+              "gcd": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              },
+              "sfd": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "gcd"
+            ],
+            "properties": {
+              "actual": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              },
+              "gcd": {
+                "$ref": "#/components/schemas/Decimal"
+              },
+              "sfd": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "sfd"
+            ],
+            "properties": {
+              "actual": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              },
+              "gcd": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              },
+              "sfd": {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            }
+          }
+        ]
+      },
+      "Location": {
+        "type": "object",
+        "required": [
+          "city",
+          "country"
+        ],
+        "properties": {
+          "street": {
+            "type": "string",
+            "nullable": true
+          },
+          "zip": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "$ref": "#/components/schemas/ISO3166CC"
+          },
+          "iata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IataCode"
+              }
+            ],
+            "nullable": true
+          },
+          "locode": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Locode"
+              }
+            ],
+            "nullable": true
+          },
+          "uic": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UicCode"
+              }
+            ],
+            "nullable": true
+          },
+          "lat": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          },
+          "lng": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "IataCode": {
+        "type": "string"
+      },
+      "Locode": {
+        "type": "string"
+      },
+      "UicCode": {
+        "type": "string"
+      },
+      "TransportMode": {
+        "type": "string",
+        "enum": [
+          "Road",
+          "Rail",
+          "Air",
+          "Sea",
+          "InlandWaterway"
+        ]
+      },
+      "PackagingOrTrEqType": {
+        "type": "string",
+        "enum": [
+          "Box",
+          "Pallet",
+          "Container-TEU",
+          "Container-FEU",
+          "Container"
+        ]
+      },
+      "NonEmptyVec_for_EnergyCarrier": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EnergyCarrier"
+        }
+      },
+      "EnergyCarrier": {
+        "type": "object",
+        "required": [
+          "emissionFactorTTW",
+          "emissionFactorWTW",
+          "energyCarrier",
+          "relativeShare"
+        ],
+        "properties": {
+          "energyCarrier": {
+            "$ref": "#/components/schemas/EnergyCarrierType"
+          },
+          "feedstocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Feedstock"
+            },
+            "nullable": true
+          },
+          "energyConsumption": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          },
+          "energyConsumptionUnit": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EnergyConsumptionUnit"
+              }
+            ],
+            "nullable": true
+          },
+          "emissionFactorWTW": {
+            "$ref": "#/components/schemas/Decimal"
+          },
+          "emissionFactorTTW": {
+            "$ref": "#/components/schemas/Decimal"
+          },
+          "relativeShare": {
+            "$ref": "#/components/schemas/Decimal"
+          }
+        }
+      },
+      "EnergyCarrierType": {
+        "type": "string",
+        "enum": [
+          "Diesel",
+          "HVO",
+          "Petrol",
+          "CNG",
+          "LNG",
+          "LPG",
+          "HFO",
+          "MGO",
+          "Aviation fuel",
+          "Hydrogen",
+          "Methanol",
+          "Electric"
+        ]
+      },
+      "Feedstock": {
+        "type": "object",
+        "required": [
+          "feedstock"
+        ],
+        "properties": {
+          "feedstock": {
+            "$ref": "#/components/schemas/FeedstockType"
+          },
+          "feedstockShare": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          },
+          "regionProvenance": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "FeedstockType": {
+        "type": "string",
+        "enum": [
+          "Fossil",
+          "Natural gas",
+          "Grid",
+          "Renewable electricity",
+          "Cooking oil"
+        ]
+      },
+      "EnergyConsumptionUnit": {
+        "type": "string",
+        "enum": [
+          "l",
+          "kg",
+          "kWh",
+          "MJ"
+        ]
+      },
+      "TadTempControl": {
+        "type": "string",
+        "enum": [
+          "ambient",
+          "refrigerated"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "description": "OAuth2 Client Credentials Grant (RFC6749 4.4)",
+        "type": "oauth2",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/auth/token",
+            "scopes": {
+              "footprint:list": "Ability to list footprints",
+              "footprint:read": "Ability to access individual footprints"
+            }
+          }
+        }
+      }
+    }
+  }
+}
