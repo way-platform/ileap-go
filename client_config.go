@@ -30,8 +30,8 @@ func WithBaseURL(baseURL string) ClientOption {
 	}
 }
 
-// WithOAuth authenticates requests using OAuth 2.0.
-func WithOAuth2(clientID string, clientSecret string) ClientOption {
+// WithOAuth2 authenticates requests using OAuth 2.0.
+func WithOAuth2(clientID, clientSecret string) ClientOption {
 	return func(cc *ClientConfig) {
 		cc.transport = &tokenAuthenticatorTransport{
 			tokenAuthenticator: &oauth2TokenAuthenticator{

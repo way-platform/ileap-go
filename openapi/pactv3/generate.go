@@ -1,3 +1,4 @@
+// Package pactv3 generates the PACT v3 API client.
 package pactv3
 
 //go:generate echo flattening...

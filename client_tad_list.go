@@ -25,7 +25,10 @@ type ListTADsResponse struct {
 }
 
 // ListTADs lists transport activity data.
-func (c *Client) ListTADs(ctx context.Context, request *ListTADsRequest) (_ *ListTADsResponse, err error) {
+func (c *Client) ListTADs(
+	ctx context.Context,
+	request *ListTADsRequest,
+) (_ *ListTADsResponse, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("list iLEAP TADs: %w", err)
@@ -44,7 +47,7 @@ func (c *Client) ListTADs(ctx context.Context, request *ListTADsRequest) (_ *Lis
 	if err != nil {
 		return nil, fmt.Errorf("send request: %w", err)
 	}
-	defer httpResponse.Body.Close()
+	defer func() { _ = httpResponse.Body.Close() }()
 	if httpResponse.StatusCode != http.StatusOK {
 		return nil, newClientError(httpResponse)
 	}

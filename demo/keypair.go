@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
@@ -13,8 +14,6 @@ import (
 	"log/slog"
 	"math/big"
 	"strings"
-
-	_ "embed"
 )
 
 //go:embed testdata/keypair.pem
@@ -74,7 +73,7 @@ func (k *KeyPair) CreateJWT(claims JWTClaims) (string, error) {
 	return token, nil
 }
 
-// ParseKeyPair parses the embedded PEM data and returns a KeyPair.
+// LoadKeyPair parses the embedded PEM data and returns a KeyPair.
 func LoadKeyPair() (*KeyPair, error) {
 	defer slog.Debug("loaded demo keypair")
 	block, _ := pem.Decode(keypairData)
@@ -98,6 +97,7 @@ func LoadKeyPair() (*KeyPair, error) {
 	}, nil
 }
 
+// ValidateJWT validates a JWT.
 func (k *KeyPair) ValidateJWT(token string) (*JWTClaims, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {

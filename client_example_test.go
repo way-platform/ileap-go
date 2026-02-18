@@ -17,7 +17,7 @@ func ExampleClient() {
 		ID: "123",
 	})
 	if err != nil {
-		// TODO: Handle error.
+		panic(err)
 	}
 	fmt.Println(footprint)
 }

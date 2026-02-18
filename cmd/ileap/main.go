@@ -7,8 +7,8 @@ import (
 	"image/color"
 	"os"
 
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/fang"
-	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/spf13/cobra"
 	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/cmd/ileap/internal/auth"
@@ -76,10 +76,10 @@ func newRootCommand() *cobra.Command {
 
 func newGetFootprintCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "footprint",
-		Short: "Get a product carbon footprint",
+		Use:     "footprint",
+		Short:   "Get a product carbon footprint",
 		GroupID: "pcf",
-		Args:  cobra.ExactArgs(1),
+		Args:    cobra.ExactArgs(1),
 	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		client, err := auth.NewClient()
@@ -92,16 +92,15 @@ func newGetFootprintCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		printJSON(cmd, footprint)
-		return nil
+		return printJSON(cmd, footprint)
 	}
 	return cmd
 }
 
 func newListFootprintsCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "footprints",
-		Short: "List product carbon footprints",
+		Use:     "footprints",
+		Short:   "List product carbon footprints",
 		GroupID: "pcf",
 	}
 	limit := cmd.Flags().Int("limit", 100, "max footprints queried")
@@ -118,16 +117,15 @@ func newListFootprintsCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		printJSON(cmd, response)
-		return nil
+		return printJSON(cmd, response)
 	}
 	return cmd
 }
 
 func newListTADsCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "tad",
-		Short: "List transport activity data (TAD)",
+		Use:     "tad",
+		Short:   "List transport activity data (TAD)",
 		GroupID: "tad",
 	}
 	limit := cmd.Flags().Int("limit", 100, "max TADs queried")
@@ -142,8 +140,7 @@ func newListTADsCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		printJSON(cmd, response)
-		return nil
+		return printJSON(cmd, response)
 	}
 	return cmd
 }

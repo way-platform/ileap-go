@@ -36,7 +36,11 @@ func NewClient(opts ...ClientOption) *Client {
 	}
 }
 
-func (c *Client) newRequest(ctx context.Context, method, requestPath string, body io.Reader) (_ *retryablehttp.Request, err error) {
+func (c *Client) newRequest(
+	ctx context.Context,
+	method, requestPath string,
+	body io.Reader,
+) (_ *retryablehttp.Request, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("new request: %w", err)

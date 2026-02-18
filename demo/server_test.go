@@ -19,7 +19,11 @@ func TestServer(t *testing.T) {
 
 	t.Run("POST /auth/token", func(t *testing.T) {
 		t.Run("success", func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+			req := httptest.NewRequest(
+				"POST",
+				"/auth/token",
+				strings.NewReader("grant_type=client_credentials"),
+			)
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
@@ -52,7 +56,11 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("invalid content type", func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+			req := httptest.NewRequest(
+				"POST",
+				"/auth/token",
+				strings.NewReader("grant_type=client_credentials"),
+			)
 			req.Header.Set("Content-Type", "application/json") // Wrong content type
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
@@ -70,16 +78,29 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("unsupported grant type", func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=authorization_code"))
+			req := httptest.NewRequest(
+				"POST",
+				"/auth/token",
+				strings.NewReader("grant_type=authorization_code"),
+			)
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeUnsupportedGrantType)
+			checkOAuthErrorResponse(
+				t,
+				w,
+				http.StatusBadRequest,
+				ileap.OAuthErrorCodeUnsupportedGrantType,
+			)
 		})
 
 		t.Run("missing basic auth", func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+			req := httptest.NewRequest(
+				"POST",
+				"/auth/token",
+				strings.NewReader("grant_type=client_credentials"),
+			)
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			// No basic auth set
 			w := httptest.NewRecorder()
@@ -88,7 +109,11 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("invalid credentials", func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+			req := httptest.NewRequest(
+				"POST",
+				"/auth/token",
+				strings.NewReader("grant_type=client_credentials"),
+			)
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.SetBasicAuth("invalid", "credentials")
 			w := httptest.NewRecorder()
@@ -194,7 +219,12 @@ func TestServer(t *testing.T) {
 	})
 }
 
-func checkErrorResponse(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, expectedCode ileap.ErrorCode) {
+func checkErrorResponse(
+	t *testing.T,
+	w *httptest.ResponseRecorder,
+	expectedStatus int,
+	expectedCode ileap.ErrorCode,
+) {
 	t.Helper()
 	if w.Code != expectedStatus {
 		t.Fatalf("expected status %d, got %d: %s", expectedStatus, w.Code, w.Body.String())
@@ -215,7 +245,12 @@ func checkErrorResponse(t *testing.T, w *httptest.ResponseRecorder, expectedStat
 	}
 }
 
-func checkOAuthErrorResponse(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, expectedCode ileap.OAuthErrorCode) {
+func checkOAuthErrorResponse(
+	t *testing.T,
+	w *httptest.ResponseRecorder,
+	expectedStatus int,
+	expectedCode ileap.OAuthErrorCode,
+) {
 	t.Helper()
 	if w.Code != expectedStatus {
 		t.Fatalf("expected status %d, got %d: %s", expectedStatus, w.Code, w.Body.String())
@@ -238,13 +273,21 @@ func checkOAuthErrorResponse(t *testing.T, w *httptest.ResponseRecorder, expecte
 
 func getAccessToken(t *testing.T, server *Server) string {
 	t.Helper()
-	tokenRequest := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+	tokenRequest := httptest.NewRequest(
+		"POST",
+		"/auth/token",
+		strings.NewReader("grant_type=client_credentials"),
+	)
 	tokenRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	tokenRequest.SetBasicAuth("hello", "pathfinder")
 	tokenResponse := httptest.NewRecorder()
 	server.Handler().ServeHTTP(tokenResponse, tokenRequest)
 	if tokenResponse.Code != http.StatusOK {
-		t.Fatalf("failed to get access token: %d: %s", tokenResponse.Code, tokenResponse.Body.String())
+		t.Fatalf(
+			"failed to get access token: %d: %s",
+			tokenResponse.Code,
+			tokenResponse.Body.String(),
+		)
 	}
 	var credentials ileap.ClientCredentials
 	if err := json.NewDecoder(tokenResponse.Body).Decode(&credentials); err != nil {
