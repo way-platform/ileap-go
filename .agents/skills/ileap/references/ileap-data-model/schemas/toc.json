@@ -1,0 +1,289 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TOC",
+  "type": "object",
+  "required": [
+    "co2eIntensityTTW",
+    "co2eIntensityWTW",
+    "energyCarriers",
+    "mode",
+    "tocId",
+    "transportActivityUnit"
+  ],
+  "properties": {
+    "tocId": {
+      "type": "string"
+    },
+    "certifications": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/NonEmptyVec_for_Certification"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "mode": {
+      "$ref": "#/definitions/TransportMode"
+    },
+    "loadFactor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "emptyDistanceFactor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "temperatureControl": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TemperatureControl"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "truckLoadingSequence": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TruckLoadingSequence"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "airShippingOption": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/AirShippingOption"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "flightLength": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/FlightLength"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "energyCarriers": {
+      "$ref": "#/definitions/NonEmptyVec_for_EnergyCarrier"
+    },
+    "co2eIntensityWTW": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "co2eIntensityTTW": {
+      "$ref": "#/definitions/Decimal"
+    },
+    "transportActivityUnit": {
+      "$ref": "#/definitions/TransportActivityUnit"
+    }
+  },
+  "definitions": {
+    "NonEmptyVec_for_Certification": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Certification"
+      }
+    },
+    "Certification": {
+      "type": "string",
+      "enum": [
+        "ISO14083:2023",
+        "GLECv2",
+        "GLECv3",
+        "GLECv3.1"
+      ]
+    },
+    "TransportMode": {
+      "type": "string",
+      "enum": [
+        "Road",
+        "Rail",
+        "Air",
+        "Sea",
+        "InlandWaterway"
+      ]
+    },
+    "TemperatureControl": {
+      "type": "string",
+      "enum": [
+        "ambient",
+        "refrigerated",
+        "mixed"
+      ]
+    },
+    "TruckLoadingSequence": {
+      "type": "string",
+      "enum": [
+        "LTL",
+        "FTL"
+      ]
+    },
+    "AirShippingOption": {
+      "type": "string",
+      "enum": [
+        "belly freight",
+        "freighter"
+      ]
+    },
+    "FlightLength": {
+      "type": "string",
+      "enum": [
+        "short-haul",
+        "long-haul"
+      ]
+    },
+    "NonEmptyVec_for_EnergyCarrier": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/EnergyCarrier"
+      }
+    },
+    "EnergyCarrier": {
+      "type": "object",
+      "required": [
+        "emissionFactorTTW",
+        "emissionFactorWTW",
+        "energyCarrier",
+        "relativeShare"
+      ],
+      "properties": {
+        "energyCarrier": {
+          "$ref": "#/definitions/EnergyCarrierType"
+        },
+        "feedstocks": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/Feedstock"
+          }
+        },
+        "energyConsumption": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "energyConsumptionUnit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EnergyConsumptionUnit"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "emissionFactorWTW": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "emissionFactorTTW": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "relativeShare": {
+          "$ref": "#/definitions/Decimal"
+        }
+      }
+    },
+    "EnergyCarrierType": {
+      "type": "string",
+      "enum": [
+        "Diesel",
+        "HVO",
+        "Petrol",
+        "CNG",
+        "LNG",
+        "LPG",
+        "HFO",
+        "MGO",
+        "Aviation fuel",
+        "Hydrogen",
+        "Methanol",
+        "Electric"
+      ]
+    },
+    "Feedstock": {
+      "type": "object",
+      "required": [
+        "feedstock"
+      ],
+      "properties": {
+        "feedstock": {
+          "$ref": "#/definitions/FeedstockType"
+        },
+        "feedstockShare": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "regionProvenance": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "FeedstockType": {
+      "type": "string",
+      "enum": [
+        "Fossil",
+        "Natural gas",
+        "Grid",
+        "Renewable electricity",
+        "Cooking oil"
+      ]
+    },
+    "Decimal": {
+      "type": "string",
+      "pattern": "^-?\\d+(\\.\\d+)?$"
+    },
+    "EnergyConsumptionUnit": {
+      "type": "string",
+      "enum": [
+        "l",
+        "kg",
+        "kWh",
+        "MJ"
+      ]
+    },
+    "TransportActivityUnit": {
+      "type": "string",
+      "enum": [
+        "TEUkm",
+        "tkm"
+      ]
+    }
+  }
+}

@@ -1,0 +1,38 @@
+---
+config:
+    theme: forest
+---
+flowchart LR
+
+    subgraph Initial Legs
+        TCE1("`TCE
+        ID=tce1234
+        prevTceIds=[]
+        `")
+
+        TCE2("`TCE
+        ID=tce567
+        prevTceIds=[]
+        `")
+    end
+
+    TCE3("`TCE
+    ID=tce890
+    prevTceIds=
+        [tce1234, tce567]
+    `")
+
+    TCE4("`TCE
+    ID=tceABC
+    prevTceIds=
+        [tce890]
+    `")
+
+    subgraph Transport to Rotterdam
+        TCE1-->TCE3
+        TCE2-->TCE3
+    end
+
+    subgraph Hub Operations
+        TCE3-->TCE4
+    end

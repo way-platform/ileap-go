@@ -1,0 +1,108 @@
+<pre class='metadata'>
+Title: FAQ iLEAP Technical Specifications
+Shortname: ileap-faq
+Status: LD
+Status Text: Frequently Asked Questions
+ED: https://sine-fdn.github.io/ileap-extension/faq
+Canonical URL: ED
+Editor: Violetta Matzoros, https://www.smartfreightcentre.org, violetta.matzoros@smartfreightcentre.org
+Editor: Martin Pompéry, https://sine.foundation, martin@sine.foundation
+Editor: Raimundo Henriques, https://sine.foundation, raimundo@sine.foundation
+Former Editor: Gabriela Rubio Domingo
+Repository: sine-fdn/ileap-extension
+Abstract: The [iLEAP Technical Specifications](https://sine-fdn.github.io/ileap-extension/specs/) outline the the semantics for logistics emissions data exchange, thereby promoting a seamless exchange of logistics emissions data. They were conceived as an extension to the [PACT Data Model and Data Exchange Protocol](https://wbcsd.github.io/data-exchange-protocol/v2/), thereby levereging its network effects. This document provides answers to frequently asked questions about the iLEAP Technical Specifications, including their integration with the PACT Tech Specs.
+Markup Shorthands: markdown yes
+Boilerplate: omit conformance, omit copyright
+</pre>
+
+# On Selecting the PACT Tech Specs as a Foundation for iLEAP # {#on-selecting-pact}
+
+This section explains the choice made by SINE and the Smart Freight Centre to base the work of
+iLEAP on some of the technical work of the [WBCSD PACT
+Project](https://www.carbon-transparency.org/), in particular the [PACT Technical
+Specifications](https://wbcsd.github.io/data-exchange-protocol/v2/).
+
+## What is PACT? ## {#what-is-pact}
+
+PACT (Partnership for Carbon Transparency) is a WBCSD-led project that aims to enable emissions
+transparency at the product and service level. To achieve this, PACT has both a methodological focus
+("how to calculate the carbon footprints of products and services") and a technological focus ("how
+to make such data available in a seamless and automated way").
+
+What sets PACT apart from other initiatives is its industry-agnostic and global focus. This means
+that the methodological and technological approaches are designed to be used on a global scale and
+by companies of different sizes, profiles, and specializations.
+
+## What are the PACT Tech Specs? ## {#what-are-pact-tech-specs}
+
+The PACT Technical Specifications (or simply "PACT Tech Specs") are an interoperability
+quasi-standard to enable the seamless (and interoperable) exchange of carbon footprint data, often
+referred to as Product Carbon Footprints (PCFs).
+
+To achieve interoperability, the PACT Tech Specs consist of a data model and a data exchange
+protocol. The data model is designed to be extensible, i.e., it is possible to add additional
+information for further transparency when receiving emissions data.
+
+This feature of the PACT Tech Specs is specifically designed to enable the exchange of
+industry-specific data, such as logistics emissions data.
+
+### Technical details of the PACT Tech Specs ### {#pact-tech-specs-details}
+
+On a technical level, the PACT data exchange protocol is a minimal HTTP REST API that allows one
+party to make carbon emissions data available to another party, as well as to asynchronously request
+specific data to be made available.
+
+When 2 parties (the party that "owns" the emissions data, plus the party that wants to retrieve the
+data) implement the PACT Tech Specs, they can seamlessly and fully automatically exchange
+information between **independent** software solutions and systems - i.e. achieve interoperability
+at a technical level.
+
+## How do the iLEAP Tech Specs relate to the PACT Tech Specs? ## {#ileap-pact-relation}
+
+In addition to the PACT Tech Specs, the iLEAP Tech Specs define what is necessary to achieve
+**logistics** emissions transparency.
+
+For this purpose, the iLEAP Tech Specs define a data model that is aligned and based on the
+principles of ISO14083 and the [GLEC Framework
+v3](https://smart-freight-centre-media.s3.amazonaws.com/documents/GLEC_FRAMEWORK_v3_UPDATED_12_10.pdf).
+
+On a very technical and software implementation level, the iLEAP data model is designed as a
+so-called "Data Model Extension" to the PACT data model.
+
+This means that the logistic emissions data being exchanged are treated as a Product Carbon
+Footprint (a "logistics product" / logistics service footprint) in order to achieve interoperability
+with any system implementing the PACT Tech Specs.
+
+The iLEAP Tech Specs provide further
+[guidance](https://sine-fdn.github.io/ileap-extension/#pcf-mapping) on how to integrate the iLEAP
+data into the PACT data model.
+
+## Why did iLEAP choose PACT Tech Specs as a protocol and foundation? ## {#why-choose-pact}
+
+Carbon emissions transparency, especially at Scope 3, is a global challenge. Without
+interoperability and global adoption of 1 (or at least very very few) approaches, the cost and
+effort to achieve carbon transparency based on actual and primary data, will be significantly
+higher.
+
+By adopting PACT's approaches and technical foundations, iLEAP is contributing to the realization of
+an  "Internet of Emissions Data" through interoperability. Several synergies will be achieved:
+
+1. **the effort to add iLEAP support to existing systems and implementations is significantly
+    reduced**, increasing the likelihood that they will also implement the iLEAP Tech Specs;
+2. **iLEAP contributes to achieving a single Internet of Emissions Data,** avoiding further
+    fragmentation of what should be a global data ecosystem;
+3. Tool providers and their customers and users will benefit from synergistic network effects:
+    implementers of the iLEAP Tech Specs will be interoperable with a growing ecosystem of solution
+    providers from day one - that's 25+ solutions in the [PACT
+    ecosystem](https://www.carbon-transparency.org/network) alone as of today.
+
+In this sense, iLEAP can potentially benefit from the network effects of PACT, increasing the
+chances of global adoption for both iLEAP and PACT at the same time.
+
+Furthermore, this option is much more attractive for shippers, as they can use the same software to
+collect the emissions data for both the products and their shipment.
+
+But using PACT's data model also has advantages for iLEAP. For example, PACT already implements
+verification and accreditation related data in its data model. Since the logistics emissions will be
+embedded in this data model, iLEAP will be able to re-use the work instead of developing a different
+and non-interoperable approach.

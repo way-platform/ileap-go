@@ -1,0 +1,22 @@
+---
+config:
+    theme: forest
+---
+
+sequenceDiagram
+
+    participant A as Carrier A
+    participant B as Carrier B
+    participant L as LSP
+    participant S as Shipper
+
+    A ->>+ L: Data Transactions 1 & 2
+    note over A: ShipmentFoortprint A <br> TOC A
+    note over L: ShipmentFootprint A <br> TOC A
+    B ->>+ L: Data transaction 3
+    note over B: TAD
+    note over L: TAD
+    L ->>- L: Emissions Calculation
+    note over L: ShipmentFootprint LSP (A + B) <br> TOCs (A + B)
+    L->>+ S: Data Transactions 1 & 2
+    note over S: ShipmentFootprint LSP (A + B) <br> TOCs (A + B)

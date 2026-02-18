@@ -1,0 +1,435 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ShipmentFootprint",
+  "type": "object",
+  "required": [
+    "mass",
+    "shipmentId",
+    "tces"
+  ],
+  "properties": {
+    "mass": {
+      "type": "string"
+    },
+    "volume": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "shipmentId": {
+      "type": "string"
+    },
+    "tces": {
+      "$ref": "#/definitions/NonEmptyVec_for_TCE"
+    }
+  },
+  "definitions": {
+    "NonEmptyVec_for_TCE": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/TCE"
+      }
+    },
+    "TCE": {
+      "type": "object",
+      "required": [
+        "co2eTTW",
+        "co2eWTW",
+        "distance",
+        "mass",
+        "shipmentId",
+        "tceId",
+        "transportActivity"
+      ],
+      "properties": {
+        "tceId": {
+          "type": "string"
+        },
+        "prevTceIds": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "tocId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hocId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "shipmentId": {
+          "type": "string"
+        },
+        "consignmentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mass": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "packagingOrTrEqType": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PackagingOrTrEqType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "packagingOrTrEqAmount": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PositiveDecimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "distance": {
+          "$ref": "#/definitions/GlecDistance"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Location"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destination": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Location"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "transportActivity": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "departureAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "arrivalAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "flightNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "voyageNo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "incoterms": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Incoterms"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "co2eWTW": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "co2eTTW": {
+          "$ref": "#/definitions/Decimal"
+        },
+        "noxTTW": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "soxTTW": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ch4TTW": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pmTTW": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Decimal": {
+      "type": "string",
+      "pattern": "^-?\\d+(\\.\\d+)?$"
+    },
+    "PackagingOrTrEqType": {
+      "type": "string",
+      "enum": [
+        "Box",
+        "Pallet",
+        "Container-TEU",
+        "Container-FEU",
+        "Container"
+      ]
+    },
+    "PositiveDecimal": {
+      "type": "string",
+      "pattern": "^\\d+(\\.\\d+)?$"
+    },
+    "GlecDistance": {
+      "type": "object",
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [
+            "actual"
+          ],
+          "properties": {
+            "actual": {
+              "$ref": "#/definitions/Decimal"
+            },
+            "gcd": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Decimal"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sfd": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Decimal"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "gcd"
+          ],
+          "properties": {
+            "actual": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Decimal"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "gcd": {
+              "$ref": "#/definitions/Decimal"
+            },
+            "sfd": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Decimal"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "sfd"
+          ],
+          "properties": {
+            "actual": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Decimal"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "gcd": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Decimal"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sfd": {
+              "$ref": "#/definitions/Decimal"
+            }
+          }
+        }
+      ]
+    },
+    "Location": {
+      "type": "object",
+      "required": [
+        "city",
+        "country"
+      ],
+      "properties": {
+        "street": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "zip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "city": {
+          "type": "string"
+        },
+        "country": {
+          "$ref": "#/definitions/ISO3166CC"
+        },
+        "iata": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/IataCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locode": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Locode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uic": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/UicCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lat": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lng": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "ISO3166CC": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "IataCode": {
+      "type": "string"
+    },
+    "Locode": {
+      "type": "string"
+    },
+    "UicCode": {
+      "type": "string"
+    },
+    "Incoterms": {
+      "type": "string",
+      "enum": [
+        "EXW",
+        "FCA",
+        "CPT",
+        "CIP",
+        "DAP",
+        "DPU",
+        "DDP",
+        "FAS",
+        "FOB",
+        "CFR",
+        "CIF"
+      ]
+    }
+  }
+}
