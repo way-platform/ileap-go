@@ -16,6 +16,11 @@
       "sourceType": "github",
       "computedHash": "e8445eff7538ffd81616cbc2b22c2158320d30b557d0d75ee189bd6fd8530d66"
     },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "a096b9af85c9d954374ebe3f7a23b5b7737ed3f35fe2a8f5893742c4e00dba1c"
+    },
     "way-go-style": {
       "source": "way-platform/skills",
       "sourceType": "github",
