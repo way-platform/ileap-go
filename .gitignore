@@ -2,3 +2,4 @@
 .generated-go-semantic-release-changelog.md
 build/
 dist/
+tools/build/

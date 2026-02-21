@@ -14,6 +14,9 @@ import (
 	"log/slog"
 	"math/big"
 	"strings"
+	"time"
+
+	"github.com/way-platform/ileap-go/ileapserver"
 )
 
 //go:embed testdata/keypair.pem
@@ -120,6 +123,10 @@ func (k *KeyPair) ValidateJWT(token string) (*JWTClaims, error) {
 	var claims JWTClaims
 	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
 		return nil, fmt.Errorf("unmarshal payload: %w", err)
+	}
+	if claims.Expiration != 0 && time.Unix(claims.Expiration, 0).Before(time.Now()) {
+		return nil, fmt.Errorf("token expired at %v: %w",
+			time.Unix(claims.Expiration, 0), ileapserver.ErrTokenExpired)
 	}
 	return &claims, nil
 }

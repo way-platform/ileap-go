@@ -4,11 +4,15 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/magefile/mage/mg"
 )
@@ -92,6 +96,134 @@ func VHS() error {
 func Diff() error {
 	log.Println("checking for git diffs")
 	return cmd(root(), "git", "diff", "--exit-code").Run()
+}
+
+// ACT runs the ACT conformance test suite against the demo server.
+// Pass a base URL to test against a remote server, or omit to start
+// a local server.
+func ACT(baseURL string) error {
+	log.Println("running ACT conformance tests")
+	// Install ACT binary.
+	actBin, err := installACT()
+	if err != nil {
+		return err
+	}
+	if baseURL == "" {
+		// Start a local server.
+		var cleanup func()
+		baseURL, cleanup, err = startLocalServer()
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+	}
+	// Run ACT.
+	return cmd(
+		root(), actBin,
+		"test", "-b", baseURL, "-u", "hello", "-p", "pathfinder",
+	).Run()
+}
+
+func startLocalServer() (baseURL string, cleanup func(), err error) {
+	// Find a free port.
+	lis, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return "", nil, fmt.Errorf("find free port: %w", err)
+	}
+	port := lis.Addr().(*net.TCPAddr).Port
+	lis.Close()
+	baseURL = fmt.Sprintf("http://localhost:%d", port)
+	// Build the demo server.
+	binary := filepath.Join(root(), "demo-server")
+	if err := cmd(root(), "go", "build", "-o", binary, "./cmd/demo-server").Run(); err != nil {
+		return "", nil, fmt.Errorf("build demo-server: %w", err)
+	}
+	// Start the demo server.
+	server := cmdWith(
+		map[string]string{
+			"BASE_URL": baseURL,
+			"PORT":     fmt.Sprintf("%d", port),
+		},
+		root(),
+		binary,
+	)
+	if err := server.Start(); err != nil {
+		os.Remove(binary)
+		return "", nil, fmt.Errorf("start demo-server: %w", err)
+	}
+	// Wait for the server to be ready.
+	if err := waitForServer(baseURL, 10*time.Second); err != nil {
+		_ = server.Process.Kill()
+		_ = server.Wait()
+		os.Remove(binary)
+		return "", nil, fmt.Errorf("wait for demo-server: %w", err)
+	}
+	cleanup = func() {
+		_ = server.Process.Kill()
+		_ = server.Wait()
+		os.Remove(binary)
+	}
+	return baseURL, cleanup, nil
+}
+
+// installACT downloads the ACT conformance binary and caches it.
+func installACT() (string, error) {
+	arch := runtime.GOARCH
+	switch arch {
+	case "amd64":
+		arch = "x86_64"
+	case "arm64":
+		// already correct
+	default:
+		return "", fmt.Errorf("unsupported architecture: %s", arch)
+	}
+	binPath := root("tools", "build", "act", "conformance_"+arch)
+	if _, err := os.Stat(binPath); err == nil {
+		return binPath, nil
+	}
+	url := fmt.Sprintf(
+		"https://actbin.blob.core.windows.net/act-bin/conformance_%s",
+		arch,
+	)
+	log.Printf("downloading ACT binary from %s", url)
+	if err := downloadBinary(url, binPath); err != nil {
+		return "", fmt.Errorf("download ACT: %w", err)
+	}
+	return binPath, nil
+}
+
+func downloadBinary(url, dst string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("HTTP %s", resp.Status)
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = io.Copy(f, resp.Body)
+	return err
+}
+
+func waitForServer(baseURL string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		resp, err := http.Get(baseURL + "/.well-known/openid-configuration")
+		if err == nil {
+			resp.Body.Close()
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("server not ready after %v", timeout)
 }
 
 // Helpers

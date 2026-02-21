@@ -1,7 +1,7 @@
 overlay: 1.0.0
 
 info:
-  title: Overlay for iLEAP 0.2.0-wip
+  title: Overlay for iLEAP Tech Specs v1
   version: 1.0.0
 
 actions:
@@ -10,16 +10,8 @@ actions:
   description: "Skip code generation for requests"
   remove: true
 
-- target: $.components.responses
-  description: "Skip code generation for responses"
-  remove: true
-
 - target: $.components.securitySchemes
   description: "Skip code generation for security schemes"
-  remove: true
-
-- target: $.components.parameters
-  description: "Skip code generation for request parameters"
   remove: true
 
 - target: $..[?(@.format == "uuid")].format
@@ -37,4 +29,10 @@ actions:
     geographyCountry:
       $ref: "#/components/schemas/ISO3166CC"
     geographyCountrySubdivision:
+      $ref: "#/components/schemas/NonEmptyString"
+
+- target: $.components.schemas.ProductFootprint_for_ILeapType.properties
+  description: "ACT conformance workaround: add organizationName field"
+  update:
+    organizationName:
       $ref: "#/components/schemas/NonEmptyString"

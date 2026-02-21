@@ -11,6 +11,11 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// Defines values for AccessDeniedCode.
+const (
+	AccessDeniedCodeAccessDenied AccessDeniedCode = "AccessDenied"
+)
+
 // Defines values for AssuranceBoundary.
 const (
 	AssuranceBoundaryCradleToGate AssuranceBoundary = "Cradle-to-Gate"
@@ -31,9 +36,14 @@ const (
 	AssuranceLevelReasonable AssuranceLevel = "reasonable"
 )
 
+// Defines values for BadRequestCode.
+const (
+	BadRequestCodeBadRequest BadRequestCode = "BadRequest"
+)
+
 // Defines values for BiogenicAccountingMethodology.
 const (
-	BiogenicAccountingMethodologyGHPG    BiogenicAccountingMethodology = "GHPG"
+	BiogenicAccountingMethodologyGHGP    BiogenicAccountingMethodology = "GHGP"
 	BiogenicAccountingMethodologyISO     BiogenicAccountingMethodology = "ISO"
 	BiogenicAccountingMethodologyPEF     BiogenicAccountingMethodology = "PEF"
 	BiogenicAccountingMethodologyQuantis BiogenicAccountingMethodology = "Quantis"
@@ -63,6 +73,30 @@ const (
 	DeclaredUnitTonKilometer DeclaredUnit = "ton kilometer"
 )
 
+// Defines values for EnergyCarrierType.
+const (
+	EnergyCarrierTypeAviationFuel EnergyCarrierType = "Aviation fuel"
+	EnergyCarrierTypeCNG          EnergyCarrierType = "CNG"
+	EnergyCarrierTypeDiesel       EnergyCarrierType = "Diesel"
+	EnergyCarrierTypeElectric     EnergyCarrierType = "Electric"
+	EnergyCarrierTypeHFO          EnergyCarrierType = "HFO"
+	EnergyCarrierTypeHVO          EnergyCarrierType = "HVO"
+	EnergyCarrierTypeHydrogen     EnergyCarrierType = "Hydrogen"
+	EnergyCarrierTypeLNG          EnergyCarrierType = "LNG"
+	EnergyCarrierTypeLPG          EnergyCarrierType = "LPG"
+	EnergyCarrierTypeMGO          EnergyCarrierType = "MGO"
+	EnergyCarrierTypeMethanol     EnergyCarrierType = "Methanol"
+	EnergyCarrierTypePetrol       EnergyCarrierType = "Petrol"
+)
+
+// Defines values for EnergyConsumptionUnit.
+const (
+	EnergyConsumptionUnitKWh EnergyConsumptionUnit = "kWh"
+	EnergyConsumptionUnitKg  EnergyConsumptionUnit = "kg"
+	EnergyConsumptionUnitL   EnergyConsumptionUnit = "l"
+	EnergyConsumptionUnitMJ  EnergyConsumptionUnit = "MJ"
+)
+
 // Defines values for FeedstockType.
 const (
 	FeedstockTypeCookingOil           FeedstockType = "Cooking oil"
@@ -72,11 +106,23 @@ const (
 	FeedstockTypeRenewableElectricity FeedstockType = "Renewable electricity"
 )
 
+// Defines values for NoSuchFootprintCode.
+const (
+	NoSuchFootprintCodeNoSuchFootprint NoSuchFootprintCode = "NoSuchFootprint"
+)
+
+// Defines values for NotImplementedCode.
+const (
+	NotImplementedCodeNotImplemented NotImplementedCode = "NotImplemented"
+)
+
 // Defines values for PackagingOrTrEqType.
 const (
-	PackagingOrTrEqTypeBox       PackagingOrTrEqType = "Box"
-	PackagingOrTrEqTypeContainer PackagingOrTrEqType = "Container"
-	PackagingOrTrEqTypePallet    PackagingOrTrEqType = "Pallet"
+	PackagingOrTrEqTypeBox          PackagingOrTrEqType = "Box"
+	PackagingOrTrEqTypeContainer    PackagingOrTrEqType = "Container"
+	PackagingOrTrEqTypeContainerFEU PackagingOrTrEqType = "Container-FEU"
+	PackagingOrTrEqTypeContainerTEU PackagingOrTrEqType = "Container-TEU"
+	PackagingOrTrEqTypePallet       PackagingOrTrEqType = "Pallet"
 )
 
 // Defines values for PathfinderEvent0Type.
@@ -100,6 +146,12 @@ const (
 	ProductOrSectorSpecificRuleOperatorEPDInternational ProductOrSectorSpecificRuleOperator = "EPD International"
 	ProductOrSectorSpecificRuleOperatorOther            ProductOrSectorSpecificRuleOperator = "Other"
 	ProductOrSectorSpecificRuleOperatorPEF              ProductOrSectorSpecificRuleOperator = "PEF"
+)
+
+// Defines values for TadTempControl.
+const (
+	TadTempControlAmbient      TadTempControl = "ambient"
+	TadTempControlRefrigerated TadTempControl = "refrigerated"
 )
 
 // Defines values for TransportMode.
@@ -139,20 +191,24 @@ const (
 
 // AccessDenied Response with an error code of `AccessDenied`. See Chapter "Error Codes" of the Tech Specs for mor details.
 type AccessDenied struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	// Code Error code enum for AccessDenied responses
+	Code    AccessDeniedCode `json:"code"`
+	Message string           `json:"message"`
 }
+
+// AccessDeniedCode Error code enum for AccessDenied responses
+type AccessDeniedCode string
 
 // Assurance Data Type "Assurance" of Spec Version 2
 type Assurance struct {
 	Assurance    bool               `json:"assurance"`
-	Boundary     *AssuranceBoundary `json:"boundary"`
-	Comments     *string            `json:"comments"`
-	CompletedAt  *time.Time         `json:"completedAt"`
-	Coverage     *AssuranceCoverage `json:"coverage"`
-	Level        *AssuranceLevel    `json:"level"`
+	Boundary     *AssuranceBoundary `json:"boundary,omitempty"`
+	Comments     *string            `json:"comments,omitempty"`
+	CompletedAt  *time.Time         `json:"completedAt,omitempty"`
+	Coverage     *AssuranceCoverage `json:"coverage,omitempty"`
+	Level        *AssuranceLevel    `json:"level,omitempty"`
 	ProviderName string             `json:"providerName"`
-	StandardName *string            `json:"standardName"`
+	StandardName *string            `json:"standardName,omitempty"`
 }
 
 // AssuranceBoundary defines model for AssuranceBoundary.
@@ -166,29 +222,33 @@ type AssuranceLevel string
 
 // BadRequest Response with an error code of `BadRequest`. See Chapter "Error Codes" of the Tech Specs for mor details.
 type BadRequest struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	// Code Error code enum for BadRequest responses
+	Code    BadRequestCode `json:"code"`
+	Message string         `json:"message"`
 }
+
+// BadRequestCode Error code enum for BadRequest responses
+type BadRequestCode string
 
 // BiogenicAccountingMethodology defines model for BiogenicAccountingMethodology.
 type BiogenicAccountingMethodology string
 
 // CarbonFootprint Data Type "CarbonFootprint" of Spec Version 2
 type CarbonFootprint struct {
-	AircraftGhgEmissions          *PositiveDecimal               `json:"aircraftGhgEmissions"`
-	AllocationRulesDescription    *string                        `json:"allocationRulesDescription"`
-	Assurance                     *Assurance                     `json:"assurance"`
-	BiogenicAccountingMethodology *BiogenicAccountingMethodology `json:"biogenicAccountingMethodology"`
+	AircraftGhgEmissions          *PositiveDecimal               `json:"aircraftGhgEmissions,omitempty"`
+	AllocationRulesDescription    *string                        `json:"allocationRulesDescription,omitempty"`
+	Assurance                     *Assurance                     `json:"assurance,omitempty"`
+	BiogenicAccountingMethodology *BiogenicAccountingMethodology `json:"biogenicAccountingMethodology,omitempty"`
 	BiogenicCarbonContent         PositiveDecimal                `json:"biogenicCarbonContent"`
-	BiogenicCarbonWithdrawal      *NegativeDecimal               `json:"biogenicCarbonWithdrawal"`
+	BiogenicCarbonWithdrawal      *NegativeDecimal               `json:"biogenicCarbonWithdrawal,omitempty"`
 	BoundaryProcessesDescription  string                         `json:"boundaryProcessesDescription"`
 	CharacterizationFactors       CharacterizationFactors        `json:"characterizationFactors"`
 	CrossSectoralStandardsUsed    CrossSectoralStandardSet       `json:"crossSectoralStandardsUsed"`
-	DLucGhgEmissions              *PositiveDecimal               `json:"dLucGhgEmissions"`
+	DLucGhgEmissions              *PositiveDecimal               `json:"dLucGhgEmissions,omitempty"`
 
 	// DeclaredUnit Data Type "DeclaredUnit" of Spec Version 2
 	DeclaredUnit                 DeclaredUnit             `json:"declaredUnit"`
-	Dqi                          *DataQualityIndicators   `json:"dqi"`
+	Dqi                          *DataQualityIndicators   `json:"dqi,omitempty"`
 	ExemptedEmissionsDescription string                   `json:"exemptedEmissionsDescription"`
 	ExemptedEmissionsPercent     ExemptedEmissionsPercent `json:"exemptedEmissionsPercent"`
 	FossilCarbonContent          PositiveDecimal          `json:"fossilCarbonContent"`
@@ -198,20 +258,20 @@ type CarbonFootprint struct {
 
 	// GeographyRegionOrSubregion List of UN regions and subregions
 	GeographyRegionOrSubregion         *UNRegionOrSubregion               `json:"geographyRegionOrSubregion,omitempty"`
-	ILucGhgEmissions                   *PositiveDecimal                   `json:"iLucGhgEmissions"`
+	ILucGhgEmissions                   *PositiveDecimal                   `json:"iLucGhgEmissions,omitempty"`
 	IpccCharacterizationFactorsSources IpccCharacterizationFactorsSources `json:"ipccCharacterizationFactorsSources"`
-	LandManagementGhgEmissions         *PositiveDecimal                   `json:"landManagementGhgEmissions"`
-	OtherBiogenicGhgEmissions          *PositiveDecimal                   `json:"otherBiogenicGhgEmissions"`
+	LandManagementGhgEmissions         *PositiveDecimal                   `json:"landManagementGhgEmissions,omitempty"`
+	OtherBiogenicGhgEmissions          *PositiveDecimal                   `json:"otherBiogenicGhgEmissions,omitempty"`
 	PCfExcludingBiogenic               PositiveDecimal                    `json:"pCfExcludingBiogenic"`
-	PCfIncludingBiogenic               *Decimal                           `json:"pCfIncludingBiogenic"`
+	PCfIncludingBiogenic               *Decimal                           `json:"pCfIncludingBiogenic,omitempty"`
 	PackagingEmissionsIncluded         bool                               `json:"packagingEmissionsIncluded"`
-	PackagingGhgEmissions              *PositiveDecimal                   `json:"packagingGhgEmissions"`
-	PrimaryDataShare                   *Percent                           `json:"primaryDataShare"`
-	ProductOrSectorSpecificRules       *ProductOrSectorSpecificRuleSet    `json:"productOrSectorSpecificRules"`
+	PackagingGhgEmissions              *PositiveDecimal                   `json:"packagingGhgEmissions,omitempty"`
+	PrimaryDataShare                   *Percent                           `json:"primaryDataShare,omitempty"`
+	ProductOrSectorSpecificRules       *ProductOrSectorSpecificRuleSet    `json:"productOrSectorSpecificRules,omitempty"`
 	ReferencePeriodEnd                 time.Time                          `json:"referencePeriodEnd"`
 	ReferencePeriodStart               time.Time                          `json:"referencePeriodStart"`
-	SecondaryEmissionFactorSources     *EmissionFactorDSSet               `json:"secondaryEmissionFactorSources"`
-	UncertaintyAssessmentDescription   *string                            `json:"uncertaintyAssessmentDescription"`
+	SecondaryEmissionFactorSources     *EmissionFactorDSSet               `json:"secondaryEmissionFactorSources,omitempty"`
+	UncertaintyAssessmentDescription   *string                            `json:"uncertaintyAssessmentDescription,omitempty"`
 	UnitaryProductAmount               StrictlyPositiveDecimal            `json:"unitaryProductAmount"`
 }
 
@@ -263,14 +323,31 @@ type EmissionFactorDSSet = []struct {
 	Version NonEmptyString `json:"version"`
 }
 
+// EnergyCarrier defines model for EnergyCarrier.
+type EnergyCarrier struct {
+	EmissionFactorTTW     Decimal                `json:"emissionFactorTTW"`
+	EmissionFactorWTW     Decimal                `json:"emissionFactorWTW"`
+	EnergyCarrier         EnergyCarrierType      `json:"energyCarrier"`
+	EnergyConsumption     *Decimal               `json:"energyConsumption,omitempty"`
+	EnergyConsumptionUnit *EnergyConsumptionUnit `json:"energyConsumptionUnit,omitempty"`
+	Feedstocks            *[]Feedstock           `json:"feedstocks,omitempty"`
+	RelativeShare         Decimal                `json:"relativeShare"`
+}
+
+// EnergyCarrierType defines model for EnergyCarrierType.
+type EnergyCarrierType string
+
+// EnergyConsumptionUnit defines model for EnergyConsumptionUnit.
+type EnergyConsumptionUnit string
+
 // ExemptedEmissionsPercent defines model for ExemptedEmissionsPercent.
 type ExemptedEmissionsPercent = float64
 
 // Feedstock defines model for Feedstock.
 type Feedstock struct {
-	Feedstock           FeedstockType `json:"feedstock"`
-	FeedstockPercentage *Decimal      `json:"feedstockPercentage"`
-	RegionProvenance    *string       `json:"regionProvenance"`
+	Feedstock        FeedstockType `json:"feedstock"`
+	FeedstockShare   *Decimal      `json:"feedstockShare,omitempty"`
+	RegionProvenance *string       `json:"regionProvenance,omitempty"`
 }
 
 // FeedstockType defines model for FeedstockType.
@@ -289,17 +366,23 @@ type GlecDistance struct {
 
 // GlecDistance0 defines model for .
 type GlecDistance0 struct {
-	Actual Decimal `json:"actual"`
+	Actual Decimal  `json:"actual"`
+	Gcd    *Decimal `json:"gcd,omitempty"`
+	Sfd    *Decimal `json:"sfd,omitempty"`
 }
 
 // GlecDistance1 defines model for .
 type GlecDistance1 struct {
-	Gcd Decimal `json:"gcd"`
+	Actual *Decimal `json:"actual,omitempty"`
+	Gcd    Decimal  `json:"gcd"`
+	Sfd    *Decimal `json:"sfd,omitempty"`
 }
 
 // GlecDistance2 defines model for .
 type GlecDistance2 struct {
-	Sfd Decimal `json:"sfd"`
+	Actual *Decimal `json:"actual,omitempty"`
+	Gcd    *Decimal `json:"gcd,omitempty"`
+	Sfd    Decimal  `json:"sfd"`
 }
 
 // ISO3166CC defines model for ISO3166CC.
@@ -318,13 +401,13 @@ type IpccCharacterizationFactorsSources = []string
 type Location struct {
 	City    string    `json:"city"`
 	Country ISO3166CC `json:"country"`
-	Iata    *IataCode `json:"iata"`
-	Lat     *Decimal  `json:"lat"`
-	Lng     *Decimal  `json:"lng"`
-	Locode  *Locode   `json:"locode"`
-	Street  *string   `json:"street"`
-	Uic     *UicCode  `json:"uic"`
-	Zip     *string   `json:"zip"`
+	Iata    *IataCode `json:"iata,omitempty"`
+	Lat     *Decimal  `json:"lat,omitempty"`
+	Lng     *Decimal  `json:"lng,omitempty"`
+	Locode  *Locode   `json:"locode,omitempty"`
+	Street  *string   `json:"street,omitempty"`
+	Uic     *UicCode  `json:"uic,omitempty"`
+	Zip     *string   `json:"zip,omitempty"`
 }
 
 // Locode defines model for Locode.
@@ -332,6 +415,16 @@ type Locode = string
 
 // NegativeDecimal defines model for NegativeDecimal.
 type NegativeDecimal = string
+
+// NoSuchFootprint Response with an error code of `NoSuchFootprint`. See Chapter "Error Codes" of the Tech Specs for mor details.
+type NoSuchFootprint struct {
+	// Code Error code enum for NoSuchFootprint responses
+	Code    NoSuchFootprintCode `json:"code"`
+	Message string              `json:"message"`
+}
+
+// NoSuchFootprintCode Error code enum for NoSuchFootprint responses
+type NoSuchFootprintCode string
 
 // NonEmptyPfIDVec defines model for NonEmptyPfIdVec.
 type NonEmptyPfIDVec = []string
@@ -342,9 +435,22 @@ type NonEmptyString = string
 // NonEmptyStringVec defines model for NonEmptyStringVec.
 type NonEmptyStringVec = []string
 
+// NonEmptyVecForEnergyCarrier defines model for NonEmptyVec_for_EnergyCarrier.
+type NonEmptyVecForEnergyCarrier = []EnergyCarrier
+
+// NotImplemented Response with an error code of `NotImplemented`. See Chapter "Error Codes" of the Tech Specs for mor details.
+type NotImplemented struct {
+	// Code Error code enum for NotImplemented responses
+	Code    NotImplementedCode `json:"code"`
+	Message string             `json:"message"`
+}
+
+// NotImplementedCode Error code enum for NotImplemented responses
+type NotImplementedCode string
+
 // PFRequestEventBody defines model for PFRequestEventBody.
 type PFRequestEventBody struct {
-	Comment *string     `json:"comment"`
+	Comment *string     `json:"comment,omitempty"`
 	Pf      interface{} `json:"pf"`
 }
 
@@ -411,26 +517,27 @@ type ProductFootprintResponse struct {
 
 // ProductFootprintForILeapType Data Type "ProductFootprint" of Tech Spec Version 2
 type ProductFootprintForILeapType struct {
-	Comment     string                `json:"comment"`
-	CompanyIds  CompanyIDSet          `json:"companyIds"`
-	CompanyName NonEmptyString        `json:"companyName"`
-	Created     time.Time             `json:"created"`
-	Extensions  *[]DataModelExtension `json:"extensions"`
-	ID          PfID                  `json:"id"`
+	Comment          string                `json:"comment"`
+	CompanyIds       CompanyIDSet          `json:"companyIds"`
+	CompanyName      NonEmptyString        `json:"companyName"`
+	Created          time.Time             `json:"created"`
+	Extensions       *[]DataModelExtension `json:"extensions,omitempty"`
+	ID               PfID                  `json:"id"`
+	OrganizationName *NonEmptyString       `json:"organizationName,omitempty"`
 
 	// Pcf Data Type "CarbonFootprint" of Spec Version 2
 	Pcf                 CarbonFootprint  `json:"pcf"`
-	PrecedingPfIds      *NonEmptyPfIDVec `json:"precedingPfIds"`
+	PrecedingPfIds      *NonEmptyPfIDVec `json:"precedingPfIds,omitempty"`
 	ProductCategoryCpc  NonEmptyString   `json:"productCategoryCpc"`
 	ProductDescription  string           `json:"productDescription"`
 	ProductIds          ProductIDSet     `json:"productIds"`
 	ProductNameCompany  NonEmptyString   `json:"productNameCompany"`
 	SpecVersion         VersionString    `json:"specVersion"`
 	Status              PfStatus         `json:"status"`
-	StatusComment       *string          `json:"statusComment"`
-	Updated             *time.Time       `json:"updated"`
-	ValidityPeriodEnd   *time.Time       `json:"validityPeriodEnd"`
-	ValidityPeriodStart *time.Time       `json:"validityPeriodStart"`
+	StatusComment       *string          `json:"statusComment,omitempty"`
+	Updated             *time.Time       `json:"updated,omitempty"`
+	ValidityPeriodEnd   *time.Time       `json:"validityPeriodEnd,omitempty"`
+	ValidityPeriodStart *time.Time       `json:"validityPeriodStart,omitempty"`
 	Version             VersionInteger   `json:"version"`
 }
 
@@ -440,7 +547,7 @@ type ProductIDSet = []string
 // ProductOrSectorSpecificRule defines model for ProductOrSectorSpecificRule.
 type ProductOrSectorSpecificRule struct {
 	Operator          ProductOrSectorSpecificRuleOperator `json:"operator"`
-	OtherOperatorName *NonEmptyString                     `json:"otherOperatorName"`
+	OtherOperatorName *NonEmptyString                     `json:"otherOperatorName,omitempty"`
 	RuleNames         NonEmptyStringVec                   `json:"ruleNames"`
 }
 
@@ -450,7 +557,7 @@ type ProductOrSectorSpecificRuleOperator string
 // ProductOrSectorSpecificRuleSet defines model for ProductOrSectorSpecificRuleSet.
 type ProductOrSectorSpecificRuleSet = []struct {
 	Operator          ProductOrSectorSpecificRuleOperator `json:"operator"`
-	OtherOperatorName *NonEmptyString                     `json:"otherOperatorName"`
+	OtherOperatorName *NonEmptyString                     `json:"otherOperatorName,omitempty"`
 	RuleNames         NonEmptyStringVec                   `json:"ruleNames"`
 }
 
@@ -459,26 +566,30 @@ type StrictlyPositiveDecimal = string
 
 // TAD Data Type "Transport Activity Data" of the iLEAP Technical Specifications
 type TAD struct {
-	ActivityID            string               `json:"activityId"`
-	ArrivalAt             *time.Time           `json:"arrivalAt"`
-	ConsignmentIds        []string             `json:"consignmentIds"`
-	DepartureAt           *time.Time           `json:"departureAt"`
-	Destination           Location             `json:"destination"`
-	Distance              GlecDistance         `json:"distance"`
-	EmptyDistanceFactor   *Decimal             `json:"emptyDistanceFactor"`
-	Feedstocks            *[]Feedstock         `json:"feedstocks"`
-	LoadFactor            *Decimal             `json:"loadFactor"`
-	Mass                  *Decimal             `json:"mass"`
-	Mode                  *TransportMode       `json:"mode"`
-	Origin                Location             `json:"origin"`
-	PackagingOrTrEqAmount *uint                `json:"packagingOrTrEqAmount"`
-	PackagingOrTrEqType   *PackagingOrTrEqType `json:"packagingOrTrEqType"`
+	ActivityID            string                       `json:"activityId"`
+	ArrivalAt             time.Time                    `json:"arrivalAt"`
+	ConsignmentIds        []string                     `json:"consignmentIds"`
+	DepartureAt           time.Time                    `json:"departureAt"`
+	Destination           Location                     `json:"destination"`
+	Distance              GlecDistance                 `json:"distance"`
+	EmptyDistanceFactor   *Decimal                     `json:"emptyDistanceFactor,omitempty"`
+	EnergyCarriers        *NonEmptyVecForEnergyCarrier `json:"energyCarriers,omitempty"`
+	LoadFactor            *Decimal                     `json:"loadFactor,omitempty"`
+	Mass                  *Decimal                     `json:"mass,omitempty"`
+	Mode                  TransportMode                `json:"mode"`
+	Origin                Location                     `json:"origin"`
+	PackagingOrTrEqAmount *uint                        `json:"packagingOrTrEqAmount,omitempty"`
+	PackagingOrTrEqType   *PackagingOrTrEqType         `json:"packagingOrTrEqType,omitempty"`
+	TemperatureControl    *TadTempControl              `json:"temperatureControl,omitempty"`
 }
 
 // TadListingResponseInner HTTP Body of Action `TransportActivityData`
 type TadListingResponseInner struct {
 	Data []TAD `json:"data"`
 }
+
+// TadTempControl defines model for TadTempControl.
+type TadTempControl string
 
 // TransportMode defines model for TransportMode.
 type TransportMode string
@@ -488,12 +599,6 @@ type UNRegionOrSubregion string
 
 // UicCode defines model for UicCode.
 type UicCode = string
-
-// Unauthorized Response with an error code of `Unauthorized`, used for iLEAP TransportActivityData
-type Unauthorized struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-}
 
 // VersionInteger defines model for VersionInteger.
 type VersionInteger = int32

@@ -38,6 +38,16 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "# 404 Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoSuchFootprint"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -150,7 +160,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BadRequest"
+                  "$ref": "#/components/schemas/NotImplemented"
                 }
               }
             }
@@ -208,12 +218,12 @@
               }
             }
           },
-          "401": {
-            "description": "# 401 Unauthorized\nThe access token is not valid. ",
+          "403": {
+            "description": "# 403 Forbidden",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Unauthorized"
+                  "$ref": "#/components/schemas/AccessDenied"
                 }
               }
             }
@@ -794,7 +804,7 @@
         "enum": [
           "PEF",
           "ISO",
-          "GHPG",
+          "GHGP",
           "Quantis"
         ]
       },
@@ -1025,9 +1035,39 @@
             "type": "string"
           },
           "code": {
-            "type": "string"
+            "$ref": "#/components/schemas/BadRequestCode"
           }
         }
+      },
+      "BadRequestCode": {
+        "description": "Error code enum for BadRequest responses",
+        "type": "string",
+        "enum": [
+          "BadRequest"
+        ]
+      },
+      "NoSuchFootprint": {
+        "description": "Response with an error code of `NoSuchFootprint`. See Chapter \"Error Codes\" of the Tech Specs for mor details.",
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "$ref": "#/components/schemas/NoSuchFootprintCode"
+          }
+        }
+      },
+      "NoSuchFootprintCode": {
+        "description": "Error code enum for NoSuchFootprint responses",
+        "type": "string",
+        "enum": [
+          "NoSuchFootprint"
+        ]
       },
       "PfIdParam": {
         "$ref": "#/components/schemas/PfId"
@@ -1059,9 +1099,39 @@
             "type": "string"
           },
           "code": {
-            "type": "string"
+            "$ref": "#/components/schemas/AccessDeniedCode"
           }
         }
+      },
+      "AccessDeniedCode": {
+        "description": "Error code enum for AccessDenied responses",
+        "type": "string",
+        "enum": [
+          "AccessDenied"
+        ]
+      },
+      "NotImplemented": {
+        "description": "Response with an error code of `NotImplemented`. See Chapter \"Error Codes\" of the Tech Specs for mor details.",
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "$ref": "#/components/schemas/NotImplementedCode"
+          }
+        }
+      },
+      "NotImplementedCode": {
+        "description": "Error code enum for NotImplemented responses",
+        "type": "string",
+        "enum": [
+          "NotImplemented"
+        ]
       },
       "PathfinderEvent": {
         "description": "possible contents of `data` property of events - see tech specs section 6 for details",
@@ -1175,9 +1245,12 @@
         "type": "object",
         "required": [
           "activityId",
+          "arrivalAt",
           "consignmentIds",
+          "departureAt",
           "destination",
           "distance",
+          "mode",
           "origin"
         ],
         "properties": {
@@ -1225,21 +1298,14 @@
           },
           "departureAt": {
             "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "format": "date-time"
           },
           "arrivalAt": {
             "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "format": "date-time"
           },
           "mode": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/TransportMode"
-              }
-            ],
-            "nullable": true
+            "$ref": "#/components/schemas/TransportMode"
           },
           "packagingOrTrEqType": {
             "allOf": [
@@ -1255,17 +1321,27 @@
             "minimum": 0.0,
             "nullable": true
           },
-          "feedstocks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Feedstock"
-            },
+          "energyCarriers": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmptyVec_for_EnergyCarrier"
+              }
+            ],
+            "nullable": true
+          },
+          "temperatureControl": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TadTempControl"
+              }
+            ],
             "nullable": true
           }
         }
       },
       "GlecDistance": {
-        "oneOf": [
+        "type": "object",
+        "anyOf": [
           {
             "type": "object",
             "required": [
@@ -1274,9 +1350,24 @@
             "properties": {
               "actual": {
                 "$ref": "#/components/schemas/Decimal"
+              },
+              "gcd": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              },
+              "sfd": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
               }
-            },
-            "additionalProperties": false
+            }
           },
           {
             "type": "object",
@@ -1284,11 +1375,26 @@
               "gcd"
             ],
             "properties": {
+              "actual": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              },
               "gcd": {
                 "$ref": "#/components/schemas/Decimal"
+              },
+              "sfd": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
               }
-            },
-            "additionalProperties": false
+            }
           },
           {
             "type": "object",
@@ -1296,11 +1402,26 @@
               "sfd"
             ],
             "properties": {
+              "actual": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              },
+              "gcd": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Decimal"
+                  }
+                ],
+                "nullable": true
+              },
               "sfd": {
                 "$ref": "#/components/schemas/Decimal"
               }
-            },
-            "additionalProperties": false
+            }
           }
         ]
       },
@@ -1391,7 +1512,78 @@
         "enum": [
           "Box",
           "Pallet",
+          "Container-TEU",
+          "Container-FEU",
           "Container"
+        ]
+      },
+      "NonEmptyVec_for_EnergyCarrier": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EnergyCarrier"
+        }
+      },
+      "EnergyCarrier": {
+        "type": "object",
+        "required": [
+          "emissionFactorTTW",
+          "emissionFactorWTW",
+          "energyCarrier",
+          "relativeShare"
+        ],
+        "properties": {
+          "energyCarrier": {
+            "$ref": "#/components/schemas/EnergyCarrierType"
+          },
+          "feedstocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Feedstock"
+            },
+            "nullable": true
+          },
+          "energyConsumption": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Decimal"
+              }
+            ],
+            "nullable": true
+          },
+          "energyConsumptionUnit": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EnergyConsumptionUnit"
+              }
+            ],
+            "nullable": true
+          },
+          "emissionFactorWTW": {
+            "$ref": "#/components/schemas/Decimal"
+          },
+          "emissionFactorTTW": {
+            "$ref": "#/components/schemas/Decimal"
+          },
+          "relativeShare": {
+            "$ref": "#/components/schemas/Decimal"
+          }
+        }
+      },
+      "EnergyCarrierType": {
+        "type": "string",
+        "enum": [
+          "Diesel",
+          "HVO",
+          "Petrol",
+          "CNG",
+          "LNG",
+          "LPG",
+          "HFO",
+          "MGO",
+          "Aviation fuel",
+          "Hydrogen",
+          "Methanol",
+          "Electric"
         ]
       },
       "Feedstock": {
@@ -1403,7 +1595,7 @@
           "feedstock": {
             "$ref": "#/components/schemas/FeedstockType"
           },
-          "feedstockPercentage": {
+          "feedstockShare": {
             "allOf": [
               {
                 "$ref": "#/components/schemas/Decimal"
@@ -1427,21 +1619,21 @@
           "Cooking oil"
         ]
       },
-      "Unauthorized": {
-        "description": "Response with an error code of `Unauthorized`, used for iLEAP TransportActivityData",
-        "type": "object",
-        "required": [
-          "code",
-          "message"
-        ],
-        "properties": {
-          "message": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          }
-        }
+      "EnergyConsumptionUnit": {
+        "type": "string",
+        "enum": [
+          "l",
+          "kg",
+          "kWh",
+          "MJ"
+        ]
+      },
+      "TadTempControl": {
+        "type": "string",
+        "enum": [
+          "ambient",
+          "refrigerated"
+        ]
       }
     },
     "securitySchemes": {

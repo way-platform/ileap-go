@@ -131,7 +131,6 @@ func TestServer(t *testing.T) {
 			if w.Code != http.StatusOK {
 				t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 			}
-			// Check content type for successful response
 			contentType := w.Header().Get("Content-Type")
 			if contentType != "application/json" {
 				t.Errorf("expected Content-Type 'application/json', got '%s'", contentType)
@@ -142,7 +141,7 @@ func TestServer(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints", nil)
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest)
+			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 		})
 
 		t.Run("invalid token", func(t *testing.T) {
@@ -158,7 +157,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Authorization", "Basic invalid-auth")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest)
+			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 		})
 
 		t.Run("empty token", func(t *testing.T) {
@@ -166,7 +165,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer ")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest)
+			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 		})
 	})
 
@@ -176,14 +175,14 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer "+getAccessToken(t, server))
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusNotFound, ileap.ErrorCodeNotFound)
+			checkErrorResponse(t, w, http.StatusNotFound, ileap.ErrorCodeNoSuchFootprint)
 		})
 
 		t.Run("unauthenticated", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints/some-id", nil)
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest)
+			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 		})
 	})
 
@@ -202,19 +201,19 @@ func TestServer(t *testing.T) {
 			}
 		})
 
-		t.Run("unauthenticated", func(t *testing.T) {
+		t.Run("unauthenticated returns 403", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest)
+			checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
 		})
 
-		t.Run("invalid token", func(t *testing.T) {
+		t.Run("invalid token returns 403", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
 			req.Header.Set("Authorization", "Bearer invalid.token.here")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+			checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
 		})
 	})
 }

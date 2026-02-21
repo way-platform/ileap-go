@@ -14,4 +14,6 @@ type JWTClaims struct {
 	Username string `json:"username"`
 	// IssuedAt is the Unix timestamp of the JWT issuance.
 	IssuedAt int64 `json:"iat,omitempty"`
+	// Expiration is the Unix timestamp of the JWT expiration.
+	Expiration int64 `json:"exp,omitempty"`
 }
