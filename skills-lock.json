@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "skills": {
+    "agents-md": {
+      "source": "getsentry/skills",
+      "sourceType": "github",
+      "computedHash": "3396f2a758bca4adab4fcfff070105da71732b7da38fdc1402d5e3994f3b0a02"
+    },
+    "ileap": {
+      "source": "way-platform/skills",
+      "sourceType": "github",
+      "computedHash": "59ff48d4095d996dc38e002febe5f37fdd71ce44e48f67fd3d1e81761e01d124"
+    },
+    "prd": {
+      "source": "snarktank/ralph",
+      "sourceType": "github",
+      "computedHash": "e8445eff7538ffd81616cbc2b22c2158320d30b557d0d75ee189bd6fd8530d66"
+    },
+    "way-go-style": {
+      "source": "way-platform/skills",
+      "sourceType": "github",
+      "computedHash": "786907e7b6fec712353685fad08256d7bd46cb8ac735444d561e51fa3f0700e6"
+    },
+    "way-magefile": {
+      "source": "way-platform/skills",
+      "sourceType": "github",
+      "computedHash": "eef0e89b850cec77b87899714e907d5ffb21c43915da6e838e36620faafe0edb"
+    }
+  }
+}
