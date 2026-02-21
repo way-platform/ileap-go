@@ -3,15 +3,11 @@
 Practical issues discovered while implementing iLEAP servers and
 running ACT conformance tests.
 
-## ACT `organizationName` Field
+## `organizationName` Field
 
-ACT (Automated Conformance Testing) expects an `organizationName`
-field on ProductFootprints. This field is **not defined** in any PACT
-or iLEAP spec. It appears to be an ACT-specific requirement.
-
-**Workaround**: Include `organizationName` alongside `companyName` in
-your ProductFootprint responses when targeting ACT conformance. Use the
-same value as `companyName`.
+PACT v2.1.0 defines `organizationName` as an optional alias for
+`companyName` on ProductFootprint. Include `organizationName` in
+ProductFootprint responses with the same value as `companyName`.
 
 ## Spec Version Confusion
 
@@ -74,3 +70,32 @@ The `Link` header for pagination must use **absolute URLs** with the
 same host as the original request. Relative URLs will fail ACT tests.
 
 Format: `Link: <https://example.com/2/footprints?limit=10&offset=10>; rel="next"`
+
+## Optional Fields Must Be Omitted, Not Null
+
+ACT and the SINE reference API expect optional fields to be absent from
+the JSON response, not serialized as `null`. Ensure code generators and
+serialization libraries omit nil/null optional fields.
+
+## `secondaryEmissionFactorSources` Must Be Undefined
+
+Per PACT spec, if no secondary data is used, `secondaryEmissionFactorSources`
+MUST be absent from the JSON — not `null`, not an empty array.
+
+## ACT Requires Publicly Reachable Server
+
+ACT delegates PACT tests to an external service that must reach the API
+over the internet. Localhost URLs cause PACT test failures. iLEAP-specific
+tests (TC001-TC007) work locally.
+
+## PACT TC8 and TC18: Known Reference Failures
+
+PACT TC8 and TC18 fail even on the SINE demo API at
+`api.ileap.sine.dev`. Treat these as known failures when evaluating
+ACT results.
+
+## `biogenicAccountingMethodology` Valid Values
+
+Valid values: `GHGP`, `ISO`, `PEF`, `Quantis`.
+
+Note: the correct value is `GHGP` (not `GHPG`) — common typo.

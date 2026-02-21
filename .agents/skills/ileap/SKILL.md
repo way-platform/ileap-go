@@ -236,6 +236,10 @@ See `references/known-issues.md` for error code gotchas (e.g.,
 | TC007 | TAD with invalid token | `GET /2/ileap/tad` | 403 AccessDenied |
 | TC008 | TAD with expired token | `GET /2/ileap/tad` | 401 TokenExpired |
 
+> **TC008 note**: TC008 requires the server to issue short-lived tokens
+> so ACT can wait for expiry. Most test servers skip this by issuing
+> long-lived tokens — TC008 will then time out or fail.
+
 ### ACT (Automated Conformance Testing)
 
 - **Web UI**: https://act.sine.dev
@@ -269,6 +273,13 @@ act_test:
         -u "${{ secrets.ACT_USER }}" \
         -p "${{ secrets.ACT_PASSWORD }}"
 ```
+
+**Important ACT constraints**:
+- PACT tests require a publicly reachable server — ACT delegates PACT
+  tests to an external service that must reach the API over the internet
+- No iLEAP-only flag — ACT always runs both PACT and iLEAP test suites
+- PACT TC8 and TC18 are known failures even on the SINE reference API
+  (`api.ileap.sine.dev`)
 
 See `references/act/README.md` for full CLI options and coverage details.
 
