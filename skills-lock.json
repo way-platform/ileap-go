@@ -9,7 +9,7 @@
     "ileap": {
       "source": "way-platform/skills",
       "sourceType": "github",
-      "computedHash": "59ff48d4095d996dc38e002febe5f37fdd71ce44e48f67fd3d1e81761e01d124"
+      "computedHash": "45b11d93da38b21b00271220efcbe33c2d3111adb0f4350ad93b63fccd6c85b4"
     },
     "prd": {
       "source": "snarktank/ralph",

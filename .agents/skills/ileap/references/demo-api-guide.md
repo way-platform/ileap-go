@@ -113,3 +113,11 @@ Map error codes to HTTP status:
 | `NoSuchFootprint` | 404 |
 | `NotImplemented` | 400 |
 | `InternalError` | 500 |
+
+## JSON Serialization: Omit Null Optional Fields
+
+ACT and the SINE reference API expect optional fields to be omitted
+from JSON, not serialized as `null`. When using code generators,
+post-process generated types to ensure optional/nullable fields are
+omitted when empty. Verify by comparing output field-for-field against
+the SINE demo API (`api.ileap.sine.dev`).
