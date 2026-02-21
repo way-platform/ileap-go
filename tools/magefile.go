@@ -133,30 +133,26 @@ func startLocalServer() (baseURL string, cleanup func(), err error) {
 	port := lis.Addr().(*net.TCPAddr).Port
 	lis.Close()
 	baseURL = fmt.Sprintf("http://localhost:%d", port)
-	// Build the demo server.
-	binary := filepath.Join(root(), "demo-server")
-	if err := cmd(root(), "go", "build", "-o", binary, "./cmd/demo-server").Run(); err != nil {
-		return "", nil, fmt.Errorf("build demo-server: %w", err)
+	// Build the ileap binary.
+	binary := filepath.Join(root(), "ileap-tmp")
+	if err := cmd(root("cmd/ileap"), "go", "build", "-o", binary, ".").Run(); err != nil {
+		return "", nil, fmt.Errorf("build ileap: %w", err)
 	}
-	// Start the demo server.
-	server := cmdWith(
-		map[string]string{
-			"BASE_URL": baseURL,
-			"PORT":     fmt.Sprintf("%d", port),
-		},
-		root(),
-		binary,
+	// Start: ileap-tmp demo-server --port <port> --base-url <url>
+	server := cmdWith(nil, root(), binary, "demo-server",
+		"--port", fmt.Sprintf("%d", port),
+		"--base-url", baseURL,
 	)
 	if err := server.Start(); err != nil {
 		os.Remove(binary)
-		return "", nil, fmt.Errorf("start demo-server: %w", err)
+		return "", nil, fmt.Errorf("start ileap demo-server: %w", err)
 	}
 	// Wait for the server to be ready.
 	if err := waitForServer(baseURL, 10*time.Second); err != nil {
 		_ = server.Process.Kill()
 		_ = server.Wait()
 		os.Remove(binary)
-		return "", nil, fmt.Errorf("wait for demo-server: %w", err)
+		return "", nil, fmt.Errorf("wait for ileap demo-server: %w", err)
 	}
 	cleanup = func() {
 		_ = server.Process.Kill()
@@ -164,6 +160,30 @@ func startLocalServer() (baseURL string, cleanup func(), err error) {
 		os.Remove(binary)
 	}
 	return baseURL, cleanup, nil
+}
+
+// DockerPush pushes the ileap Docker image to GHCR.
+func DockerPush() error {
+	log.Println("pushing ileap Docker image to GHCR")
+	c := tool(root("cmd", "ileap"), "ko", "build",
+		"--base-import-paths",
+		"--platform", "linux/amd64",
+		".",
+	)
+	c.Env = append(os.Environ(), "KO_DOCKER_REPO=ghcr.io/way-platform/ileap-go")
+	return c.Run()
+}
+
+// DockerBuild builds the ileap Docker image locally.
+func DockerBuild() error {
+	log.Println("building ileap Docker image locally")
+	c := tool(root("cmd", "ileap"), "ko", "build",
+		"--base-import-paths",
+		"--platform", "linux/amd64",
+		".",
+	)
+	c.Env = append(os.Environ(), "KO_DOCKER_REPO=ko.local")
+	return c.Run()
 }
 
 // installACT downloads the ACT conformance binary and caches it.

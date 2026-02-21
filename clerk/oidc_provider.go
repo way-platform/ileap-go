@@ -1,18 +1,19 @@
 package clerk
 
 import (
-	"github.com/way-platform/ileap-go/demo"
+	"fmt"
+
 	"github.com/way-platform/ileap-go/ileapauthserver"
 )
 
-// OIDCProvider implements ileapauthserver.OIDCProvider using a local keypair.
+// OIDCProvider implements ileapauthserver.OIDCProvider using Clerk's JWKS.
 type OIDCProvider struct {
-	keypair *demo.KeyPair
+	client *Client
 }
 
-// NewOIDCProvider creates a new OIDC provider backed by the given keypair.
-func NewOIDCProvider(keypair *demo.KeyPair) *OIDCProvider {
-	return &OIDCProvider{keypair: keypair}
+// NewOIDCProvider creates a new OIDC provider backed by the Clerk client.
+func NewOIDCProvider(client *Client) *OIDCProvider {
+	return &OIDCProvider{client: client}
 }
 
 // OpenIDConfiguration returns the OIDC configuration for the given base URL.
@@ -21,24 +22,18 @@ func (p *OIDCProvider) OpenIDConfiguration(baseURL string) *ileapauthserver.Open
 		IssuerURL:              baseURL,
 		AuthURL:                baseURL + "/auth/token",
 		TokenURL:               baseURL + "/auth/token",
-		JWKSURL:                baseURL + "/jwks",
+		JWKSURL:                fmt.Sprintf("https://%s/.well-known/jwks.json", p.client.fapiDomain),
 		Algorithms:             []string{"RS256"},
 		ResponseTypesSupported: []string{"token"},
 		SubjectTypesSupported:  []string{"public"},
 	}
 }
 
-// JWKS returns the JSON Web Key Set containing the public key.
+// JWKS fetches and returns Clerk's JSON Web Key Set.
 func (p *OIDCProvider) JWKS() *ileapauthserver.JWKSet {
-	jwk := p.keypair.JWK()
-	return &ileapauthserver.JWKSet{
-		Keys: []ileapauthserver.JWK{{
-			KeyType:   jwk.KeyType,
-			Use:       jwk.Use,
-			Algorithm: jwk.Algorithm,
-			KeyID:     jwk.KeyID,
-			N:         jwk.N,
-			E:         jwk.E,
-		}},
+	jwks, err := p.client.FetchJWKS()
+	if err != nil {
+		return &ileapauthserver.JWKSet{}
 	}
+	return jwks
 }

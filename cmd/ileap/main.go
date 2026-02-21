@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/cmd/ileap/internal/auth"
+	"github.com/way-platform/ileap-go/cmd/ileap/internal/demoserver"
 )
 
 func main() {
@@ -58,6 +59,13 @@ func newRootCommand() *cobra.Command {
 		Title: "Transport Activity Data",
 	})
 	cmd.AddCommand(newListTADsCommand())
+	cmd.AddGroup(&cobra.Group{
+		ID:    "server",
+		Title: "Server",
+	})
+	demoCmd := demoserver.NewCommand()
+	demoCmd.GroupID = "server"
+	cmd.AddCommand(demoCmd)
 	cmd.AddGroup(&cobra.Group{
 		ID:    "auth",
 		Title: "Authentication",

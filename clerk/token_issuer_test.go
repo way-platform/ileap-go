@@ -8,26 +8,30 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/way-platform/ileap-go/demo"
 	"github.com/way-platform/ileap-go/ileapauthserver"
 )
 
 func TestTokenIssuer(t *testing.T) {
-	keypair, err := demo.LoadKeyPair()
-	if err != nil {
-		t.Fatalf("load keypair: %v", err)
-	}
+	const wantJWT = "header.payload.signature"
 
 	t.Run("success", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(signInResponse{Status: "complete"})
+			resp := signInResponse{}
+			resp.Response.Status = "complete"
+			resp.Client.Sessions = []struct {
+				LastActiveToken struct {
+					JWT string `json:"jwt"`
+				} `json:"last_active_token"`
+			}{{}}
+			resp.Client.Sessions[0].LastActiveToken.JWT = wantJWT
+			_ = json.NewEncoder(w).Encode(resp)
 		}))
 		defer srv.Close()
 		client := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		issuer := NewTokenIssuer(client, keypair)
+		issuer := NewTokenIssuer(client)
 		creds, err := issuer.IssueToken(context.Background(), "user@example.com", "password")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -35,16 +39,8 @@ func TestTokenIssuer(t *testing.T) {
 		if creds.TokenType != "bearer" {
 			t.Errorf("expected bearer, got %s", creds.TokenType)
 		}
-		if creds.AccessToken == "" {
-			t.Error("expected non-empty access token")
-		}
-		// Validate the JWT.
-		claims, err := keypair.ValidateJWT(creds.AccessToken)
-		if err != nil {
-			t.Fatalf("validate JWT: %v", err)
-		}
-		if claims.Username != "user@example.com" {
-			t.Errorf("expected username user@example.com, got %s", claims.Username)
+		if creds.AccessToken != wantJWT {
+			t.Errorf("expected access token %q, got %q", wantJWT, creds.AccessToken)
 		}
 	})
 
@@ -57,7 +53,7 @@ func TestTokenIssuer(t *testing.T) {
 		client := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		issuer := NewTokenIssuer(client, keypair)
+		issuer := NewTokenIssuer(client)
 		_, err := issuer.IssueToken(context.Background(), "bad", "wrong")
 		if err == nil {
 			t.Fatal("expected error")
