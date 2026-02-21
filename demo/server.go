@@ -1,426 +1,61 @@
 package demo
 
 import (
-	"encoding/json"
 	"fmt"
-	"log/slog"
-	"mime"
 	"net/http"
-	"strconv"
-	"strings"
-	"time"
 
-	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/ileapauthserver"
+	"github.com/way-platform/ileap-go/ileapserver"
 )
 
-// Server is an example iLEAP server.
+// Server is an example iLEAP server composing data and auth adapters.
 type Server struct {
-	baseURL    string
-	footprints []ileapv0.ProductFootprintForILeapType
-	tads       []ileapv0.TAD
-	keypair    *KeyPair
-	serveMux   *http.ServeMux
+	serveMux *http.ServeMux
 }
 
 // NewServer creates a new example iLEAP server.
 func NewServer(baseURL string) (*Server, error) {
-	footprints, err := LoadFootprints()
+	dataHandler, err := NewDataHandler()
 	if err != nil {
-		return nil, fmt.Errorf("load footprints: %w", err)
+		return nil, fmt.Errorf("create data handler: %w", err)
 	}
-	tads, err := LoadTADs()
+	authProvider, err := NewAuthProvider()
 	if err != nil {
-		return nil, fmt.Errorf("load tads: %w", err)
+		return nil, fmt.Errorf("create auth provider: %w", err)
 	}
-	keypair, err := LoadKeyPair()
-	if err != nil {
-		return nil, fmt.Errorf("load keypair: %w", err)
-	}
-	server := &Server{
-		baseURL:    baseURL,
-		footprints: footprints,
-		tads:       tads,
-		keypair:    keypair,
-		serveMux:   http.NewServeMux(),
-	}
-	server.registerRoute(server.authTokenRoute())
-	server.registerRoute(server.openIDConnectConfigRoute())
-	server.registerRoute(server.jwksRoute())
-	server.registerAuthenticatedRoute(server.listFootprintsRoute())
-	server.registerAuthenticatedRoute(server.getFootprintRoute())
-	server.registerAuthenticatedRoute(server.listTADsRoute())
-	server.registerAuthenticatedRoute(server.eventsRoute())
-	return server, nil
+	return NewServerWith(baseURL, authProvider, dataHandler, authProvider), nil
+}
+
+// NewServerWith creates a new example iLEAP server with explicit dependencies.
+func NewServerWith(
+	baseURL string,
+	auth interface {
+		ileapauthserver.TokenIssuer
+		ileapauthserver.OIDCProvider
+		ileapserver.TokenValidator
+	},
+	data interface {
+		ileapserver.FootprintHandler
+		ileapserver.TADHandler
+	},
+	tokenValidator ileapserver.TokenValidator,
+) *Server {
+	dataSrv := ileapserver.NewServer(
+		ileapserver.WithFootprintHandler(data),
+		ileapserver.WithTADHandler(data),
+		ileapserver.WithEventHandler(&EventHandler{}),
+		ileapserver.WithTokenValidator(tokenValidator),
+	)
+	authSrv := ileapauthserver.NewServer(baseURL, auth, auth)
+	mux := http.NewServeMux()
+	mux.Handle("/auth/", authSrv)
+	mux.Handle("/.well-known/", authSrv)
+	mux.Handle("/jwks", authSrv)
+	mux.Handle("/", dataSrv)
+	return &Server{serveMux: mux}
 }
 
 // Handler returns the HTTP handler for the server.
 func (s *Server) Handler() http.Handler {
 	return s.serveMux
-}
-
-func (s *Server) authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("Authorization")
-		if auth == "" {
-			s.errorf(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "missing authorization")
-			return
-		}
-		if !strings.HasPrefix(auth, "Bearer ") {
-			s.errorf(
-				w,
-				http.StatusUnauthorized,
-				ileap.ErrorCodeBadRequest,
-				"unsupported authentication scheme",
-			)
-			return
-		}
-		token := strings.TrimPrefix(auth, "Bearer ")
-		if token == "" {
-			s.errorf(w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest, "missing access token")
-			return
-		}
-		if _, err := s.keypair.ValidateJWT(token); err != nil {
-			// TODO: ACT conformance test requires 400, but semantically this should be 401.
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid access token")
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (s *Server) registerAuthenticatedRoute(pattern string, handler http.Handler) {
-	slog.Debug("registering authenticated route", "pattern", pattern)
-	s.serveMux.Handle(pattern, s.authMiddleware(handler))
-}
-
-func (s *Server) registerRoute(pattern string, handler http.Handler) {
-	slog.Debug("registering route", "pattern", pattern)
-	s.serveMux.Handle(pattern, handler)
-}
-
-func (s *Server) errorf(
-	w http.ResponseWriter,
-	status int,
-	errorCode ileap.ErrorCode,
-	format string,
-	args ...any,
-) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(ileap.Error{
-		Code:    errorCode,
-		Message: fmt.Sprintf(format, args...),
-	}); err != nil {
-		slog.Error("failed to encode error response", "error", err)
-		return
-	}
-}
-
-func (s *Server) oauthError(
-	w http.ResponseWriter,
-	status int,
-	code ileap.OAuthErrorCode,
-	description string,
-) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(ileap.OAuthError{
-		Code:        code,
-		Description: description,
-	}); err != nil {
-		slog.Error("failed to encode OAuth error response", "error", err)
-		return
-	}
-}
-
-func (s *Server) authTokenRoute() (string, http.HandlerFunc) {
-	return "POST /auth/token", func(w http.ResponseWriter, r *http.Request) {
-		// Validate content type.
-		if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-			s.oauthError(
-				w,
-				http.StatusBadRequest,
-				ileap.OAuthErrorCodeInvalidRequest,
-				"invalid content type",
-			)
-			return
-		}
-		// Parse URL values from request body.
-		if err := r.ParseForm(); err != nil {
-			s.oauthError(
-				w,
-				http.StatusBadRequest,
-				ileap.OAuthErrorCodeInvalidRequest,
-				"invalid request body",
-			)
-			return
-		}
-		// Validate grant type.
-		grantType := r.Form.Get("grant_type")
-		if grantType != "client_credentials" {
-			s.oauthError(
-				w,
-				http.StatusBadRequest,
-				ileap.OAuthErrorCodeUnsupportedGrantType,
-				"unsupported grant type",
-			)
-			return
-		}
-		// Validate HTTP Basic Auth credentials.
-		username, password, ok := r.BasicAuth()
-		if !ok {
-			s.oauthError(
-				w,
-				http.StatusBadRequest,
-				ileap.OAuthErrorCodeInvalidRequest,
-				"missing HTTP basic authorization",
-			)
-			return
-		}
-		var authorized bool
-		for _, user := range Users() {
-			if username == user.Username && password == user.Password {
-				authorized = true
-				break
-			}
-		}
-		if !authorized {
-			// TODO: ACT conformance test requires 400, but semantically this should be 401.
-			s.oauthError(
-				w,
-				http.StatusBadRequest,
-				ileap.OAuthErrorCodeInvalidRequest,
-				"invalid HTTP basic auth",
-			)
-			return
-		}
-		accessToken, err := s.keypair.CreateJWT(JWTClaims{
-			Username: username,
-			IssuedAt: time.Now().Unix(),
-		})
-		if err != nil {
-			s.oauthError(
-				w,
-				http.StatusInternalServerError,
-				ileap.OAuthErrorCodeServerError,
-				"failed to create JWT",
-			)
-			return
-		}
-		clientCredentials := ileap.ClientCredentials{
-			AccessToken: accessToken,
-			TokenType:   "bearer",
-		}
-		if err := json.NewEncoder(w).Encode(clientCredentials); err != nil {
-			s.oauthError(
-				w,
-				http.StatusInternalServerError,
-				ileap.OAuthErrorCodeServerError,
-				"failed to encode response",
-			)
-			return
-		}
-	}
-}
-
-func (s *Server) parseLimit(r *http.Request) (int, error) {
-	limitStr := r.URL.Query().Get("limit")
-	if limitStr == "" {
-		return 0, nil
-	}
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		return 0, err
-	}
-	if limit <= 0 {
-		return 0, fmt.Errorf("limit must be positive")
-	}
-	return limit, nil
-}
-
-func (s *Server) listFootprintsRoute() (string, http.HandlerFunc) {
-	return "GET /2/footprints", func(w http.ResponseWriter, r *http.Request) {
-		limit, err := s.parseLimit(r)
-		if err != nil {
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid limit: %v", err)
-			return
-		}
-		var filter ileap.FilterV2
-		filterQuery := r.URL.Query().Get("$filter")
-		if err := filter.UnmarshalString(filterQuery); err != nil {
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "$filter: %v", err)
-			return
-		}
-		filteredFootprints := make([]ileapv0.ProductFootprintForILeapType, 0, len(s.footprints))
-		for _, footprint := range s.footprints {
-			if filter.MatchesFootprint(&footprint) {
-				filteredFootprints = append(filteredFootprints, footprint)
-			}
-		}
-		if limit > 0 && len(filteredFootprints) > limit {
-			filteredFootprints = filteredFootprints[:limit]
-		}
-		w.Header().Set("Content-Type", "application/json")
-		response := ileapv0.PfListingResponseInner{
-			Data: filteredFootprints,
-		}
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(
-				w,
-				http.StatusInternalServerError,
-				ileap.ErrorCodeInternalError,
-				"failed to encode response",
-			)
-			return
-		}
-	}
-}
-
-func (s *Server) getFootprintRoute() (string, http.HandlerFunc) {
-	return "GET /2/footprints/{id}", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		var footprint *ileapv0.ProductFootprintForILeapType
-		for _, needle := range s.footprints {
-			if needle.ID == id {
-				footprint = &needle
-				break
-			}
-		}
-		if footprint == nil {
-			s.errorf(w, http.StatusNotFound, ileap.ErrorCodeNotFound, "not found")
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		response := ileapv0.ProductFootprintResponse{
-			Data: *footprint,
-		}
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(
-				w,
-				http.StatusInternalServerError,
-				ileap.ErrorCodeInternalError,
-				"failed to encode response",
-			)
-			return
-		}
-	}
-}
-
-func (s *Server) listTADsRoute() (string, http.HandlerFunc) {
-	return "GET /2/ileap/tad", func(w http.ResponseWriter, r *http.Request) {
-		limit, err := s.parseLimit(r)
-		if err != nil {
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid limit: %v", err)
-			return
-		}
-		if limit > 0 && len(s.tads) > limit {
-			s.tads = s.tads[:limit]
-		}
-		w.Header().Set("Content-Type", "application/json")
-		response := ileapv0.TadListingResponseInner{
-			Data: s.tads,
-		}
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(
-				w,
-				http.StatusInternalServerError,
-				ileap.ErrorCodeInternalError,
-				"failed to encode response",
-			)
-			return
-		}
-	}
-}
-
-func (s *Server) openIDConnectConfigRoute() (string, http.HandlerFunc) {
-	return "GET /.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		response := OpenIDConfiguration{
-			IssuerURL:              s.baseURL,
-			AuthURL:                s.baseURL + "/auth/token",
-			TokenURL:               s.baseURL + "/auth/token",
-			JWKSURL:                s.baseURL + "/jwks",
-			Algorithms:             []string{"RS256"},
-			ResponseTypesSupported: []string{"token"},
-			SubjectTypesSupported:  []string{"public"},
-		}
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			s.errorf(
-				w,
-				http.StatusInternalServerError,
-				ileap.ErrorCodeInternalError,
-				"failed to encode response",
-			)
-			return
-		}
-	}
-}
-
-func (s *Server) jwksRoute() (string, http.HandlerFunc) {
-	return "GET /jwks", func(w http.ResponseWriter, _ *http.Request) {
-		jwks := JWKSet{
-			Keys: []JWK{s.keypair.JWK()},
-		}
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(jwks); err != nil {
-			s.errorf(
-				w,
-				http.StatusInternalServerError,
-				ileap.ErrorCodeInternalError,
-				"failed to encode response",
-			)
-			return
-		}
-	}
-}
-
-func (s *Server) eventsRoute() (string, http.HandlerFunc) {
-	return "POST /2/events", func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") == "" {
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing content type")
-			return
-		}
-		if mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err == nil {
-			// TODO: PACT specification requires "application/cloudevents+json",
-			// but the conformance checker currently sends application/json.
-			if mediaType != "application/cloudevents+json" && mediaType != "application/json" {
-				s.errorf(
-					w,
-					http.StatusBadRequest,
-					ileap.ErrorCodeBadRequest,
-					"invalid content type: %s",
-					mediaType,
-				)
-				return
-			}
-		} else {
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
-		}
-		// Parse the event from request body.
-		var event ileap.Event
-		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-			s.errorf(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
-			return
-		}
-		switch event.Type {
-		case ileap.EventTypeRequestCreatedV1:
-			// TODO: Handle RequestCreated.
-		case ileap.EventTypeRequestFulfilledV1:
-			// TODO: Handle RequestFulfilled.
-		case ileap.EventTypeRequestRejectedV1:
-			// TODO: Handle RequestRejected.
-		case ileap.EventTypePublishedV1:
-			// TODO: Handle Published.
-		default:
-			s.errorf(
-				w,
-				http.StatusBadRequest,
-				ileap.ErrorCodeBadRequest,
-				"invalid event type: %s",
-				event.Type,
-			)
-			return
-		}
-	}
 }
