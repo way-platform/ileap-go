@@ -1,6 +1,12 @@
 package ileap
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
+)
 
 // DemoBaseURL is the base URL for the SINE Foundation's demo iLEAP API.
 const DemoBaseURL = "https://api.ileap.sine.dev"
@@ -33,26 +39,27 @@ func WithBaseURL(baseURL string) ClientOption {
 func WithOAuth2(clientID, clientSecret string) ClientOption {
 	return func(cc *ClientConfig) {
 		cc.auth = func(next http.RoundTripper) http.RoundTripper {
-			return &tokenAuthenticatorTransport{
-				tokenAuthenticator: &oauth2TokenAuthenticator{
-					baseURL:      cc.baseURL,
-					clientID:     clientID,
-					clientSecret: clientSecret,
-					httpClient:   http.DefaultClient,
-				},
-				transport: next,
+			cfg := &clientcredentials.Config{
+				ClientID:     clientID,
+				ClientSecret: clientSecret,
+				TokenURL:     cc.baseURL + "/auth/token",
+				AuthStyle:    oauth2.AuthStyleInHeader,
+			}
+			return &oauth2.Transport{
+				Source: cfg.TokenSource(context.Background()),
+				Base:   next,
 			}
 		}
 	}
 }
 
-// WithReuseTokenAuth authenticates requests by re-using existing [ClientCredentials].
-func WithReuseTokenAuth(credentials ClientCredentials) ClientOption {
+// WithReuseTokenAuth authenticates requests by re-using an existing [oauth2.Token].
+func WithReuseTokenAuth(token *oauth2.Token) ClientOption {
 	return func(cc *ClientConfig) {
 		cc.auth = func(next http.RoundTripper) http.RoundTripper {
-			return &reuseTokenCredentialsTransport{
-				transport:   next,
-				credentials: credentials,
+			return &oauth2.Transport{
+				Source: oauth2.StaticTokenSource(token),
+				Base:   next,
 			}
 		}
 	}

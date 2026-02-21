@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/ileapauthserver"
+	"golang.org/x/oauth2"
 )
 
 // TokenIssuer implements ileapauthserver.TokenIssuer using Clerk FAPI.
@@ -21,12 +21,12 @@ func NewTokenIssuer(client *Client) *TokenIssuer {
 // IssueToken validates credentials via Clerk and returns Clerk's session JWT.
 func (t *TokenIssuer) IssueToken(
 	_ context.Context, clientID, clientSecret string,
-) (*ileap.ClientCredentials, error) {
+) (*oauth2.Token, error) {
 	jwt, err := t.client.SignIn(clientID, clientSecret)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ileapauthserver.ErrInvalidCredentials, err)
 	}
-	return &ileap.ClientCredentials{
+	return &oauth2.Token{
 		AccessToken: jwt,
 		TokenType:   "bearer",
 	}, nil

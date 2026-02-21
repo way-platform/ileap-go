@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/way-platform/ileap-go"
+	"golang.org/x/oauth2"
 )
 
 func TestServer(t *testing.T) {
@@ -31,7 +32,7 @@ func TestServer(t *testing.T) {
 			if w.Code != http.StatusOK {
 				t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 			}
-			var credentials ileap.ClientCredentials
+			var credentials oauth2.Token
 			if err := json.NewDecoder(w.Body).Decode(&credentials); err != nil {
 				t.Fatalf("failed to decode response: %v", err)
 			}
@@ -288,7 +289,7 @@ func getAccessToken(t *testing.T, server *Server) string {
 			tokenResponse.Body.String(),
 		)
 	}
-	var credentials ileap.ClientCredentials
+	var credentials oauth2.Token
 	if err := json.NewDecoder(tokenResponse.Body).Decode(&credentials); err != nil {
 		t.Fatalf("failed to decode token response: %v", err)
 	}
