@@ -5,6 +5,7 @@ description: >-
   (ISO 14083 / GLEC Framework) via the PACT protocol. Use when
   implementing iLEAP APIs, data models (ShipmentFootprint, TCE, TOC,
   HOC, TAD), PACT DataModelExtensions, or conformance testing.
+  Language-agnostic.
 ---
 
 # iLEAP Technical Specifications
@@ -15,20 +16,17 @@ data types conforming to ISO 14083 and the GLEC Framework v3.1.
 - **Spec**: https://sine-fdn.github.io/ileap-extension/
 - **Demo API**: https://api.ileap.sine.dev
 
+## Implementation Order
+
+1. **PACT base**: Authentication (OpenID discovery + OAuth2 Client
+   Credentials), `GET /2/footprints`, `GET /2/footprints/{id}`,
+   `POST /2/events`. See `references/pact-implementation-guide.md`.
+2. **iLEAP extensions**: Embed ShipmentFootprint, TOC, HOC as
+   `DataModelExtension`s in ProductFootprints.
+3. **TAD endpoint**: `GET /2/ileap/tad` with filtering and pagination.
+4. **Conformance**: Run ACT against your server.
+
 ## Architecture Overview
-
-### PACT prerequisite
-
-iLEAP builds on PACT (v2.1+). A host system MUST implement:
-- OAuth2 Client Credentials auth flow (OpenID discovery + token endpoint)
-- `GET /2/footprints` -- list ProductFootprints
-- `GET /2/footprints/{id}` -- get single ProductFootprint
-- `POST /2/events` -- async notifications
-
-### iLEAP additions
-
-- iLEAP data types embedded as `DataModelExtension`s in ProductFootprints
-- Dedicated endpoint: `GET /2/ileap/tad` for transport activity data
 
 ### Roles
 
@@ -40,8 +38,8 @@ iLEAP builds on PACT (v2.1+). A host system MUST implement:
 
 ### Key invariant
 
-All numeric values are `Decimal` -- JSON strings matching `^-?\d+(\.\d+)?$`.
-Never use JSON numbers for iLEAP numeric fields.
+All numeric values are `Decimal` -- JSON strings matching
+`^-?\d+(\.\d+)?$`. Never use JSON numbers for iLEAP numeric fields.
 
 ## Data Transactions
 
@@ -181,46 +179,8 @@ JSON examples of each type.
 2. Obtain token: `POST /auth/token` with Basic Auth + `grant_type=client_credentials`
 3. Use token: `Authorization: Bearer {token}` on all API calls
 
-### OpenID Discovery response
-
-The `/.well-known/openid-configuration` endpoint MUST return at minimum:
-
-```json
-{
-  "issuer": "https://your-api.example.com/",
-  "token_endpoint": "https://your-api.example.com/auth/token",
-  "jwks_uri": "https://your-api.example.com/jwks"
-}
-```
-
-See `references/demo-api/src/openid_conf.rs` for the full response
-shape and `references/demo-api/src/main.rs:74` for the handler.
-
-### Token endpoint contract
-
-`POST /auth/token` accepts:
-- **Authorization**: `Basic base64(client_id:client_secret)`
-- **Content-Type**: `application/x-www-form-urlencoded`
-- **Body**: `grant_type=client_credentials`
-
-Returns:
-```json
-{
-  "access_token": "<JWT>",
-  "token_type": "bearer"
-}
-```
-
-Error response (invalid credentials):
-```json
-{
-  "error": "invalid_client",
-  "error_description": "Invalid client credentials"
-}
-```
-
-See `references/demo-api/src/main.rs:117` for the token endpoint and
-`references/demo-api/src/auth.rs:87` for Basic Auth credential parsing.
+See `references/pact-implementation-guide.md` for the full auth
+contract including request/response formats.
 
 ### PACT endpoints
 
@@ -230,7 +190,8 @@ See `references/demo-api/src/main.rs:117` for the token endpoint and
 | `GET` | `/2/footprints/{id}` | Get single ProductFootprint |
 | `POST` | `/2/events` | Async event notifications |
 
-Supports `$filter` query parameter (OData v4 subset) and `limit`/`offset` pagination.
+Supports `$filter` query parameter (OData v4 subset) and `limit`
+pagination with `Link` header.
 
 ### iLEAP endpoint
 
@@ -238,7 +199,7 @@ Supports `$filter` query parameter (OData v4 subset) and `limit`/`offset` pagina
 GET /2/ileap/tad?[filter params]&limit={n}
 ```
 
-- **Filtering**: query parameters as key-value pairs (e.g., `?mode=Road&feedstock=Fossil`)
+- **Filtering**: query parameters as key-value pairs (e.g., `?mode=Road`)
 - **Pagination**: `limit` param + `Link: <url>; rel="next"` header
 - **Response**: `{ "data": [TAD, ...] }`
 
@@ -249,7 +210,11 @@ GET /2/ileap/tad?[filter params]&limit={n}
 | `AccessDenied` | 403 | Invalid or missing token |
 | `TokenExpired` | 401 | Expired access token |
 | `BadRequest` | 400 | Malformed request |
-| `NotImplemented` | 501 | Unsupported filter or feature |
+| `NoSuchFootprint` | 404 | Footprint ID not found |
+| `NotImplemented` | 400 | Unsupported filter or feature |
+
+See `references/known-issues.md` for error code gotchas (e.g.,
+`NotImplemented` is HTTP 400 not 501).
 
 ## Conformance Testing & ACT
 
@@ -320,7 +285,9 @@ See `references/act/README.md` for full CLI options and coverage details.
 
 See `references/pilot-certification.md` for full certification process details.
 
-## Verification with Demo API
+## Verification with SINE Demo API
+
+The SINE Foundation hosts a public iLEAP-conformant server for testing.
 
 ### Base URL
 
@@ -363,53 +330,12 @@ curl -s "https://api.ileap.sine.dev/2/ileap/tad?mode=Road" \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
-## Demo Server Reference Implementation
+## Navigating the Specs
 
-The `references/demo-api/` directory contains a complete Rust (Rocket)
-implementation of an iLEAP-conformant server. Use it as a reference when
-implementing your own server.
+### iLEAP spec
 
-### File map
-
-| File | What it demonstrates |
-|---|---|
-| `src/main.rs` | All endpoint handlers, route registration, credential constants |
-| `src/auth.rs` | OAuth2 Client Credentials grant, JWT encode/decode (RS256), Basic Auth parsing |
-| `src/openid_conf.rs` | OpenID Connect discovery response shape |
-| `src/error.rs` | PACT error response types (`AccessDenied`, `TokenExpired`, `BadRequest`, `NotImplemented`) |
-| `src/api_types.rs` | Request/response types, pagination `Link` header construction |
-| `src/sample_data.rs` | Example ProductFootprints with iLEAP extensions, TAD records |
-
-### Key implementation patterns
-
-**Auth flow** (`src/auth.rs`):
-- RSA key pair loaded from PEM (`load_keys()`, line 157)
-- Basic Auth decoded from `Authorization` header (line 109)
-- JWT issued with RS256, no expiry in demo (line 189)
-- JWKS endpoint exposes public key for token verification (`/jwks`, `src/main.rs:89`)
-
-**Role-based data filtering** (`src/main.rs:342`):
-- `transport_service_user` sees ShipmentFootprints only
-- `transport_service_organizer` sees TOCs and HOCs only
-- `hello` sees all data (global access)
-- Filtering based on `extensions[].dataSchema` URL
-
-**TAD endpoint** (`src/main.rs:541`):
-- `GET /2/ileap/tad` with query-param filtering and `limit`/`offset`
-- Filter logic flattens nested JSON objects for key-value matching
-- Pagination via `Link` header with `rel="next"`
-
-**Error responses** (`src/error.rs`):
-- Each error type has a `code` field matching the PACT error code enum
-- Response body: `{ "message": "...", "code": "AccessDenied" }`
-- HTTP status codes: 400 (BadRequest), 401 (Unauthorized), 403 (AccessDenied/Forbidden), 404 (NoSuchFootprint)
-
-## Navigating the Spec
-
-The normative spec is at `references/ileap-extension/specs/index.bs`
+The normative iLEAP spec is at `references/ileap-extension/specs/index.bs`
 (Bikeshed format, 3291 lines).
-
-### Section index
 
 | Section | Topic | Lines |
 |---|---|---|
@@ -425,35 +351,64 @@ The normative spec is at `references/ileap-extension/specs/index.bs`
 | `#appendix-b` | Example JSON (SF, TOC, HOC) | 2807-3049 |
 | `#appendix-c` | Conformance test cases TC001-TC008 | 3050-3244 |
 
+### PACT spec
+
+The PACT v2.1.0 spec is at `references/pact-spec-v2/index.bs`
+(Bikeshed format, 2520 lines).
+
+| Section | Topic | Lines |
+|---|---|---|
+| `#intro` | Introduction, scope | 16-70 |
+| `#terminology` | Term definitions | 73-121 |
+| `#data-model` | Data model overview | 138-161 |
+| `#dt-pf` | ProductFootprint properties | 163-334 |
+| `#dt-carbonfootprint` | CarbonFootprint properties | 337-646 |
+| `#dt-datamodelextension` | DataModelExtension | 827-852 |
+| `#dt-declaredunit` | DeclaredUnit enum | 1089-1121 |
+| `#api-auth` | Authentication flow | 1539-1564 |
+| `#api-action-auth` | Action Authenticate | 1591-1703 |
+| `#api-action-list` | Action ListFootprints | 1706-1861 |
+| `#api-action-get` | Action GetFootprint | 1863-1922 |
+| `#api-action-events` | Action Events | 1925-2134 |
+| `#api-error-responses` | Error codes table | 2135-2277 |
+
 ### Grep patterns
 
 ```sh
-# Find a data type definition
+# iLEAP: find a data type definition
 grep -n '<dfn element>' references/ileap-extension/specs/index.bs
 
-# Find all required properties for a type
+# iLEAP: find all required properties for a type
 grep -n -A2 '<td>M$' references/ileap-extension/specs/index.bs
 
-# Find PACT mapping rules
+# iLEAP: find PACT mapping rules
 grep -n 'MUST be set to\|MUST equal\|MUST contain' references/ileap-extension/specs/index.bs
 
-# Find enum values
-grep -n '<dfn>' references/ileap-extension/specs/index.bs | grep -i 'road\|rail\|air\|sea\|warehouse'
+# PACT: find property definitions
+grep -n '<dfn>' references/pact-spec-v2/index.bs | head -40
+
+# PACT: find all mandatory properties
+grep -n '<td>M$' references/pact-spec-v2/index.bs
+
+# PACT: find error codes
+grep -n 'dfn>.*Denied\|dfn>.*Request\|dfn>.*Expired' references/pact-spec-v2/index.bs
 ```
 
 ## Reference Files
 
 | File | Purpose |
 |---|---|
-| `references/ileap-extension/specs/index.bs` | Normative spec (Bikeshed source) |
+| `references/ileap-extension/specs/index.bs` | Normative iLEAP spec (Bikeshed source) |
+| `references/pact-spec-v2/index.bs` | PACT v2.1.0 spec (Bikeshed source) |
+| `references/pact-implementation-guide.md` | PACT implementation steps (auth, endpoints, data model) |
+| `references/known-issues.md` | Implementation gotchas and workarounds |
+| `references/demo-api-guide.md` | iLEAP server implementation patterns |
 | `references/openapi.json` | OpenAPI contract (non-normative) |
-| `references/ileap-data-model/schemas/*.json` | JSON schemas for all data types |
+| `references/ileap-data-model/schemas/*.json` | JSON schemas for all iLEAP data types |
 | `references/pact-data-model/schema/data-model-schema.json` | PACT base data model schema |
 | `references/pact-integration-examples.md` | Annotated PACT integration JSON examples |
-| `references/demo-api/src/main.rs` | Demo API server (credentials, endpoints) |
-| `references/demo-api/src/sample_data.rs` | Demo API sample data |
+| `references/demo-api/` | SINE Foundation demo server source (Rust/Rocket) |
 | `references/act/README.md` | ACT CLI usage, test coverage |
 | `references/act/act.sh` | ACT runner script (detects arch, downloads binary) |
 | `references/pilot-certification.md` | SFC certification process for iLEAP |
-| `references/ileap-extension/pilot-testing/README.md` | Pilot testing overview, implementation roadmap |
-| `references/whitepaper-v1.md` | Strategic context and background |
+| `references/whitepaper-v1.md` | Strategic context only (not useful for implementation) |
