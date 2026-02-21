@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/ileapauthserver"
 	"github.com/way-platform/ileap-go/ileapserver"
+	"golang.org/x/oauth2"
 )
 
 // AuthProvider implements ileapauthserver.TokenIssuer, ileapauthserver.OIDCProvider,
@@ -29,7 +29,7 @@ func NewAuthProvider() (*AuthProvider, error) {
 // IssueToken validates demo credentials and returns a signed JWT.
 func (a *AuthProvider) IssueToken(
 	_ context.Context, clientID, clientSecret string,
-) (*ileap.ClientCredentials, error) {
+) (*oauth2.Token, error) {
 	var authorized bool
 	for _, user := range Users() {
 		if clientID == user.Username && clientSecret == user.Password {
@@ -47,7 +47,7 @@ func (a *AuthProvider) IssueToken(
 	if err != nil {
 		return nil, err
 	}
-	return &ileap.ClientCredentials{
+	return &oauth2.Token{
 		AccessToken: accessToken,
 		TokenType:   "bearer",
 	}, nil

@@ -5,13 +5,13 @@ package ileapauthserver
 import (
 	"context"
 
-	"github.com/way-platform/ileap-go"
+	"golang.org/x/oauth2"
 )
 
 // TokenIssuer issues access tokens for valid credentials.
 type TokenIssuer interface {
 	// IssueToken validates credentials and returns client credentials.
-	IssueToken(ctx context.Context, clientID, clientSecret string) (*ileap.ClientCredentials, error)
+	IssueToken(ctx context.Context, clientID, clientSecret string) (*oauth2.Token, error)
 }
 
 // OIDCProvider provides OpenID Connect discovery information.

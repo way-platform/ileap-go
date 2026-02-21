@@ -9,18 +9,16 @@ import (
 	"testing"
 
 	"github.com/way-platform/ileap-go"
+	"golang.org/x/oauth2"
 )
 
 type mockTokenIssuer struct{}
 
 func (m *mockTokenIssuer) IssueToken(
 	_ context.Context, clientID, clientSecret string,
-) (*ileap.ClientCredentials, error) {
+) (*oauth2.Token, error) {
 	if clientID == "hello" && clientSecret == "pathfinder" {
-		return &ileap.ClientCredentials{
-			AccessToken: "mock-token",
-			TokenType:   "bearer",
-		}, nil
+		return &oauth2.Token{AccessToken: "mock-token", TokenType: "bearer"}, nil
 	}
 	return nil, ErrInvalidCredentials
 }
@@ -72,7 +70,7 @@ func TestAuthToken(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var creds ileap.ClientCredentials
+		var creds oauth2.Token
 		if err := json.NewDecoder(w.Body).Decode(&creds); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
