@@ -1,4 +1,4 @@
-package clerk
+package ileapclerk
 
 import (
 	"context"
@@ -52,7 +52,7 @@ func jwksServerForKey(t *testing.T, key *rsa.PrivateKey) *httptest.Server {
 			Use:     "sig",
 			KeyID:   testKID,
 			N: base64.RawURLEncoding.EncodeToString(
-				key.PublicKey.N.Bytes(),
+				key.N.Bytes(),
 			),
 			E: base64.RawURLEncoding.EncodeToString(
 				new(big.Int).SetInt64(int64(key.PublicKey.E)).Bytes(),

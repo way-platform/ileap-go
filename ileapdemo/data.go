@@ -1,5 +1,5 @@
 // Package demo provides a demo server implementation.
-package demo
+package ileapdemo
 
 import (
 	_ "embed"
@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 //go:embed data/footprints.json
 var footprintsJSON []byte
 
 // LoadFootprints loads example iLEAP footprints.
-func LoadFootprints() ([]ileapv0.ProductFootprintForILeapType, error) {
+func LoadFootprints() ([]ileapv1.ProductFootprintForILeapType, error) {
 	var data struct {
-		Footprints []ileapv0.ProductFootprintForILeapType `json:"footprints"`
+		Footprints []ileapv1.ProductFootprintForILeapType `json:"footprints"`
 	}
 	if err := json.Unmarshal(footprintsJSON, &data); err != nil {
 		return nil, fmt.Errorf("unmarshal footprints: %w", err)
@@ -32,9 +32,9 @@ func LoadFootprints() ([]ileapv0.ProductFootprintForILeapType, error) {
 var tadJSON []byte
 
 // LoadTADs loads example iLEAP LoadTADs.
-func LoadTADs() ([]ileapv0.TAD, error) {
+func LoadTADs() ([]ileapv1.TAD, error) {
 	var data struct {
-		TADs []ileapv0.TAD `json:"tads"`
+		TADs []ileapv1.TAD `json:"tads"`
 	}
 	if err := json.Unmarshal(tadJSON, &data); err != nil {
 		return nil, fmt.Errorf("unmarshal tad: %w", err)

@@ -1,4 +1,4 @@
-package demo
+package ileapdemo
 
 import (
 	"context"
@@ -54,7 +54,10 @@ func (a *AuthProvider) IssueToken(
 }
 
 // ValidateToken validates a JWT and returns token info.
-func (a *AuthProvider) ValidateToken(_ context.Context, token string) (*ileapserver.TokenInfo, error) {
+func (a *AuthProvider) ValidateToken(
+	_ context.Context,
+	token string,
+) (*ileapserver.TokenInfo, error) {
 	claims, err := a.keypair.ValidateJWT(token)
 	if err != nil {
 		if errors.Is(err, ileapserver.ErrTokenExpired) {

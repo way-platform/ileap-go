@@ -1,4 +1,4 @@
-package demo
+package ileapdemo
 
 // User represents a user.
 type User struct {

@@ -1,4 +1,4 @@
-package demo
+package ileapdemo
 
 // JWTHeader is the header of a JWT.
 type JWTHeader struct {

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 type mockTokenValidator struct {
@@ -29,12 +29,12 @@ func (m *mockTokenValidator) ValidateToken(_ context.Context, _ string) (*TokenI
 }
 
 type mockFootprintHandler struct {
-	footprints []ileapv0.ProductFootprintForILeapType
+	footprints []ileapv1.ProductFootprintForILeapType
 }
 
 func (m *mockFootprintHandler) GetFootprint(
 	_ context.Context, id string,
-) (*ileapv0.ProductFootprintForILeapType, error) {
+) (*ileapv1.ProductFootprintForILeapType, error) {
 	for _, fp := range m.footprints {
 		if fp.ID == id {
 			return &fp, nil
@@ -50,10 +50,13 @@ func (m *mockFootprintHandler) ListFootprints(
 }
 
 type mockTADHandler struct {
-	tads []ileapv0.TAD
+	tads []ileapv1.TAD
 }
 
-func (m *mockTADHandler) ListTADs(_ context.Context, req ListTADsRequest) (*ListTADsResponse, error) {
+func (m *mockTADHandler) ListTADs(
+	_ context.Context,
+	req ListTADsRequest,
+) (*ListTADsResponse, error) {
 	result := m.tads
 	total := len(result)
 	if req.Offset > 0 {
@@ -82,13 +85,13 @@ func newTestServer() *Server {
 	return NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithFootprintHandler(&mockFootprintHandler{
-			footprints: []ileapv0.ProductFootprintForILeapType{
+			footprints: []ileapv1.ProductFootprintForILeapType{
 				{ID: "fp-1"},
 				{ID: "fp-2"},
 			},
 		}),
 		WithTADHandler(&mockTADHandler{
-			tads: []ileapv0.TAD{
+			tads: []ileapv1.TAD{
 				{ActivityID: "tad-1"},
 			},
 		}),
@@ -181,7 +184,7 @@ func TestListFootprints(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp ileapv0.PfListingResponseInner
+		var resp ileapv1.PfListingResponseInner
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
@@ -210,7 +213,7 @@ func TestGetFootprint(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp ileapv0.ProductFootprintResponse
+		var resp ileapv1.ProductFootprintResponse
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
@@ -232,7 +235,7 @@ func TestListTADs(t *testing.T) {
 	srv := NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithTADHandler(&mockTADHandler{
-			tads: []ileapv0.TAD{
+			tads: []ileapv1.TAD{
 				{ActivityID: "tad-1"},
 				{ActivityID: "tad-2"},
 				{ActivityID: "tad-3"},
@@ -248,7 +251,7 @@ func TestListTADs(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp ileapv0.TadListingResponseInner
+		var resp ileapv1.TadListingResponseInner
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
@@ -265,7 +268,7 @@ func TestListTADs(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp ileapv0.TadListingResponseInner
+		var resp ileapv1.TadListingResponseInner
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}

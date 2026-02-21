@@ -1,5 +1,5 @@
 // Package clerk provides a Clerk FAPI authentication backend for iLEAP servers.
-package clerk
+package ileapclerk
 
 import (
 	"encoding/json"

@@ -1,4 +1,4 @@
-package clerk
+package ileapclerk
 
 import (
 	"fmt"
@@ -19,10 +19,13 @@ func NewOIDCProvider(client *Client) *OIDCProvider {
 // OpenIDConfiguration returns the OIDC configuration for the given base URL.
 func (p *OIDCProvider) OpenIDConfiguration(baseURL string) *ileapauthserver.OpenIDConfiguration {
 	return &ileapauthserver.OpenIDConfiguration{
-		IssuerURL:              baseURL,
-		AuthURL:                baseURL + "/auth/token",
-		TokenURL:               baseURL + "/auth/token",
-		JWKSURL:                fmt.Sprintf("https://%s/.well-known/jwks.json", p.client.fapiDomain),
+		IssuerURL: baseURL,
+		AuthURL:   baseURL + "/auth/token",
+		TokenURL:  baseURL + "/auth/token",
+		JWKSURL: fmt.Sprintf(
+			"https://%s/.well-known/jwks.json",
+			p.client.fapiDomain,
+		),
 		Algorithms:             []string{"RS256"},
 		ResponseTypesSupported: []string{"token"},
 		SubjectTypesSupported:  []string{"public"},

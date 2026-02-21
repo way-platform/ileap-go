@@ -1,4 +1,4 @@
-package demo
+package ileapdemo
 
 // OpenIDConfiguration is an OpenID Connect configuration.
 type OpenIDConfiguration struct {

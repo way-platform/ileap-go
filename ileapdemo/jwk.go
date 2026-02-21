@@ -1,4 +1,4 @@
-package demo
+package ileapdemo
 
 // JWKSet is a JSON Web Key Set.
 type JWKSet struct {

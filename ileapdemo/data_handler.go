@@ -1,4 +1,4 @@
-package demo
+package ileapdemo
 
 import (
 	"context"
@@ -7,14 +7,14 @@ import (
 
 	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/ileapserver"
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 // DataHandler implements ileapserver.FootprintHandler and ileapserver.TADHandler
 // using embedded demo data.
 type DataHandler struct {
-	footprints []ileapv0.ProductFootprintForILeapType
-	tads       []ileapv0.TAD
+	footprints []ileapv1.ProductFootprintForILeapType
+	tads       []ileapv1.TAD
 }
 
 // NewDataHandler creates a new DataHandler with the embedded demo data.
@@ -34,7 +34,10 @@ func NewDataHandler() (*DataHandler, error) {
 }
 
 // GetFootprint returns a single footprint by ID.
-func (h *DataHandler) GetFootprint(_ context.Context, id string) (*ileapv0.ProductFootprintForILeapType, error) {
+func (h *DataHandler) GetFootprint(
+	_ context.Context,
+	id string,
+) (*ileapv1.ProductFootprintForILeapType, error) {
 	for _, fp := range h.footprints {
 		if fp.ID == id {
 			return &fp, nil
@@ -51,7 +54,7 @@ func (h *DataHandler) ListFootprints(
 	if err := filter.UnmarshalString(req.Filter); err != nil {
 		return nil, ileapserver.ErrBadRequest
 	}
-	filtered := make([]ileapv0.ProductFootprintForILeapType, 0, len(h.footprints))
+	filtered := make([]ileapv1.ProductFootprintForILeapType, 0, len(h.footprints))
 	for _, fp := range h.footprints {
 		if filter.MatchesFootprint(&fp) {
 			filtered = append(filtered, fp)
@@ -90,8 +93,8 @@ func (h *DataHandler) ListTADs(
 // filterTADs returns TADs matching all filter criteria.
 // Filter matching: serialize TAD to JSON, flatten to key→values,
 // then check each filter key/value pair (case-insensitive value match).
-func filterTADs(tads []ileapv0.TAD, filters map[string][]string) []ileapv0.TAD {
-	result := make([]ileapv0.TAD, 0, len(tads))
+func filterTADs(tads []ileapv1.TAD, filters map[string][]string) []ileapv1.TAD {
+	result := make([]ileapv1.TAD, 0, len(tads))
 	for _, tad := range tads {
 		if tadMatchesFilters(tad, filters) {
 			result = append(result, tad)
@@ -100,7 +103,7 @@ func filterTADs(tads []ileapv0.TAD, filters map[string][]string) []ileapv0.TAD {
 	return result
 }
 
-func tadMatchesFilters(tad ileapv0.TAD, filters map[string][]string) bool {
+func tadMatchesFilters(tad ileapv1.TAD, filters map[string][]string) bool {
 	data, err := json.Marshal(tad)
 	if err != nil {
 		return false

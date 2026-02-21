@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 func TestFilterV2_UnmarshalString(t *testing.T) {
@@ -130,21 +130,21 @@ func TestFilterV2_UnmarshalString(t *testing.T) {
 func TestFilterV2_MatchesFootprint(t *testing.T) {
 	testCases := []struct {
 		name      string
-		footprint *ileapv0.ProductFootprintForILeapType
+		footprint *ileapv1.ProductFootprintForILeapType
 		filter    FilterV2
 		want      bool
 	}{
 		{
 			name:      "empty",
-			footprint: &ileapv0.ProductFootprintForILeapType{},
+			footprint: &ileapv1.ProductFootprintForILeapType{},
 			filter:    FilterV2{},
 			want:      true,
 		},
 
 		{
 			name: "single predicate",
-			footprint: &ileapv0.ProductFootprintForILeapType{
-				Pcf: ileapv0.CarbonFootprint{
+			footprint: &ileapv1.ProductFootprintForILeapType{
+				Pcf: ileapv1.CarbonFootprint{
 					GeographyCountry: ptr("US"),
 				},
 			},
@@ -162,8 +162,8 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "single predicate, no match",
-			footprint: &ileapv0.ProductFootprintForILeapType{
-				Pcf: ileapv0.CarbonFootprint{
+			footprint: &ileapv1.ProductFootprintForILeapType{
+				Pcf: ileapv1.CarbonFootprint{
 					GeographyCountry: ptr("FR"),
 				},
 			},
@@ -181,7 +181,7 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "created gt",
-			footprint: &ileapv0.ProductFootprintForILeapType{
+			footprint: &ileapv1.ProductFootprintForILeapType{
 				Created: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 			filter: FilterV2{
@@ -198,7 +198,7 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "created gt, no match",
-			footprint: &ileapv0.ProductFootprintForILeapType{
+			footprint: &ileapv1.ProductFootprintForILeapType{
 				Created: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
 			filter: FilterV2{
@@ -215,9 +215,9 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "multiple predicates",
-			footprint: &ileapv0.ProductFootprintForILeapType{
+			footprint: &ileapv1.ProductFootprintForILeapType{
 				ProductCategoryCpc: "6398",
-				Pcf: ileapv0.CarbonFootprint{
+				Pcf: ileapv1.CarbonFootprint{
 					GeographyCountry: ptr("US"),
 				},
 			},
@@ -240,7 +240,7 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "productIds, any eq",
-			footprint: &ileapv0.ProductFootprintForILeapType{
+			footprint: &ileapv1.ProductFootprintForILeapType{
 				ProductIds: []string{"urn:gtin:1234"},
 			},
 			filter: FilterV2{
@@ -257,7 +257,7 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "productIds, any eq, no match",
-			footprint: &ileapv0.ProductFootprintForILeapType{
+			footprint: &ileapv1.ProductFootprintForILeapType{
 				ProductIds: []string{"urn:gtin:1234"},
 			},
 			filter: FilterV2{
