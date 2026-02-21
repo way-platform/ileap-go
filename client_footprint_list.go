@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 // ListFootprintsRequest is the request for the [Client.ListFootprints] method.
@@ -23,7 +23,7 @@ type ListFootprintsRequest struct {
 // ListFootprintsResponse is the response for the [Client.ListFootprints] method.
 type ListFootprintsResponse struct {
 	// Footprints is the list of footprints in the current page.
-	Footprints []ileapv0.ProductFootprintForILeapType `json:"footprints"`
+	Footprints []ileapv1.ProductFootprintForILeapType `json:"footprints"`
 }
 
 // ListFootprints fetches a list of product carbon footprints.
@@ -61,7 +61,7 @@ func (c *Client) ListFootprints(
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 	// TODO: Parse next page link.
-	var response ileapv0.PfListingResponseInner
+	var response ileapv1.PfListingResponseInner
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response body: %w", err)
 	}

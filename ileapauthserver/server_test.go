@@ -60,7 +60,11 @@ func TestAuthToken(t *testing.T) {
 	srv := newTestServer()
 
 	t.Run("success", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+		req := httptest.NewRequest(
+			"POST",
+			"/auth/token",
+			strings.NewReader("grant_type=client_credentials"),
+		)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.SetBasicAuth("hello", "pathfinder")
 		w := httptest.NewRecorder()
@@ -81,7 +85,11 @@ func TestAuthToken(t *testing.T) {
 	})
 
 	t.Run("invalid content type", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+		req := httptest.NewRequest(
+			"POST",
+			"/auth/token",
+			strings.NewReader("grant_type=client_credentials"),
+		)
 		req.Header.Set("Content-Type", "application/json")
 		req.SetBasicAuth("hello", "pathfinder")
 		w := httptest.NewRecorder()
@@ -90,7 +98,11 @@ func TestAuthToken(t *testing.T) {
 	})
 
 	t.Run("unsupported grant type", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=authorization_code"))
+		req := httptest.NewRequest(
+			"POST",
+			"/auth/token",
+			strings.NewReader("grant_type=authorization_code"),
+		)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.SetBasicAuth("hello", "pathfinder")
 		w := httptest.NewRecorder()
@@ -99,7 +111,11 @@ func TestAuthToken(t *testing.T) {
 	})
 
 	t.Run("missing basic auth", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+		req := httptest.NewRequest(
+			"POST",
+			"/auth/token",
+			strings.NewReader("grant_type=client_credentials"),
+		)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
@@ -107,7 +123,11 @@ func TestAuthToken(t *testing.T) {
 	})
 
 	t.Run("invalid credentials", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/auth/token", strings.NewReader("grant_type=client_credentials"))
+		req := httptest.NewRequest(
+			"POST",
+			"/auth/token",
+			strings.NewReader("grant_type=client_credentials"),
+		)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.SetBasicAuth("bad", "creds")
 		w := httptest.NewRecorder()

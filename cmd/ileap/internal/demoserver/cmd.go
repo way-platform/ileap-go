@@ -13,9 +13,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/way-platform/ileap-go/clerk"
-	"github.com/way-platform/ileap-go/demo"
 	"github.com/way-platform/ileap-go/ileapauthserver"
+	"github.com/way-platform/ileap-go/ileapclerk"
+	"github.com/way-platform/ileap-go/ileapdemo"
 	"github.com/way-platform/ileap-go/ileapserver"
 )
 
@@ -37,10 +37,11 @@ func NewCommand() *cobra.Command {
 		"base URL of the server",
 	)
 	cmd.Flags().String("auth-backend", "demo", "auth backend to use (demo, clerk)")
-	cmd.Flags().String("clerk-fapi-domain", "", "Clerk FAPI domain (required when auth-backend=clerk)")
-	v.BindPFlag("port", cmd.Flags().Lookup("port"))                         //nolint:errcheck
-	v.BindPFlag("base-url", cmd.Flags().Lookup("base-url"))                 //nolint:errcheck
-	v.BindPFlag("auth-backend", cmd.Flags().Lookup("auth-backend"))         //nolint:errcheck
+	cmd.Flags().
+		String("clerk-fapi-domain", "", "Clerk FAPI domain (required when auth-backend=clerk)")
+	v.BindPFlag("port", cmd.Flags().Lookup("port"))                           //nolint:errcheck
+	v.BindPFlag("base-url", cmd.Flags().Lookup("base-url"))                   //nolint:errcheck
+	v.BindPFlag("auth-backend", cmd.Flags().Lookup("auth-backend"))           //nolint:errcheck
 	v.BindPFlag("clerk-fapi-domain", cmd.Flags().Lookup("clerk-fapi-domain")) //nolint:errcheck
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
@@ -77,7 +78,7 @@ func buildHandler(v *viper.Viper, baseURL string) (http.Handler, error) {
 	authBackend := v.GetString("auth-backend")
 	switch authBackend {
 	case "demo":
-		server, err := demo.NewServer(baseURL)
+		server, err := ileapdemo.NewServer(baseURL)
 		if err != nil {
 			return nil, err
 		}
@@ -94,18 +95,18 @@ func buildClerkHandler(v *viper.Viper, baseURL string) (http.Handler, error) {
 	if fapiDomain == "" {
 		return nil, fmt.Errorf("--clerk-fapi-domain required when --auth-backend=clerk")
 	}
-	dataHandler, err := demo.NewDataHandler()
+	dataHandler, err := ileapdemo.NewDataHandler()
 	if err != nil {
 		return nil, fmt.Errorf("create data handler: %w", err)
 	}
-	clerkClient := clerk.NewClient(fapiDomain)
-	tokenIssuer := clerk.NewTokenIssuer(clerkClient)
-	oidcProvider := clerk.NewOIDCProvider(clerkClient)
-	tokenValidator := clerk.NewTokenValidator(clerkClient)
+	clerkClient := ileapclerk.NewClient(fapiDomain)
+	tokenIssuer := ileapclerk.NewTokenIssuer(clerkClient)
+	oidcProvider := ileapclerk.NewOIDCProvider(clerkClient)
+	tokenValidator := ileapclerk.NewTokenValidator(clerkClient)
 	dataSrv := ileapserver.NewServer(
 		ileapserver.WithFootprintHandler(dataHandler),
 		ileapserver.WithTADHandler(dataHandler),
-		ileapserver.WithEventHandler(&demo.EventHandler{}),
+		ileapserver.WithEventHandler(&ileapdemo.EventHandler{}),
 		ileapserver.WithTokenValidator(tokenValidator),
 	)
 	authSrv := ileapauthserver.NewServer(baseURL, tokenIssuer, oidcProvider)

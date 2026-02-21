@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 // ListFootprintsRequest is the request for listing footprints.
@@ -18,7 +18,7 @@ type ListFootprintsRequest struct {
 // ListFootprintsResponse is the response for listing footprints.
 type ListFootprintsResponse struct {
 	// Data is the list of footprints.
-	Data []ileapv0.ProductFootprintForILeapType
+	Data []ileapv1.ProductFootprintForILeapType
 }
 
 // ListTADsRequest is the request for listing transport activity data.
@@ -34,7 +34,7 @@ type ListTADsRequest struct {
 // ListTADsResponse is the response for listing transport activity data.
 type ListTADsResponse struct {
 	// Data is the list of TADs.
-	Data []ileapv0.TAD
+	Data []ileapv1.TAD
 	// Total is the total number of TADs matching the filter (before pagination).
 	Total int
 }

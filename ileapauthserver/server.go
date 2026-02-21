@@ -38,23 +38,39 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
-		writeOAuthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid content type")
+		writeOAuthError(
+			w,
+			http.StatusBadRequest,
+			ileap.OAuthErrorCodeInvalidRequest,
+			"invalid content type",
+		)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		writeOAuthError(w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid request body")
+		writeOAuthError(
+			w,
+			http.StatusBadRequest,
+			ileap.OAuthErrorCodeInvalidRequest,
+			"invalid request body",
+		)
 		return
 	}
 	if grantType := r.Form.Get("grant_type"); grantType != "client_credentials" {
 		writeOAuthError(
-			w, http.StatusBadRequest, ileap.OAuthErrorCodeUnsupportedGrantType, "unsupported grant type",
+			w,
+			http.StatusBadRequest,
+			ileap.OAuthErrorCodeUnsupportedGrantType,
+			"unsupported grant type",
 		)
 		return
 	}
 	username, password, ok := r.BasicAuth()
 	if !ok {
 		writeOAuthError(
-			w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "missing HTTP basic authorization",
+			w,
+			http.StatusBadRequest,
+			ileap.OAuthErrorCodeInvalidRequest,
+			"missing HTTP basic authorization",
 		)
 		return
 	}
@@ -63,11 +79,19 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, ErrInvalidCredentials) {
 			// ACT conformance test requires 400.
 			writeOAuthError(
-				w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest, "invalid HTTP basic auth",
+				w,
+				http.StatusBadRequest,
+				ileap.OAuthErrorCodeInvalidRequest,
+				"invalid HTTP basic auth",
 			)
 			return
 		}
-		writeOAuthError(w, http.StatusInternalServerError, ileap.OAuthErrorCodeServerError, "failed to issue token")
+		writeOAuthError(
+			w,
+			http.StatusInternalServerError,
+			ileap.OAuthErrorCodeServerError,
+			"failed to issue token",
+		)
 		return
 	}
 	writeJSON(w, creds)
@@ -103,4 +127,3 @@ func writeJSON(w http.ResponseWriter, v any) {
 		slog.Error("failed to encode response", "error", err)
 	}
 }
-

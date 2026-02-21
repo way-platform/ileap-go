@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 // FilterV2 is a limited implementation of PACT v2 filters.
@@ -34,7 +34,7 @@ func (f *FilterV2) UnmarshalString(filter string) error {
 }
 
 // MatchesFootprint returns true if all predicates in the filter match the provided footprint.
-func (f *FilterV2) MatchesFootprint(footprint *ileapv0.ProductFootprintForILeapType) bool {
+func (f *FilterV2) MatchesFootprint(footprint *ileapv1.ProductFootprintForILeapType) bool {
 	for _, predicate := range f.Conjuctions {
 		if !predicate.MatchesFootprint(footprint) {
 			return false
@@ -96,7 +96,7 @@ func (f *FilterPredicateV2) UnmarshalString(predicate string) error {
 }
 
 // MatchesFootprint returns true if the predicate matches the provided footprint.
-func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv0.ProductFootprintForILeapType) bool {
+func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv1.ProductFootprintForILeapType) bool {
 	if f.Operator == "any/eq" {
 		return f.matchesAnyEq(footprint)
 	}
@@ -129,7 +129,7 @@ func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv0.ProductFootprint
 	}
 }
 
-func (f *FilterPredicateV2) matchesAnyEq(footprint *ileapv0.ProductFootprintForILeapType) bool {
+func (f *FilterPredicateV2) matchesAnyEq(footprint *ileapv1.ProductFootprintForILeapType) bool {
 	var lhsValue []string
 	switch f.LHS {
 	case "productIds":

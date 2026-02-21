@@ -5,13 +5,13 @@ package ileapserver
 import (
 	"context"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 // FootprintHandler handles product footprint requests.
 type FootprintHandler interface {
 	// GetFootprint returns a single footprint by ID.
-	GetFootprint(ctx context.Context, id string) (*ileapv0.ProductFootprintForILeapType, error)
+	GetFootprint(ctx context.Context, id string) (*ileapv1.ProductFootprintForILeapType, error)
 	// ListFootprints returns a filtered, limited list of footprints.
 	ListFootprints(ctx context.Context, req ListFootprintsRequest) (*ListFootprintsResponse, error)
 }

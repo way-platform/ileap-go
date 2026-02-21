@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 // Server is an iLEAP data server HTTP handler.
@@ -65,7 +65,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) registerRoutes() {
 	s.serveMux.Handle("GET /2/footprints", s.pactAuthMiddleware(http.HandlerFunc(s.listFootprints)))
-	s.serveMux.Handle("GET /2/footprints/{id}", s.pactAuthMiddleware(http.HandlerFunc(s.getFootprint)))
+	s.serveMux.Handle(
+		"GET /2/footprints/{id}",
+		s.pactAuthMiddleware(http.HandlerFunc(s.getFootprint)),
+	)
 	s.serveMux.Handle("GET /2/ileap/tad", s.ileapAuthMiddleware(http.HandlerFunc(s.listTADs)))
 	s.serveMux.Handle("POST /2/events", s.pactAuthMiddleware(http.HandlerFunc(s.events)))
 }
@@ -74,7 +77,12 @@ func (s *Server) registerRoutes() {
 func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.tokenValidator == nil {
-			writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "no token validator configured")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				ileap.ErrorCodeBadRequest,
+				"no token validator configured",
+			)
 			return
 		}
 		auth := r.Header.Get("Authorization")
@@ -83,7 +91,12 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if !strings.HasPrefix(auth, "Bearer ") {
-			writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "unsupported authentication scheme")
+			writeError(
+				w,
+				http.StatusBadRequest,
+				ileap.ErrorCodeBadRequest,
+				"unsupported authentication scheme",
+			)
 			return
 		}
 		token := strings.TrimPrefix(auth, "Bearer ")
@@ -104,16 +117,31 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.tokenValidator == nil {
-			writeError(w, http.StatusForbidden, ileap.ErrorCodeAccessDenied, "no token validator configured")
+			writeError(
+				w,
+				http.StatusForbidden,
+				ileap.ErrorCodeAccessDenied,
+				"no token validator configured",
+			)
 			return
 		}
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
-			writeError(w, http.StatusForbidden, ileap.ErrorCodeAccessDenied, "missing authorization")
+			writeError(
+				w,
+				http.StatusForbidden,
+				ileap.ErrorCodeAccessDenied,
+				"missing authorization",
+			)
 			return
 		}
 		if !strings.HasPrefix(auth, "Bearer ") {
-			writeError(w, http.StatusForbidden, ileap.ErrorCodeAccessDenied, "unsupported authentication scheme")
+			writeError(
+				w,
+				http.StatusForbidden,
+				ileap.ErrorCodeAccessDenied,
+				"unsupported authentication scheme",
+			)
 			return
 		}
 		token := strings.TrimPrefix(auth, "Bearer ")
@@ -152,7 +180,7 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 		writeHandlerError(w, err)
 		return
 	}
-	writeJSON(w, ileapv0.PfListingResponseInner{Data: resp.Data})
+	writeJSON(w, ileapv1.PfListingResponseInner{Data: resp.Data})
 }
 
 func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +194,7 @@ func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
 		writeHandlerError(w, err)
 		return
 	}
-	writeJSON(w, ileapv0.ProductFootprintResponse{Data: *fp})
+	writeJSON(w, ileapv1.ProductFootprintResponse{Data: *fp})
 }
 
 func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
@@ -217,10 +245,16 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 		if linkLimit == 0 {
 			linkLimit = len(resp.Data)
 		}
-		linkURL := fmt.Sprintf("%s://%s/2/ileap/tad?offset=%d&limit=%d", scheme, host, next, linkLimit)
+		linkURL := fmt.Sprintf(
+			"%s://%s/2/ileap/tad?offset=%d&limit=%d",
+			scheme,
+			host,
+			next,
+			linkLimit,
+		)
 		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"next\"", linkURL))
 	}
-	writeJSON(w, ileapv0.TadListingResponseInner{Data: resp.Data})
+	writeJSON(w, ileapv1.TadListingResponseInner{Data: resp.Data})
 }
 
 func (s *Server) events(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +274,13 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	// PACT specification requires "application/cloudevents+json",
 	// but the conformance checker also sends application/json.
 	if mediaType != "application/cloudevents+json" && mediaType != "application/json" {
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type: %s", mediaType)
+		writeError(
+			w,
+			http.StatusBadRequest,
+			ileap.ErrorCodeBadRequest,
+			"invalid content type: %s",
+			mediaType,
+		)
 		return
 	}
 	var event Event
@@ -291,11 +331,22 @@ func writeHandlerError(w http.ResponseWriter, err error) {
 	case errors.Is(err, ErrBadRequest):
 		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "%s", err)
 	default:
-		writeError(w, http.StatusInternalServerError, ileap.ErrorCodeInternalError, "internal error")
+		writeError(
+			w,
+			http.StatusInternalServerError,
+			ileap.ErrorCodeInternalError,
+			"internal error",
+		)
 	}
 }
 
-func writeError(w http.ResponseWriter, status int, code ileap.ErrorCode, format string, args ...any) {
+func writeError(
+	w http.ResponseWriter,
+	status int,
+	code ileap.ErrorCode,
+	format string,
+	args ...any,
+) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(ileap.Error{

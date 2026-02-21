@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 // ListTADsRequest is the request for the [Client.ListTADs] method.
@@ -21,7 +21,7 @@ type ListTADsRequest struct {
 // ListTADsResponse is the response for the [Client.ListTADs] method.
 type ListTADsResponse struct {
 	// TADs is the list of transport activity data in the current page.
-	TADs []ileapv0.TAD `json:"tads"`
+	TADs []ileapv1.TAD `json:"tads"`
 }
 
 // ListTADs lists transport activity data.
@@ -56,7 +56,7 @@ func (c *Client) ListTADs(
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 	// TODO: Parse next page link.
-	var response ileapv0.TadListingResponseInner
+	var response ileapv1.TadListingResponseInner
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response body: %w", err)
 	}

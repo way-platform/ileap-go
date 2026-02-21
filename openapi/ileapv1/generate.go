@@ -1,5 +1,5 @@
-// Package ileapv0 generates the iLEAP v0 API client.
-package ileapv0
+// Package ileapv1 generates the iLEAP v1 API client.
+package ileapv1
 
 //go:generate sh -c "go tool openapi-overlay apply overlay.yaml openapi.original.json > api.json"
 //go:generate go tool oapi-codegen -config cfg.yaml api.json

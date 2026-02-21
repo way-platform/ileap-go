@@ -131,7 +131,7 @@ func startLocalServer() (baseURL string, cleanup func(), err error) {
 		return "", nil, fmt.Errorf("find free port: %w", err)
 	}
 	port := lis.Addr().(*net.TCPAddr).Port
-	lis.Close()
+	_ = lis.Close()
 	baseURL = fmt.Sprintf("http://localhost:%d", port)
 	// Build the ileap binary.
 	binary := filepath.Join(root(), "ileap-tmp")
@@ -144,20 +144,20 @@ func startLocalServer() (baseURL string, cleanup func(), err error) {
 		"--base-url", baseURL,
 	)
 	if err := server.Start(); err != nil {
-		os.Remove(binary)
+		_ = os.Remove(binary)
 		return "", nil, fmt.Errorf("start ileap demo-server: %w", err)
 	}
 	// Wait for the server to be ready.
 	if err := waitForServer(baseURL, 10*time.Second); err != nil {
 		_ = server.Process.Kill()
 		_ = server.Wait()
-		os.Remove(binary)
+		_ = os.Remove(binary)
 		return "", nil, fmt.Errorf("wait for ileap demo-server: %w", err)
 	}
 	cleanup = func() {
 		_ = server.Process.Kill()
 		_ = server.Wait()
-		os.Remove(binary)
+		_ = os.Remove(binary)
 	}
 	return baseURL, cleanup, nil
 }
@@ -217,7 +217,7 @@ func downloadBinary(url, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %s", resp.Status)
 	}
@@ -228,7 +228,7 @@ func downloadBinary(url, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, err = io.Copy(f, resp.Body)
 	return err
 }
@@ -238,7 +238,7 @@ func waitForServer(baseURL string, timeout time.Duration) error {
 	for time.Now().Before(deadline) {
 		resp, err := http.Get(baseURL + "/.well-known/openid-configuration")
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil
 		}
 		time.Sleep(100 * time.Millisecond)

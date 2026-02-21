@@ -1,4 +1,4 @@
-package demo
+package ileapdemo
 
 import (
 	"encoding/base64"

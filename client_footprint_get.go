@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv0"
+	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
 // GetFootprintRequest is the request for the [Client.GetFootprint] method.
@@ -20,7 +20,7 @@ type GetFootprintRequest struct {
 func (c *Client) GetFootprint(
 	ctx context.Context,
 	request *GetFootprintRequest,
-) (_ *ileapv0.ProductFootprintForILeapType, err error) {
+) (_ *ileapv1.ProductFootprintForILeapType, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("get iLEAP footprint: %w", err)
@@ -42,7 +42,7 @@ func (c *Client) GetFootprint(
 	if err != nil {
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
-	var response ileapv0.ProductFootprintResponse
+	var response ileapv1.ProductFootprintResponse
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response body: %w", err)
 	}
