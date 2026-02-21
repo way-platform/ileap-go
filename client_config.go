@@ -7,17 +7,16 @@ const DemoBaseURL = "https://api.ileap.sine.dev"
 
 // ClientConfig is the configuration for a [Client].
 type ClientConfig struct {
-	baseURL    string
-	transport  http.RoundTripper
-	retryCount int
-	logger     Logger
+	baseURL      string
+	retryCount   int
+	debug        bool
+	interceptors []func(http.RoundTripper) http.RoundTripper
+	auth         func(http.RoundTripper) http.RoundTripper
 }
 
 // newClientConfig creates a new default [ClientConfig].
 func newClientConfig() ClientConfig {
-	return ClientConfig{
-		transport: http.DefaultTransport,
-	}
+	return ClientConfig{}
 }
 
 // ClientOption is an option that configures a [Client].
@@ -33,14 +32,16 @@ func WithBaseURL(baseURL string) ClientOption {
 // WithOAuth2 authenticates requests using OAuth 2.0.
 func WithOAuth2(clientID, clientSecret string) ClientOption {
 	return func(cc *ClientConfig) {
-		cc.transport = &tokenAuthenticatorTransport{
-			tokenAuthenticator: &oauth2TokenAuthenticator{
-				baseURL:      cc.baseURL,
-				clientID:     clientID,
-				clientSecret: clientSecret,
-				httpClient:   http.DefaultClient,
-			},
-			transport: cc.transport,
+		cc.auth = func(next http.RoundTripper) http.RoundTripper {
+			return &tokenAuthenticatorTransport{
+				tokenAuthenticator: &oauth2TokenAuthenticator{
+					baseURL:      cc.baseURL,
+					clientID:     clientID,
+					clientSecret: clientSecret,
+					httpClient:   http.DefaultClient,
+				},
+				transport: next,
+			}
 		}
 	}
 }
@@ -48,9 +49,11 @@ func WithOAuth2(clientID, clientSecret string) ClientOption {
 // WithReuseTokenAuth authenticates requests by re-using existing [ClientCredentials].
 func WithReuseTokenAuth(credentials ClientCredentials) ClientOption {
 	return func(cc *ClientConfig) {
-		cc.transport = &reuseTokenCredentialsTransport{
-			transport:   cc.transport,
-			credentials: credentials,
+		cc.auth = func(next http.RoundTripper) http.RoundTripper {
+			return &reuseTokenCredentialsTransport{
+				transport:   next,
+				credentials: credentials,
+			}
 		}
 	}
 }
@@ -62,17 +65,16 @@ func WithRetryCount(retryCount int) ClientOption {
 	}
 }
 
-// Logger is a leveled logger interface.
-type Logger interface {
-	Debug(msg string, keysAndValues ...any)
-	Info(msg string, keysAndValues ...any)
-	Warn(msg string, keysAndValues ...any)
-	Error(msg string, keysAndValues ...any)
+// WithDebug toggles debug mode (request/response dumps to stderr).
+func WithDebug(debug bool) ClientOption {
+	return func(cc *ClientConfig) {
+		cc.debug = debug
+	}
 }
 
-// WithLogger sets the [Logger] for the [Client].
-func WithLogger(logger Logger) ClientOption {
+// WithInterceptor adds a request interceptor for the [Client].
+func WithInterceptor(interceptor func(http.RoundTripper) http.RoundTripper) ClientOption {
 	return func(cc *ClientConfig) {
-		cc.logger = logger
+		cc.interceptors = append(cc.interceptors, interceptor)
 	}
 }
