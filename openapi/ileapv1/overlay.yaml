@@ -37,6 +37,11 @@ actions:
     organizationName:
       $ref: "#/components/schemas/NonEmptyString"
 
+# PACT requires null fields to be omitted entirely
+- target: $..[?(@.nullable == true)]
+  update:
+    x-omitempty: true
+
 # Fix PCF field names via x-go-name.
 # pCfExcludingBiogenic is a bare $ref; remove it first so the subsequent
 # update can set a fresh allOf schema (JSON Merge Patch merges objects recursively,
