@@ -279,11 +279,12 @@ func TestJWKS(t *testing.T) {
 	}
 }
 
-func TestWithBaseURL(t *testing.T) {
-	t.Run("OIDC discovery uses configured base URL", func(t *testing.T) {
-		srv := authTestServer(WithBaseURL("https://api.wayplatform.com/ileap"))
+func TestWithPathPrefix(t *testing.T) {
+	t.Run("OIDC discovery uses configured path prefix", func(t *testing.T) {
+		srv := authTestServer(WithPathPrefix("/ileap"))
 		req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
-		req.Host = "other.example.com"
+		req.Host = "api.example.com"
+		req.Header.Set("X-Forwarded-Proto", "https")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
@@ -293,33 +294,30 @@ func TestWithBaseURL(t *testing.T) {
 		if err := json.NewDecoder(w.Body).Decode(&cfg); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		want := "https://api.wayplatform.com/ileap/auth/token"
-		if cfg.TokenURL != want {
-			t.Errorf("TokenURL = %q, want %q", cfg.TokenURL, want)
+		wantToken := "https://api.example.com/ileap/auth/token"
+		if cfg.TokenURL != wantToken {
+			t.Errorf("TokenURL = %q, want %q", cfg.TokenURL, wantToken)
 		}
-		if cfg.JWKSURL != "https://api.wayplatform.com/ileap/jwks" {
-			t.Errorf("JWKSURL = %q, want https://api.wayplatform.com/ileap/jwks", cfg.JWKSURL)
+		wantJWKS := "https://api.example.com/ileap/jwks"
+		if cfg.JWKSURL != wantJWKS {
+			t.Errorf("JWKSURL = %q, want %q", cfg.JWKSURL, wantJWKS)
 		}
 	})
 
-	t.Run("OIDC discovery trailing slash normalized", func(t *testing.T) {
-		srv := authTestServer(WithBaseURL("https://api.wayplatform.com/ileap/"))
+	t.Run("normalization", func(t *testing.T) {
+		srv := authTestServer(WithPathPrefix("ileap/"))
 		req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
+		req.Host = "api.example.com"
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		if w.Code != http.StatusOK {
-			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
-		}
 		var cfg OpenIDConfiguration
-		if err := json.NewDecoder(w.Body).Decode(&cfg); err != nil {
-			t.Fatalf("decode: %v", err)
-		}
-		if cfg.TokenURL != "https://api.wayplatform.com/ileap/auth/token" {
-			t.Errorf("TokenURL with trailing slash base = %q, want no double slash", cfg.TokenURL)
+		_ = json.NewDecoder(w.Body).Decode(&cfg)
+		if cfg.TokenURL != "http://api.example.com/ileap/auth/token" {
+			t.Errorf("TokenURL = %q, want http://api.example.com/ileap/auth/token", cfg.TokenURL)
 		}
 	})
 
-	t.Run("pagination Link uses configured base URL", func(t *testing.T) {
+	t.Run("pagination Link uses prefix", func(t *testing.T) {
 		srv := NewServer(
 			WithTokenValidator(&mockTokenValidator{valid: true}),
 			WithFootprintHandler(&mockFootprintHandler{
@@ -327,18 +325,19 @@ func TestWithBaseURL(t *testing.T) {
 					{ID: "fp-1"}, {ID: "fp-2"}, {ID: "fp-3"},
 				},
 			}),
-			WithBaseURL("https://api.wayplatform.com/ileap"),
+			WithPathPrefix("/ileap"),
 		)
 		req := httptest.NewRequest("GET", "/2/footprints?limit=2", nil)
 		req.Header.Set("Authorization", "Bearer valid")
-		req.Host = "other.example.com"
+		req.Host = "api.example.com"
+		req.Header.Set("X-Forwarded-Proto", "https")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
 		got := w.Header().Get("Link")
-		want := `<https://api.wayplatform.com/ileap/2/footprints?limit=2&offset=2>; rel="next"`
+		want := `<https://api.example.com/ileap/2/footprints?limit=2&offset=2>; rel="next"`
 		if got != want {
 			t.Errorf("Link = %q, want %q", got, want)
 		}
@@ -520,7 +519,7 @@ func TestGetFootprint(t *testing.T) {
 	})
 }
 
-func TestListTADs(t *testing.T) {
+func TestListTads(t *testing.T) {
 	srv := NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithTADHandler(&mockTADHandler{
