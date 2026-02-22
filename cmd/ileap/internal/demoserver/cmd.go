@@ -58,7 +58,7 @@ func run(ctx context.Context, v *viper.Viper) error {
 	if err != nil {
 		return err
 	}
-	if err := (&http.Server{Handler: handler}).Serve(lis); err != nil {
+	if err := (&http.Server{Handler: logRequests(handler)}).Serve(lis); err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
@@ -67,8 +67,31 @@ func run(ctx context.Context, v *viper.Viper) error {
 	return nil
 }
 
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
+func logRequests(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+		slog.InfoContext(r.Context(), "request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rec.status,
+		)
+	})
+}
+
 func buildHandler(v *viper.Viper) (http.Handler, error) {
 	authBackend := v.GetString("auth-backend")
+	slog.Info("starting demo server", "auth-backend", authBackend)
 	switch authBackend {
 	case "demo":
 		server, err := ileapdemo.NewServer()
@@ -88,6 +111,7 @@ func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
 	if fapiDomain == "" {
 		return nil, fmt.Errorf("--clerk-fapi-domain required when --auth-backend=clerk")
 	}
+	slog.Info("using clerk auth backend", "fapi-domain", fapiDomain)
 	dataHandler, err := ileapdemo.NewDataHandler()
 	if err != nil {
 		return nil, fmt.Errorf("create data handler: %w", err)

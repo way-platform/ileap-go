@@ -105,6 +105,7 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
+			slog.WarnContext(r.Context(), "token validation failed", "error", err)
 			writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid access token")
 			return
 		}
@@ -151,9 +152,11 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 		}
 		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
 			if errors.Is(err, ErrTokenExpired) {
+				slog.WarnContext(r.Context(), "token expired", "error", err)
 				writeError(w, http.StatusUnauthorized, ileap.ErrorCodeTokenExpired, "token expired")
 				return
 			}
+			slog.WarnContext(r.Context(), "token validation failed", "error", err)
 			writeError(w, http.StatusForbidden, ileap.ErrorCodeAccessDenied, "invalid access token")
 			return
 		}
@@ -331,6 +334,7 @@ func writeHandlerError(w http.ResponseWriter, err error) {
 	case errors.Is(err, ErrBadRequest):
 		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "%s", err)
 	default:
+		slog.Error("handler error", "error", err)
 		writeError(
 			w,
 			http.StatusInternalServerError,
