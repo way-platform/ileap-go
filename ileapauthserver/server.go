@@ -11,16 +11,14 @@ import (
 
 // Server is an iLEAP auth server HTTP handler.
 type Server struct {
-	baseURL  string
 	issuer   TokenIssuer
 	oidc     OIDCProvider
 	serveMux *http.ServeMux
 }
 
 // NewServer creates a new iLEAP auth server.
-func NewServer(baseURL string, issuer TokenIssuer, oidc OIDCProvider) *Server {
+func NewServer(issuer TokenIssuer, oidc OIDCProvider) *Server {
 	s := &Server{
-		baseURL:  baseURL,
 		issuer:   issuer,
 		oidc:     oidc,
 		serveMux: http.NewServeMux(),
@@ -77,6 +75,7 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 	creds, err := s.issuer.IssueToken(r.Context(), username, password)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
+			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
 			// ACT conformance test requires 400.
 			writeOAuthError(
 				w,
@@ -86,6 +85,7 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		}
+		slog.ErrorContext(r.Context(), "failed to issue token", "error", err)
 		writeOAuthError(
 			w,
 			http.StatusInternalServerError,
@@ -97,8 +97,16 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, creds)
 }
 
-func (s *Server) openIDConfig(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, s.oidc.OpenIDConfiguration(s.baseURL))
+func (s *Server) openIDConfig(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, s.oidc.OpenIDConfiguration(baseURLFromRequest(r)))
+}
+
+func baseURLFromRequest(r *http.Request) string {
+	scheme := r.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		scheme = "http"
+	}
+	return scheme + "://" + r.Host
 }
 
 func (s *Server) jwks(w http.ResponseWriter, _ *http.Request) {

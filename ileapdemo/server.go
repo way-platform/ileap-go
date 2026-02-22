@@ -14,7 +14,7 @@ type Server struct {
 }
 
 // NewServer creates a new example iLEAP server.
-func NewServer(baseURL string) (*Server, error) {
+func NewServer() (*Server, error) {
 	dataHandler, err := NewDataHandler()
 	if err != nil {
 		return nil, fmt.Errorf("create data handler: %w", err)
@@ -23,12 +23,11 @@ func NewServer(baseURL string) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create auth provider: %w", err)
 	}
-	return NewServerWith(baseURL, authProvider, dataHandler, authProvider), nil
+	return NewServerWith(authProvider, dataHandler, authProvider), nil
 }
 
 // NewServerWith creates a new example iLEAP server with explicit dependencies.
 func NewServerWith(
-	baseURL string,
 	auth interface {
 		ileapauthserver.TokenIssuer
 		ileapauthserver.OIDCProvider
@@ -46,7 +45,7 @@ func NewServerWith(
 		ileapserver.WithEventHandler(&EventHandler{}),
 		ileapserver.WithTokenValidator(tokenValidator),
 	)
-	authSrv := ileapauthserver.NewServer(baseURL, auth, auth)
+	authSrv := ileapauthserver.NewServer(auth, auth)
 	mux := http.NewServeMux()
 	mux.Handle("/auth/", authSrv)
 	mux.Handle("/.well-known/", authSrv)

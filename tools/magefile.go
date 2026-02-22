@@ -167,6 +167,7 @@ func DockerPush() error {
 	log.Println("pushing ileap Docker image to GHCR")
 	c := tool(root("cmd", "ileap"), "ko", "build",
 		"--base-import-paths",
+		"--tags", "latest",
 		"--platform", "linux/amd64",
 		".",
 	)
@@ -184,6 +185,17 @@ func DockerBuild() error {
 	)
 	c.Env = append(os.Environ(), "KO_DOCKER_REPO=ko.local")
 	return c.Run()
+}
+
+// DeployDemo deploys the ileap demo server to Cloud Run.
+func DeployDemo() error {
+	log.Println("deploying ileap demo server to Cloud Run")
+	return cmd(
+		root(), "gcloud", "run", "services", "replace",
+		root("config", "demo-server.yaml"),
+		"--project", "way-ileap-demo-prod",
+		"--region", "europe-north1",
+	).Run()
 }
 
 // installACT downloads the ACT conformance binary and caches it.

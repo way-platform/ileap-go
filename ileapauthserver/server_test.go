@@ -51,7 +51,7 @@ func (m *mockOIDCProvider) JWKS() *JWKSet {
 }
 
 func newTestServer() *Server {
-	return NewServer("http://localhost:8080", &mockTokenIssuer{}, &mockOIDCProvider{})
+	return NewServer(&mockTokenIssuer{}, &mockOIDCProvider{})
 }
 
 func TestAuthToken(t *testing.T) {
@@ -137,6 +137,7 @@ func TestAuthToken(t *testing.T) {
 func TestOpenIDConfig(t *testing.T) {
 	srv := newTestServer()
 	req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
+	req.Host = "localhost:8080"
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {

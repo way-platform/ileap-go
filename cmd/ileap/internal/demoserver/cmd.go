@@ -31,16 +31,10 @@ func NewCommand() *cobra.Command {
 		Short: "Start the iLEAP demo server",
 	}
 	cmd.Flags().Int("port", 8080, "port to listen on")
-	cmd.Flags().String(
-		"base-url",
-		"https://ileap-demo-server-504882905500.europe-north1.run.app",
-		"base URL of the server",
-	)
 	cmd.Flags().String("auth-backend", "demo", "auth backend to use (demo, clerk)")
 	cmd.Flags().
 		String("clerk-fapi-domain", "", "Clerk FAPI domain (required when auth-backend=clerk)")
 	v.BindPFlag("port", cmd.Flags().Lookup("port"))                           //nolint:errcheck
-	v.BindPFlag("base-url", cmd.Flags().Lookup("base-url"))                   //nolint:errcheck
 	v.BindPFlag("auth-backend", cmd.Flags().Lookup("auth-backend"))           //nolint:errcheck
 	v.BindPFlag("clerk-fapi-domain", cmd.Flags().Lookup("clerk-fapi-domain")) //nolint:errcheck
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
@@ -54,8 +48,7 @@ func NewCommand() *cobra.Command {
 
 func run(ctx context.Context, v *viper.Viper) error {
 	port := v.GetInt("port")
-	baseURL := v.GetString("base-url")
-	handler, err := buildHandler(v, baseURL)
+	handler, err := buildHandler(v)
 	if err != nil {
 		return err
 	}
@@ -74,23 +67,23 @@ func run(ctx context.Context, v *viper.Viper) error {
 	return nil
 }
 
-func buildHandler(v *viper.Viper, baseURL string) (http.Handler, error) {
+func buildHandler(v *viper.Viper) (http.Handler, error) {
 	authBackend := v.GetString("auth-backend")
 	switch authBackend {
 	case "demo":
-		server, err := ileapdemo.NewServer(baseURL)
+		server, err := ileapdemo.NewServer()
 		if err != nil {
 			return nil, err
 		}
 		return server.Handler(), nil
 	case "clerk":
-		return buildClerkHandler(v, baseURL)
+		return buildClerkHandler(v)
 	default:
 		return nil, fmt.Errorf("unknown auth-backend: %s", authBackend)
 	}
 }
 
-func buildClerkHandler(v *viper.Viper, baseURL string) (http.Handler, error) {
+func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
 	fapiDomain := v.GetString("clerk-fapi-domain")
 	if fapiDomain == "" {
 		return nil, fmt.Errorf("--clerk-fapi-domain required when --auth-backend=clerk")
@@ -109,7 +102,7 @@ func buildClerkHandler(v *viper.Viper, baseURL string) (http.Handler, error) {
 		ileapserver.WithEventHandler(&ileapdemo.EventHandler{}),
 		ileapserver.WithTokenValidator(tokenValidator),
 	)
-	authSrv := ileapauthserver.NewServer(baseURL, tokenIssuer, oidcProvider)
+	authSrv := ileapauthserver.NewServer(tokenIssuer, oidcProvider)
 	mux := http.NewServeMux()
 	mux.Handle("/auth/", authSrv)
 	mux.Handle("/.well-known/", authSrv)

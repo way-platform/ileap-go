@@ -13,7 +13,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	server, err := NewServer("http://localhost:8080")
+	server, err := NewServer()
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
