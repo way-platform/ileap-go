@@ -20,7 +20,7 @@ func TestTokenIssuer(t *testing.T) {
 			resp := signInResponse{}
 			resp.Response.Status = "complete"
 			resp.Client.Sessions = []struct {
-				ID string `json:"id"`
+				ID              string `json:"id"`
 				LastActiveToken struct {
 					JWT string `json:"jwt"`
 				} `json:"last_active_token"`

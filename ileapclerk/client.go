@@ -4,6 +4,7 @@ package ileapclerk
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -71,7 +72,11 @@ func (c *Client) SignIn(identifier, password, activeOrgID string) (string, error
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("clerk sign_in failed: HTTP %d", resp.StatusCode)
+		var body []byte
+		if resp.Body != nil {
+			body, _ = io.ReadAll(resp.Body)
+		}
+		return "", fmt.Errorf("clerk sign_in failed: HTTP %d: %s", resp.StatusCode, string(body))
 	}
 	var result signInResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -86,11 +91,13 @@ func (c *Client) SignIn(identifier, password, activeOrgID string) (string, error
 		sessionID = result.Client.Sessions[0].ID
 	}
 
+	authHeader := resp.Header.Get("Authorization")
+
 	if activeOrgID != "" {
 		if sessionID == "" {
 			return "", fmt.Errorf("clerk sign_in: missing session ID for organization activation")
 		}
-		return c.TouchSession(sessionID, activeOrgID)
+		return c.TouchSession(sessionID, activeOrgID, authHeader)
 	}
 
 	sessions := result.Client.Sessions
@@ -101,7 +108,7 @@ func (c *Client) SignIn(identifier, password, activeOrgID string) (string, error
 }
 
 // TouchSession activates an organization for the given session and returns the new session JWT.
-func (c *Client) TouchSession(sessionID, activeOrgID string) (string, error) {
+func (c *Client) TouchSession(sessionID, activeOrgID, authHeader string) (string, error) {
 	endpoint := fmt.Sprintf("https://%s/v1/client/sessions/%s/touch", c.fapiDomain, sessionID)
 	form := url.Values{}
 	form.Set("active_organization_id", activeOrgID)
@@ -110,6 +117,9 @@ func (c *Client) TouchSession(sessionID, activeOrgID string) (string, error) {
 		return "", fmt.Errorf("create touch request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if authHeader != "" {
+		req.Header.Set("Authorization", authHeader)
+	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("send touch request: %w", err)

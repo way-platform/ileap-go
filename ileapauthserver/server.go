@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 
 	"github.com/way-platform/ileap-go"
 )
@@ -72,7 +73,19 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	creds, err := s.issuer.IssueToken(r.Context(), username, password)
+
+	// OAuth 2.0 (RFC 6749, Section 2.3.1) requires that client_id and
+	// client_secret be URL-encoded before being used in HTTP Basic Auth.
+	clientID, err := url.QueryUnescape(username)
+	if err != nil {
+		clientID = username
+	}
+	clientSecret, err := url.QueryUnescape(password)
+	if err != nil {
+		clientSecret = password
+	}
+
+	creds, err := s.issuer.IssueToken(r.Context(), clientID, clientSecret)
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
 			slog.WarnContext(r.Context(), "failed to issue token", "error", err)

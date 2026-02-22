@@ -24,7 +24,7 @@ func NewCommand() *cobra.Command {
 	v := viper.New()
 	v.SetEnvPrefix("ILEAP")
 	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	v.BindEnv("port", "PORT") //nolint:errcheck
+	_ = v.BindEnv("port", "PORT")
 	v.AutomaticEnv()
 	cmd := &cobra.Command{
 		Use:   "demo-server",
@@ -36,10 +36,22 @@ func NewCommand() *cobra.Command {
 		String("clerk-fapi-domain", "", "Clerk FAPI domain (required when auth-backend=clerk)")
 	cmd.Flags().
 		String("clerk-organization-id", "", "Clerk organization ID to activate upon login (optional)")
-	v.BindPFlag("port", cmd.Flags().Lookup("port"))                                       //nolint:errcheck
-	v.BindPFlag("auth-backend", cmd.Flags().Lookup("auth-backend"))                       //nolint:errcheck
-	v.BindPFlag("clerk-fapi-domain", cmd.Flags().Lookup("clerk-fapi-domain"))             //nolint:errcheck
-	v.BindPFlag("clerk-organization-id", cmd.Flags().Lookup("clerk-organization-id"))     //nolint:errcheck
+	_ = v.BindPFlag(
+		"port",
+		cmd.Flags().Lookup("port"),
+	)
+	_ = v.BindPFlag(
+		"auth-backend",
+		cmd.Flags().Lookup("auth-backend"),
+	)
+	_ = v.BindPFlag(
+		"clerk-fapi-domain",
+		cmd.Flags().Lookup("clerk-fapi-domain"),
+	)
+	_ = v.BindPFlag(
+		"clerk-organization-id",
+		cmd.Flags().Lookup("clerk-organization-id"),
+	)
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelDebug,
@@ -124,7 +136,10 @@ func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
 	}
 
 	clerkClient := ileapclerk.NewClient(fapiDomain)
-	tokenIssuer := ileapclerk.NewTokenIssuer(clerkClient, ileapclerk.WithActiveOrganization(activeOrgID))
+	tokenIssuer := ileapclerk.NewTokenIssuer(
+		clerkClient,
+		ileapclerk.WithActiveOrganization(activeOrgID),
+	)
 	oidcProvider := ileapclerk.NewOIDCProvider(clerkClient)
 	tokenValidator := ileapclerk.NewTokenValidator(clerkClient)
 	dataSrv := ileapserver.NewServer(
