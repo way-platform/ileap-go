@@ -101,6 +101,15 @@ All numeric values are `Decimal` -- JSON strings matching
 | `co2eIntensityTTW` | Decimal | M | TTW intensity per hubActivityUnit |
 | `hubActivityUnit` | String | M | `"tonnes"` or `"TEU"` |
 
+### EnergyCarrier
+
+| Property | Type | Req | Description |
+|---|---|---|---|
+| `energyCarrier` | EnergyCarrierType | M | Enum value |
+| `emissionFactorTTW` | Decimal | M | kgCO2e per unit |
+| `emissionFactorWTW` | Decimal | M | kgCO2e per unit |
+| `relativeShare` | Decimal | M | Fraction of total energy (0–1). Must be `"1"` if only one carrier. |
+
 ### TAD (Transport Activity Data)
 
 | Property | Type | Req | Description |
@@ -193,6 +202,18 @@ contract including request/response formats.
 Supports `$filter` query parameter (OData v4 subset) and `limit`
 pagination with `Link` header.
 
+**Required filterable fields** (`GET /2/footprints`):
+| Field | Operators |
+|---|---|
+| `productCategoryCpc` | `eq` |
+| `productIds/any(id:(id eq '...'))` | `any/eq` |
+| `companyIds/any(id:(id eq '...'))` | `any/eq` |
+| `pcf/geographyCountry` | `eq` |
+| `created` | `gt`, `lt` |
+| `updated` | `gt`, `lt` |
+
+Combined filters using `and` must also be supported.
+
 ### iLEAP endpoint
 
 ```
@@ -218,6 +239,9 @@ See `references/known-issues.md` for error code gotchas (e.g.,
 
 ## Conformance Testing & ACT
 
+For a comprehensive guide on conformance tests, definitions, and requirements, please refer to the dedicated document:
+**`references/conformance-tests.md`**
+
 ### Conformance levels
 
 1. **Emissions Data Conformance**: DT#1 + DT#2 (ShipmentFootprint, TOC, HOC via `/2/footprints`)
@@ -240,15 +264,24 @@ See `references/known-issues.md` for error code gotchas (e.g.,
 > so ACT can wait for expiry. Most test servers skip this by issuing
 > long-lived tokens — TC008 will then time out or fail.
 
+### Implementation Strategy: Unit Test Suite
+
+When building an iLEAP-conformant API, strongly consider implementing the conformance test cases (TC001-TC008) and the PACT Required Test Cases as a standalone **integration or unit test suite** within your language's native testing framework (e.g., `go test`, `pytest`, `Jest`).
+
+**Why this matters:**
+- **Regression Protection**: Ensures that changes to core routing, auth, and data modeling don't accidentally break conformity before running the official ACT tool.
+- **SFC Certification**: Conformance test cases are central to achieving SFC Certification. Automating these tests locally drastically shortens the feedback loop.
+- **Mocking**: Building local test suites allows you to mock database layers and quickly test HTTP handler edge cases (e.g., pagination behaviors, token expiration, OData filtering) without spinning up the entire stack.
+
 ### ACT (Automated Conformance Testing)
 
 - **Web UI**: https://act.sine.dev
 - **CLI**: `references/act/act.sh` -- downloads and runs binary for current architecture (arm64/x86_64)
 
 ```sh
-# Run against demo API
+# Run against demo API (Check SINE Foundation Demo API for current credentials)
 curl -sSf https://raw.githubusercontent.com/sine-fdn/act/main/act.sh |\
-  bash -s -- test -b "https://api.ileap.sine.dev" -u "hello" -p "pathfinder"
+  bash -s -- test -b "https://api.ileap.sine.dev" -u "<demo-user>" -p "<demo-password>"
 ```
 
 ```sh
@@ -306,11 +339,7 @@ https://api.ileap.sine.dev
 
 ### Credentials
 
-| client_id | client_secret | Scope |
-|---|---|---|
-| `hello` | `pathfinder` | Global access to all data |
-| `transport_service_user` | `ileap` | ShipmentFootprints + TAD |
-| `transport_service_organizer` | `ileap` | TOCs + HOCs + TAD |
+Demo API credentials for the SINE reference server (including role-based accounts like `transport_service_user` and `transport_service_organizer`) are published in the [SINE Foundation Demo API GitHub Repository](https://github.com/sine-fdn/impact-protocols/tree/main/demo-api#credentials).
 
 ### Step-by-step verification
 
@@ -320,7 +349,7 @@ curl -s https://api.ileap.sine.dev/.well-known/openid-configuration | jq .
 
 # 2. Obtain access token
 TOKEN=$(curl -s -X POST https://api.ileap.sine.dev/auth/token \
-  -u "hello:pathfinder" \
+  -u "<demo-user>:<demo-password>" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=client_credentials" | jq -r .access_token)
 
@@ -407,8 +436,11 @@ grep -n 'dfn>.*Denied\|dfn>.*Request\|dfn>.*Expired' references/pact-spec-v2/ind
 
 ## Reference Files
 
+### Internal Skill References
+
 | File | Purpose |
 |---|---|
+| `references/conformance-tests.md` | iLEAP and PACT conformance tests definitions |
 | `references/ileap-extension/specs/index.bs` | Normative iLEAP spec (Bikeshed source) |
 | `references/pact-spec-v2/index.bs` | PACT v2.1.0 spec (Bikeshed source) |
 | `references/pact-implementation-guide.md` | PACT implementation steps (auth, endpoints, data model) |
@@ -418,8 +450,14 @@ grep -n 'dfn>.*Denied\|dfn>.*Request\|dfn>.*Expired' references/pact-spec-v2/ind
 | `references/ileap-data-model/schemas/*.json` | JSON schemas for all iLEAP data types |
 | `references/pact-data-model/schema/data-model-schema.json` | PACT base data model schema |
 | `references/pact-integration-examples.md` | Annotated PACT integration JSON examples |
-| `references/demo-api/` | SINE Foundation demo server source (Rust/Rocket) |
 | `references/act/README.md` | ACT CLI usage, test coverage |
 | `references/act/act.sh` | ACT runner script (detects arch, downloads binary) |
 | `references/pilot-certification.md` | SFC certification process for iLEAP |
 | `references/whitepaper-v1.md` | Strategic context only (not useful for implementation) |
+
+### External References
+
+| Link | Purpose |
+|---|---|
+| [SINE Foundation Demo API](https://github.com/sine-fdn/impact-protocols/tree/main/demo-api) | External reference server implementation (Rust/Rocket) |
+| [Way Platform iLEAP Go](https://github.com/way-platform/ileap-go) | Way's iLEAP implementation in Go |

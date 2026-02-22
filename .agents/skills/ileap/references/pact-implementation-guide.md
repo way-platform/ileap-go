@@ -157,6 +157,11 @@ Content-Type: application/cloudevents+json; charset=UTF-8
 Support is OPTIONAL. Non-implementing hosts SHOULD return
 `NotImplemented`.
 
+**Important Validation Requirements (ACT TC 21)**:
+If implemented, you MUST validate the incoming CloudEvent:
+- `specversion` MUST be exactly `"1.0"`. Reject older versions (e.g., `"0.3"`) with HTTP 400.
+- `data` MUST be present and not null. Reject missing/null data with HTTP 400.
+
 ### Event Types
 
 | Event | Type String | Direction |

@@ -88,14 +88,38 @@ ACT delegates PACT tests to an external service that must reach the API
 over the internet. Localhost URLs cause PACT test failures. iLEAP-specific
 tests (TC001-TC007) work locally.
 
-## PACT TC8 and TC18: Known Reference Failures
+## Known Permanent ACT Failures (Not Implementation Bugs)
 
-PACT TC8 and TC18 fail even on the SINE demo API at
-`api.ileap.sine.dev`. Treat these as known failures when evaluating
-ACT results.
+Treat these as known failures when evaluating ACT results, as they often fail even on the SINE demo API at `api.ileap.sine.dev`:
+
+| TC | Reason |
+|---|---|
+| PACT TC8 | Requires short-lived / expired tokens; not practical to provision |
+| PACT TC18 | OIDC discovery flow; fails on the SINE reference API too |
+| PACT TC19 | Structurally depends on TC18 |
 
 ## `biogenicAccountingMethodology` Valid Values
 
 Valid values: `GHGP`, `ISO`, `PEF`, `Quantis`.
 
 Note: the correct value is `GHGP` (not `GHPG`) — common typo.
+
+## `hubType` Enum Is PascalCase
+
+The `hubType` field on HOC must use PascalCase values (e.g.,
+`"Transshipment"`, `"Warehouse"`, `"StorageAndTransshipment"`).
+Using lowercase values (like `"transshipment"`) will cause ACT TC 003
+to fail with an "unknown variant" error.
+
+## OData `$filter` with Timezone Offsets (TC 20)
+
+ACT sends timestamps with `+00:00` timezone offsets (not just `Z`) in OData filter values (e.g., `updated+lt+'2023-06-27T13:00:00.000+00:00'`). Standard URL query decoders (like Go's `url.ParseQuery`) will decode the `+` character as a space, resulting in `updated lt '2023-06-27T13:00:00.000 00:00'`. 
+
+If your filter parser splits by whitespace (e.g., using `strings.Fields`), it will incorrectly split the timestamp into multiple tokens and fail to parse the filter.
+**Fix**: Use a limited split (like `strings.SplitN(data, " ", 3)` in Go) to keep the RHS intact regardless of internal spaces.
+
+## CloudEvents Validation (TC 21)
+
+The `POST /2/events` handler must strictly validate the incoming event:
+1. **`data` field**: Must be present **and not null**. ACT explicitly tests that an event with `"data": null` or an absent `data` field returns `400 BadRequest`.
+2. **`specversion` field**: Must be exactly `"1.0"`. ACT sends an event with `specversion: "0.3"` to test rejection. Checking only for an empty string will fail this test; you must enforce `specversion == "1.0"`.
