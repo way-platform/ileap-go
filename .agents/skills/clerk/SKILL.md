@@ -48,19 +48,42 @@ The API will return a `SignIn` object. You must check the `status` field to dete
 }
 ```
 
-### 3. Integrating with iLEAP
+### 3. Activate an Organization (Optional)
+
+If your application requires scoping the user's session to a specific organization, you must set an "Active Organization" on the session after a successful sign-in.
+
+Send a `POST` request to the `/v1/client/sessions/{session_id}/touch` endpoint on the FAPI URL:
+
+**Request Body (`application/x-www-form-urlencoded` or JSON):**
+- `active_organization_id`: The ID of the organization to activate (e.g., `org_2xMv7P...`)
+
+**Example Request:**
+```http
+POST /v1/client/sessions/sess_1234567890/touch
+Content-Type: application/x-www-form-urlencoded
+Authorization: <optional_token_if_needed>
+
+active_organization_id=org_2xMv7P...
+```
+
+The response will contain the updated `client.sessions` array, where the `last_active_token.jwt` will now include claims specific to the activated organization (like `org_id` and `org_role`).
+
+### 4. Integrating with iLEAP
 
 When adapting this for the iLEAP Authentication Server Adapter (e.g., the `POST /auth/token` route):
 1. Extract the `username` and `password` from the incoming HTTP Basic Auth request.
 2. Proxy these credentials to the Clerk FAPI `/v1/client/sign_ins` endpoint.
-3. If Clerk returns `status: "complete"`, consider the user authenticated.
-4. Generate the required iLEAP token (as seen in `demo/server.go`) and return it to the client.
+3. If Clerk returns `status: "complete"`, optionally call the `touch` endpoint if an organization ID is provided.
+4. Extract the session JWT (`last_active_token.jwt`).
+5. Generate the required iLEAP token (as seen in `demo/server.go`) or return the Clerk JWT directly to the client.
 
 ## Reference Material
 
 For further details on Clerk's APIs and custom flows, refer to the bundled reference documentation:
 
-- **OpenAPI FAPI Spec:** `.agents/skills/clerk/references/openapi/frontend-api-2025-11-10.yml` (Look for `/v1/client/sign_ins`)
+- **OpenAPI FAPI Spec:** `.agents/skills/clerk/references/openapi/frontend-api-2025-11-10.yml` (Look for `/v1/client/sign_ins` and `/v1/client/sessions/{session_id}/touch`)
+- **Active Organization Concept:** `.agents/skills/clerk/references/docs/_tooltips/active-organization.mdx`
+- **Custom Organization Switcher Flow:** `.agents/skills/clerk/references/docs/guides/development/custom-flows/organizations/organization-switcher.mdx`
 - **Custom Email/Password Flow Docs:** `.agents/skills/clerk/references/docs/guides/development/custom-flows/authentication/email-password.mdx`
 - **Backend API Spec (for administrative tasks):** `.agents/skills/clerk/references/openapi/backend-api-2025-11-10.yml`
 
