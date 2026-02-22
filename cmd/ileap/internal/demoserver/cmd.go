@@ -112,13 +112,17 @@ func buildHandler(v *viper.Viper) (http.Handler, error) {
 		if err != nil {
 			return nil, err
 		}
-		dataHandler, err := ileapdemo.NewDataHandler()
+		footprintHandler, err := ileapdemo.NewFootprintHandler()
+		if err != nil {
+			return nil, err
+		}
+		tadHandler, err := ileapdemo.NewTADHandler()
 		if err != nil {
 			return nil, err
 		}
 		return ileap.NewServer(
-			ileap.WithFootprintHandler(dataHandler),
-			ileap.WithTADHandler(dataHandler),
+			ileap.WithFootprintHandler(footprintHandler),
+			ileap.WithTADHandler(tadHandler),
 			ileap.WithEventHandler(&ileapdemo.EventHandler{}),
 			ileap.WithTokenValidator(authProvider),
 			ileap.WithTokenIssuer(authProvider),
@@ -140,9 +144,13 @@ func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
 
 	activeOrgID := v.GetString("clerk-organization-id")
 
-	dataHandler, err := ileapdemo.NewDataHandler()
+	footprintHandler, err := ileapdemo.NewFootprintHandler()
 	if err != nil {
-		return nil, fmt.Errorf("create data handler: %w", err)
+		return nil, fmt.Errorf("create footprint handler: %w", err)
+	}
+	tadHandler, err := ileapdemo.NewTADHandler()
+	if err != nil {
+		return nil, fmt.Errorf("create TAD handler: %w", err)
 	}
 
 	clerkClient := ileapclerk.NewClient(fapiDomain)
@@ -153,8 +161,8 @@ func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
 	oidcProvider := ileapclerk.NewOIDCProvider(clerkClient)
 	tokenValidator := ileapclerk.NewTokenValidator(clerkClient)
 	srv := ileap.NewServer(
-		ileap.WithFootprintHandler(dataHandler),
-		ileap.WithTADHandler(dataHandler),
+		ileap.WithFootprintHandler(footprintHandler),
+		ileap.WithTADHandler(tadHandler),
 		ileap.WithEventHandler(&ileapdemo.EventHandler{}),
 		ileap.WithTokenValidator(tokenValidator),
 		ileap.WithTokenIssuer(tokenIssuer),

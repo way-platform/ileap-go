@@ -698,33 +698,83 @@ func TestEventsValidationMissingFields(t *testing.T) {
 }
 
 func TestNotImplemented(t *testing.T) {
-	srv := NewServer(
-		WithTokenValidator(&mockTokenValidator{valid: true}),
-	)
+	t.Run("data handlers with auth configured", func(t *testing.T) {
+		srv := NewServer(
+			WithTokenValidator(&mockTokenValidator{valid: true}),
+		)
 
-	t.Run("footprints", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/2/footprints", nil)
-		req.Header.Set("Authorization", "Bearer valid")
-		w := httptest.NewRecorder()
-		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		t.Run("footprints", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/2/footprints", nil)
+			req.Header.Set("Authorization", "Bearer valid")
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		})
+
+		t.Run("tads", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
+			req.Header.Set("Authorization", "Bearer valid")
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		})
+
+		t.Run("events", func(t *testing.T) {
+			body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-1","source":"test","data":{"pfIds":[]}}`
+			req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
+			req.Header.Set("Authorization", "Bearer valid")
+			req.Header.Set("Content-Type", "application/cloudevents+json")
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		})
 	})
 
-	t.Run("tads", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
-		req.Header.Set("Authorization", "Bearer valid")
-		w := httptest.NewRecorder()
-		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
-	})
+	t.Run("bare server returns 501 for all endpoints", func(t *testing.T) {
+		srv := NewServer()
 
-	t.Run("events", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/2/events", strings.NewReader("{}"))
-		req.Header.Set("Authorization", "Bearer valid")
-		req.Header.Set("Content-Type", "application/cloudevents+json")
-		w := httptest.NewRecorder()
-		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		t.Run("footprints with token", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/2/footprints", nil)
+			req.Header.Set("Authorization", "Bearer any-token")
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		})
+
+		t.Run("tad with token", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
+			req.Header.Set("Authorization", "Bearer any-token")
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		})
+
+		t.Run("auth token", func(t *testing.T) {
+			req := httptest.NewRequest(
+				"POST",
+				"/auth/token",
+				strings.NewReader("grant_type=client_credentials"),
+			)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.SetBasicAuth("user", "pass")
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		})
+
+		t.Run("openid configuration", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		})
+
+		t.Run("jwks", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/jwks", nil)
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+		})
 	})
 }
 
