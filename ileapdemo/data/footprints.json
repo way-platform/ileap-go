@@ -704,7 +704,8 @@
             "loadFactor": "0.6",
             "mode": "Rail",
             "temperatureControl": "ambient",
-            "tocId": "toc-rail-1"
+            "tocId": "toc-rail-1",
+            "transportActivityUnit": "tkm"
           },
           "dataSchema": "https://api.ileap.sine.dev/toc.json",
           "documentation": "https://sine-fdn.github.io/ileap-extension/",
@@ -792,6 +793,7 @@
             "mode": "Road",
             "temperatureControl": "refrigerated",
             "tocId": "toc-road-1",
+            "transportActivityUnit": "tkm",
             "truckLoadingSequence": "FTL"
           },
           "dataSchema": "https://api.ileap.sine.dev/toc.json",
@@ -880,6 +882,7 @@
             "mode": "Road",
             "temperatureControl": "refrigerated",
             "tocId": "truck-40t-euro5-de",
+            "transportActivityUnit": "tkm",
             "truckLoadingSequence": "FTL"
           },
           "dataSchema": "https://api.ileap.sine.dev/toc.json",
@@ -968,6 +971,7 @@
             "mode": "Road",
             "temperatureControl": "ambient",
             "tocId": "toc-small-truck-1",
+            "transportActivityUnit": "tkm",
             "truckLoadingSequence": "FTL"
           },
           "dataSchema": "https://api.ileap.sine.dev/toc.json",
@@ -1051,7 +1055,8 @@
               }
             ],
             "hocId": "hoc-transshipment-1",
-            "hubType": "transshipment",
+            "hubActivityUnit": "tonnes",
+            "hubType": "Transshipment",
             "inboundTransportMode": "Road",
             "isAccredited": true,
             "isVerified": true,
@@ -1139,7 +1144,8 @@
               }
             ],
             "hocId": "hoc-warehouse-1",
-            "hubType": "warehouse",
+            "hubActivityUnit": "tonnes",
+            "hubType": "Warehouse",
             "inboundTransportMode": "Road",
             "isAccredited": true,
             "isVerified": true,

@@ -375,7 +375,7 @@ func TestEvents(t *testing.T) {
 	)
 
 	t.Run("cloudevents content type", func(t *testing.T) {
-		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-1","source":"test"}`
+		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-1","source":"test","data":{"pfIds":[]}}`
 		req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
 		req.Header.Set("Authorization", "Bearer valid")
 		req.Header.Set("Content-Type", "application/cloudevents+json")
@@ -393,7 +393,7 @@ func TestEvents(t *testing.T) {
 	})
 
 	t.Run("application/json content type", func(t *testing.T) {
-		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-2","source":"test"}`
+		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-2","source":"test","data":{"pfIds":[]}}`
 		req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
 		req.Header.Set("Authorization", "Bearer valid")
 		req.Header.Set("Content-Type", "application/json")
@@ -439,6 +439,14 @@ func TestEventsValidationMissingFields(t *testing.T) {
 		{
 			"missing source",
 			`{"specversion":"1.0","id":"1","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
+		},
+		{
+			"missing data",
+			`{"specversion":"1.0","id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
+		},
+		{
+			"null data",
+			`{"specversion":"1.0","id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":null}`,
 		},
 	}
 	for _, tc := range cases {

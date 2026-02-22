@@ -330,6 +330,15 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
+	if len(event.Data) == 0 || string(event.Data) == "null" {
+		writeError(
+			w,
+			http.StatusBadRequest,
+			ileap.ErrorCodeBadRequest,
+			"missing event data",
+		)
+		return
+	}
 	if err := s.eventHandler.HandleEvent(r.Context(), event); err != nil {
 		writeHandlerError(w, err)
 		return
