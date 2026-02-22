@@ -36,3 +36,170 @@ actions:
   update:
     organizationName:
       $ref: "#/components/schemas/NonEmptyString"
+
+# Fix PCF field names via x-go-name.
+# pCfExcludingBiogenic is a bare $ref; remove it first so the subsequent
+# update can set a fresh allOf schema (JSON Merge Patch merges objects recursively,
+# so a plain update would leave the $ref sibling in place, causing oapi-codegen
+# to ignore the x-go-name extension).
+- target: $.components.schemas.CarbonFootprint.properties.pCfExcludingBiogenic
+  remove: true
+
+- target: $.components.schemas.CarbonFootprint.properties
+  update:
+    pCfExcludingBiogenic:
+      allOf:
+        - $ref: '#/components/schemas/PositiveDecimal'
+      x-go-name: PCFExcludingBiogenic
+
+- target: $.components.schemas.CarbonFootprint.properties.pCfIncludingBiogenic
+  update:
+    x-go-name: PCFIncludingBiogenic
+
+# Fix LUC fields: the regex merges DL/IL into one uppercase token (DLuc/ILuc)
+# so the LUC initialism can't match; override with explicit names.
+- target: $.components.schemas.CarbonFootprint.properties.dLucGhgEmissions
+  update:
+    x-go-name: DLUCGHGEmissions
+
+- target: $.components.schemas.CarbonFootprint.properties.iLucGhgEmissions
+  update:
+    x-go-name: ILUCGHGEmissions
+
+# Fix specversion → SpecVersion (no word boundary for normaliser)
+- target: $.components.schemas.PathfinderEvent.properties.specversion
+  update:
+    x-go-name: SpecVersion
+
+# Fix *[]T → []T for optional slices
+- target: $.components.schemas.EnergyCarrier.properties.feedstocks
+  update:
+    x-go-type-skip-optional-pointer: true
+
+- target: $.components.schemas.ProductFootprint_for_ILeapType.properties.extensions
+  update:
+    x-go-type-skip-optional-pointer: true
+
+- target: $.components.schemas.ProductFootprint_for_ILeapType.properties.precedingPfIds
+  update:
+    x-go-type-skip-optional-pointer: true
+
+- target: $.components.schemas.ProductFootprint_for_ILeapType.properties.productOrSectorSpecificRules
+  update:
+    x-go-type-skip-optional-pointer: true
+
+- target: $.components.schemas.CarbonFootprint.properties.secondaryEmissionFactorSources
+  update:
+    x-go-type-skip-optional-pointer: true
+
+- target: $.components.schemas.TAD.properties.energyCarriers
+  update:
+    x-go-type-skip-optional-pointer: true
+
+# Fix anonymous inline structs in set types
+- target: $.components.schemas.EmissionFactorDSSet.items
+  update:
+    x-go-type: EmissionFactorDS
+
+- target: $.components.schemas.ProductOrSectorSpecificRuleSet.items
+  update:
+    x-go-type: ProductOrSectorSpecificRule
+
+# Fix interface{} fields → json.RawMessage
+- target: $.components.schemas.DataModelExtension.properties.data
+  update:
+    x-go-type: json.RawMessage
+
+- target: $.components.schemas.PFRequestEventBody.properties.pf
+  update:
+    x-go-type: json.RawMessage
+
+# Flatten GlecDistance anyOf → flat struct.
+# Remove anyOf first, then update the parent to add properties
+# (can't target .properties before it exists).
+- target: $.components.schemas.GlecDistance.anyOf
+  remove: true
+
+- target: $.components.schemas.GlecDistance
+  update:
+    properties:
+      actual:
+        $ref: '#/components/schemas/Decimal'
+      gcd:
+        $ref: '#/components/schemas/Decimal'
+      sfd:
+        $ref: '#/components/schemas/Decimal'
+
+# Restructure PathfinderEvent oneOf → flat + typed variants
+- target: $.components.schemas.PathfinderEvent.oneOf
+  remove: true
+
+- target: $.components.schemas.PathfinderEvent.properties
+  update:
+    type:
+      type: string
+    data:
+      type: object
+      x-go-type: json.RawMessage
+
+# Add PathfinderUpdateEvent and PathfinderRequestEvent as new top-level schemas
+- target: $.components.schemas
+  update:
+    PathfinderUpdateEvent:
+      description: >-
+        PF Update Event – see Tech Specs section 6.8.3
+      type: object
+      required: [id, source, specversion, time, type, data]
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        specversion:
+          type: string
+          x-go-name: SpecVersion
+        time:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum:
+            - "org.wbcsd.pathfinder.ProductFootprint.Published.v1"
+          x-enum-varnames:
+            - PathfinderUpdateEventTypePublishedV1
+        data:
+          $ref: '#/components/schemas/PFUpdateEventBody'
+
+    PathfinderRequestEvent:
+      description: >-
+        PF Request Event – see Tech Specs section 6.8.4.1
+      type: object
+      required: [id, source, specversion, time, type, data]
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        specversion:
+          type: string
+          x-go-name: SpecVersion
+        time:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum:
+            - "org.wbcsd.pathfinder.ProductFootprintRequest.Created.v1"
+          x-enum-varnames:
+            - PathfinderRequestEventTypeCreatedV1
+        data:
+          $ref: '#/components/schemas/PFRequestEventBody'
+
+# Enum collision fix: PEF appears in both BiogenicAccountingMethodology
+# and ProductOrSectorSpecificRuleOperator; disambiguate with varnames
+- target: $.components.schemas.ProductOrSectorSpecificRuleOperator
+  update:
+    x-enum-varnames:
+      - ProductRulePEF
+      - EPDInternational
+      - ProductRuleOperatorOther
