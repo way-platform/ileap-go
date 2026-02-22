@@ -87,7 +87,8 @@ func (f *FilterPredicateV2) UnmarshalString(predicate string) error {
 		return fmt.Errorf("invalid predicate LHS: `%s`", lhs)
 	}
 	switch operator := fields[1]; operator {
-	case "eq", "gt", "lt":
+	case "eq", "gt", "lt", "ge", "le":
+		// ACT conformance TC20 uses "ge" for timestamp filtering.
 		f.Operator = operator
 	default:
 		return fmt.Errorf("invalid predicate operator: `%s`", operator)
@@ -130,8 +131,13 @@ func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv1.ProductFootprint
 		return lhsValue == rhsValue
 	case "gt":
 		return lhsValue > rhsValue
+	case "ge":
+		// Added to satisfy ACT conformance test case 20.
+		return lhsValue >= rhsValue
 	case "lt":
 		return lhsValue < rhsValue
+	case "le":
+		return lhsValue <= rhsValue
 	default:
 		return false
 	}

@@ -73,7 +73,8 @@ func (s *Server) registerRoutes() {
 	s.serveMux.Handle("POST /2/events", s.pactAuthMiddleware(http.HandlerFunc(s.events)))
 }
 
-// pactAuthMiddleware returns 400 BadRequest for all auth failures (PACT spec).
+// pactAuthMiddleware returns 403 AccessDenied when the token is rejected,
+// and 400 BadRequest for malformed/missing auth headers (PACT spec).
 func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.tokenValidator == nil {
@@ -106,7 +107,7 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 		}
 		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
 			slog.WarnContext(r.Context(), "token validation failed", "error", err)
-			writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid access token")
+			writeError(w, http.StatusForbidden, ileap.ErrorCodeAccessDenied, "invalid access token")
 			return
 		}
 		next.ServeHTTP(w, r)

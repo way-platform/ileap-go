@@ -25,6 +25,10 @@ func NewServer(issuer TokenIssuer, oidc OIDCProvider) *Server {
 		serveMux: http.NewServeMux(),
 	}
 	s.serveMux.HandleFunc("POST /auth/token", s.authToken)
+	// Workaround for ACT bug: PACT TC18/19 (OpenID Connect flow) mistakenly POSTs
+	// to the base URL (/) instead of the token_endpoint advertised in
+	// /.well-known/openid-configuration.
+	s.serveMux.HandleFunc("POST /", s.authToken)
 	s.serveMux.HandleFunc("GET /.well-known/openid-configuration", s.openIDConfig)
 	s.serveMux.HandleFunc("GET /jwks", s.jwks)
 	return s

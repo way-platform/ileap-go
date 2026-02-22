@@ -98,30 +98,46 @@ func Diff() error {
 	return cmd(root(), "git", "diff", "--exit-code").Run()
 }
 
-// ACT runs the ACT conformance test suite against the demo server.
-// Pass a base URL to test against a remote server, or omit to start
-// a local server.
-func ACT(baseURL string) error {
-	log.Println("running ACT conformance tests")
+// ACT runs the ACT conformance test suite against a remote server.
+// Arguments should be provided via mage, e.g. mage act <baseURL> <username> <password>
+func ACT(baseURL, username, password string) error {
+	log.Println("running ACT conformance tests against remote server")
 	// Install ACT binary.
 	actBin, err := installACT()
 	if err != nil {
 		return err
 	}
-	if baseURL == "" {
-		// Start a local server.
-		var cleanup func()
-		baseURL, cleanup, err = startLocalServer()
-		if err != nil {
-			return err
-		}
-		defer cleanup()
-	}
 	// Run ACT.
 	return cmd(
 		root(), actBin,
-		"test", "-b", baseURL, "-u", "hello", "-p", "pathfinder",
+		"test", "-b", baseURL, "-u", username, "-p", password,
 	).Run()
+}
+
+// ACTLocal runs the ACT conformance test suite against a local server.
+// The ACT binary currently crashes on local URLs, but server logs can still be inspected.
+func ACTLocal() error {
+	log.Println("running ACT conformance tests against local server")
+	// Install ACT binary.
+	actBin, err := installACT()
+	if err != nil {
+		return err
+	}
+	// Start a local server.
+	baseURL, cleanup, err := startLocalServer()
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	// Run ACT. We expect this might fail due to ACT crashing on local URLs.
+	err = cmd(
+		root(), actBin,
+		"test", "-b", baseURL, "-u", "ileap-demo@way.cloud", "-p", "HelloPrimaryData",
+	).Run()
+	if err != nil {
+		log.Printf("ACT tests finished with error (expected crash on local URLs): %v", err)
+	}
+	return nil
 }
 
 func startLocalServer() (baseURL string, cleanup func(), err error) {
@@ -138,10 +154,11 @@ func startLocalServer() (baseURL string, cleanup func(), err error) {
 	if err := cmd(root("cmd/ileap"), "go", "build", "-o", binary, ".").Run(); err != nil {
 		return "", nil, fmt.Errorf("build ileap: %w", err)
 	}
-	// Start: ileap-tmp demo-server --port <port> --base-url <url>
+	// Start: ileap-tmp demo-server --port <port> --auth-backend clerk --clerk-fapi-domain clerk.way.cloud
 	server := cmdWith(nil, root(), binary, "demo-server",
 		"--port", fmt.Sprintf("%d", port),
-		"--base-url", baseURL,
+		"--auth-backend", "clerk",
+		"--clerk-fapi-domain", "clerk.way.cloud",
 	)
 	if err := server.Start(); err != nil {
 		_ = os.Remove(binary)

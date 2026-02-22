@@ -137,7 +137,7 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 	})
 
-	t.Run("invalid token returns 400", func(t *testing.T) {
+	t.Run("invalid token returns 403", func(t *testing.T) {
 		srv := NewServer(
 			WithTokenValidator(&mockTokenValidator{valid: false}),
 			WithFootprintHandler(&mockFootprintHandler{}),
@@ -146,7 +146,7 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer bad-token")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+		checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
 	})
 }
 
