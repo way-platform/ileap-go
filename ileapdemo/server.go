@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/way-platform/ileap-go/ileapauthserver"
 	"github.com/way-platform/ileap-go/ileapserver"
 )
 
 // Server is an example iLEAP server composing data and auth adapters.
 type Server struct {
-	serveMux *http.ServeMux
+	handler http.Handler
 }
 
 // NewServer creates a new example iLEAP server.
@@ -29,8 +28,8 @@ func NewServer() (*Server, error) {
 // NewServerWith creates a new example iLEAP server with explicit dependencies.
 func NewServerWith(
 	auth interface {
-		ileapauthserver.TokenIssuer
-		ileapauthserver.OIDCProvider
+		ileapserver.TokenIssuer
+		ileapserver.OIDCProvider
 		ileapserver.TokenValidator
 	},
 	data interface {
@@ -39,22 +38,18 @@ func NewServerWith(
 	},
 	tokenValidator ileapserver.TokenValidator,
 ) *Server {
-	dataSrv := ileapserver.NewServer(
+	srv := ileapserver.NewServer(
 		ileapserver.WithFootprintHandler(data),
 		ileapserver.WithTADHandler(data),
 		ileapserver.WithEventHandler(&EventHandler{}),
 		ileapserver.WithTokenValidator(tokenValidator),
+		ileapserver.WithTokenIssuer(auth),
+		ileapserver.WithOIDCProvider(auth),
 	)
-	authSrv := ileapauthserver.NewServer(auth, auth)
-	mux := http.NewServeMux()
-	mux.Handle("/auth/", authSrv)
-	mux.Handle("/.well-known/", authSrv)
-	mux.Handle("/jwks", authSrv)
-	mux.Handle("/", dataSrv)
-	return &Server{serveMux: mux}
+	return &Server{handler: srv}
 }
 
 // Handler returns the HTTP handler for the server.
 func (s *Server) Handler() http.Handler {
-	return s.serveMux
+	return s.handler
 }

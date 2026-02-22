@@ -6,7 +6,22 @@ import (
 	"context"
 
 	"github.com/way-platform/ileap-go/openapi/ileapv1"
+	"golang.org/x/oauth2"
 )
+
+// TokenIssuer issues access tokens for valid credentials.
+type TokenIssuer interface {
+	// IssueToken validates credentials and returns client credentials.
+	IssueToken(ctx context.Context, clientID, clientSecret string) (*oauth2.Token, error)
+}
+
+// OIDCProvider provides OpenID Connect discovery information.
+type OIDCProvider interface {
+	// OpenIDConfiguration returns the OIDC configuration for the given base URL.
+	OpenIDConfiguration(baseURL string) *OpenIDConfiguration
+	// JWKS returns the JSON Web Key Set.
+	JWKS() *JWKSet
+}
 
 // FootprintHandler handles product footprint requests.
 type FootprintHandler interface {

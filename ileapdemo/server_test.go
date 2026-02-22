@@ -150,7 +150,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer invalid.token.here")
 			w := httptest.NewRecorder()
 			server.Handler().ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
+			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeAccessDenied)
 		})
 
 		t.Run("missing bearer prefix", func(t *testing.T) {

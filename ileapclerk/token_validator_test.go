@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/way-platform/ileap-go/ileapauthserver"
+	"github.com/way-platform/ileap-go/ileapserver"
 )
 
 const testKID = "test-key-id"
@@ -46,8 +46,8 @@ func makeTestJWT(t *testing.T, key *rsa.PrivateKey, claims map[string]any) strin
 
 func jwksServerForKey(t *testing.T, key *rsa.PrivateKey) *httptest.Server {
 	t.Helper()
-	jwks := ileapauthserver.JWKSet{
-		Keys: []ileapauthserver.JWK{{
+	jwks := ileapserver.JWKSet{
+		Keys: []ileapserver.JWK{{
 			KeyType: "RSA",
 			Use:     "sig",
 			KeyID:   testKID,

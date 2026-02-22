@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,9 @@ type Server struct {
 	tadHandler       TADHandler
 	eventHandler     EventHandler
 	tokenValidator   TokenValidator
+	issuer           TokenIssuer
+	oidc             OIDCProvider
+	baseURL          string
 	serveMux         *http.ServeMux
 }
 
@@ -44,6 +48,22 @@ func WithEventHandler(h EventHandler) Option {
 // WithTokenValidator sets the token validator.
 func WithTokenValidator(v TokenValidator) Option {
 	return func(s *Server) { s.tokenValidator = v }
+}
+
+// WithTokenIssuer sets the token issuer for OAuth2 client credentials.
+func WithTokenIssuer(issuer TokenIssuer) Option {
+	return func(s *Server) { s.issuer = issuer }
+}
+
+// WithOIDCProvider sets the OIDC provider for discovery and JWKS.
+func WithOIDCProvider(oidc OIDCProvider) Option {
+	return func(s *Server) { s.oidc = oidc }
+}
+
+// WithBaseURL sets the absolute base URL for the service (e.g. for subpath mounting).
+// Trailing slashes are trimmed. If empty, URLs are derived from the request.
+func WithBaseURL(u string) Option {
+	return func(s *Server) { s.baseURL = strings.TrimRight(u, "/") }
 }
 
 // NewServer creates a new iLEAP data server with the given options.
@@ -71,6 +91,15 @@ func (s *Server) registerRoutes() {
 	)
 	s.serveMux.Handle("GET /2/ileap/tad", s.ileapAuthMiddleware(http.HandlerFunc(s.listTADs)))
 	s.serveMux.Handle("POST /2/events", s.pactAuthMiddleware(http.HandlerFunc(s.events)))
+	if s.issuer != nil && s.oidc != nil {
+		s.serveMux.HandleFunc("POST /auth/token", s.authToken)
+		// Workaround for ACT bug: PACT TC18/19 (OpenID Connect flow) mistakenly POSTs
+		// to the base URL (/) instead of the token_endpoint advertised in
+		// /.well-known/openid-configuration.
+		s.serveMux.HandleFunc("POST /", s.authToken)
+		s.serveMux.HandleFunc("GET /.well-known/openid-configuration", s.openIDConfig)
+		s.serveMux.HandleFunc("GET /jwks", s.jwks)
+	}
 }
 
 // pactAuthMiddleware returns 401 Unauthorized when the token is rejected,
@@ -107,7 +136,12 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 		}
 		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
 			slog.WarnContext(r.Context(), "token validation failed", "error", err)
-			writeError(w, http.StatusUnauthorized, ileap.ErrorCodeAccessDenied, "invalid access token")
+			writeError(
+				w,
+				http.StatusUnauthorized,
+				ileap.ErrorCodeAccessDenied,
+				"invalid access token",
+			)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -165,6 +199,104 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func (s *Server) resolveBaseURL(r *http.Request) string {
+	if s.baseURL != "" {
+		return s.baseURL
+	}
+	scheme := r.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		if r.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	return scheme + "://" + r.Host
+}
+
+func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+		writeOAuthError(
+			w,
+			http.StatusBadRequest,
+			ileap.OAuthErrorCodeInvalidRequest,
+			"invalid content type",
+		)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		writeOAuthError(
+			w,
+			http.StatusBadRequest,
+			ileap.OAuthErrorCodeInvalidRequest,
+			"invalid request body",
+		)
+		return
+	}
+	if grantType := r.Form.Get("grant_type"); grantType != "client_credentials" {
+		writeOAuthError(
+			w,
+			http.StatusBadRequest,
+			ileap.OAuthErrorCodeUnsupportedGrantType,
+			"unsupported grant type",
+		)
+		return
+	}
+	username, password, ok := r.BasicAuth()
+	if !ok {
+		writeOAuthError(
+			w,
+			http.StatusBadRequest,
+			ileap.OAuthErrorCodeInvalidRequest,
+			"missing HTTP basic authorization",
+		)
+		return
+	}
+
+	// OAuth 2.0 (RFC 6749, Section 2.3.1) requires that client_id and
+	// client_secret be URL-encoded before being used in HTTP Basic Auth.
+	clientID, err := url.QueryUnescape(username)
+	if err != nil {
+		clientID = username
+	}
+	clientSecret, err := url.QueryUnescape(password)
+	if err != nil {
+		clientSecret = password
+	}
+
+	creds, err := s.issuer.IssueToken(r.Context(), clientID, clientSecret)
+	if err != nil {
+		if errors.Is(err, ErrInvalidCredentials) {
+			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
+			// ACT conformance test requires 400.
+			writeOAuthError(
+				w,
+				http.StatusBadRequest,
+				ileap.OAuthErrorCodeInvalidRequest,
+				"invalid HTTP basic auth",
+			)
+			return
+		}
+		slog.ErrorContext(r.Context(), "failed to issue token", "error", err)
+		writeOAuthError(
+			w,
+			http.StatusInternalServerError,
+			ileap.OAuthErrorCodeServerError,
+			"failed to issue token",
+		)
+		return
+	}
+	writeJSON(w, creds)
+}
+
+func (s *Server) openIDConfig(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, s.oidc.OpenIDConfiguration(s.resolveBaseURL(r)))
+}
+
+func (s *Server) jwks(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, s.oidc.JWKS())
+}
+
 func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 	if s.footprintHandler == nil {
 		writeError(w, http.StatusNotImplemented, ileap.ErrorCodeNotImplemented, "not implemented")
@@ -193,25 +325,12 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 	// Emit Link header for pagination when more data is available.
 	next := offset + len(resp.Data)
 	if next < resp.Total {
-		host := r.Host
-		scheme := "https"
-		if r.TLS == nil {
-			scheme = "http"
-		}
-		if fwd := r.Header.Get("X-Forwarded-Proto"); fwd != "" {
-			scheme = fwd
-		}
 		linkLimit := limit
 		if linkLimit == 0 {
 			linkLimit = len(resp.Data)
 		}
-		linkURL := fmt.Sprintf(
-			"%s://%s/2/footprints?limit=%d&offset=%d",
-			scheme,
-			host,
-			linkLimit,
-			next,
-		)
+		base := s.resolveBaseURL(r)
+		linkURL := fmt.Sprintf("%s/2/footprints?limit=%d&offset=%d", base, linkLimit, next)
 		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"next\"", linkURL))
 	}
 	writeJSON(w, ileapv1.PfListingResponseInner{Data: resp.Data})
@@ -267,25 +386,12 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 	// Emit Link header for pagination when more data is available.
 	next := offset + len(resp.Data)
 	if next < resp.Total {
-		host := r.Host
-		scheme := "https"
-		if r.TLS == nil {
-			scheme = "http"
-		}
-		if fwd := r.Header.Get("X-Forwarded-Proto"); fwd != "" {
-			scheme = fwd
-		}
 		linkLimit := limit
 		if linkLimit == 0 {
 			linkLimit = len(resp.Data)
 		}
-		linkURL := fmt.Sprintf(
-			"%s://%s/2/ileap/tad?offset=%d&limit=%d",
-			scheme,
-			host,
-			next,
-			linkLimit,
-		)
+		base := s.resolveBaseURL(r)
+		linkURL := fmt.Sprintf("%s/2/ileap/tad?offset=%d&limit=%d", base, next, linkLimit)
 		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"next\"", linkURL))
 	}
 	writeJSON(w, ileapv1.TadListingResponseInner{Data: resp.Data})
@@ -390,6 +496,22 @@ func writeHandlerError(w http.ResponseWriter, err error) {
 			ileap.ErrorCodeInternalError,
 			"internal error",
 		)
+	}
+}
+
+func writeOAuthError(
+	w http.ResponseWriter,
+	status int,
+	code ileap.OAuthErrorCode,
+	description string,
+) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(ileap.OAuthError{
+		Code:        code,
+		Description: description,
+	}); err != nil {
+		slog.Error("failed to encode OAuth error response", "error", err)
 	}
 }
 

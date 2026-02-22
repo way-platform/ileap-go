@@ -13,7 +13,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/way-platform/ileap-go/ileapauthserver"
 	"github.com/way-platform/ileap-go/ileapclerk"
 	"github.com/way-platform/ileap-go/ileapdemo"
 	"github.com/way-platform/ileap-go/ileapserver"
@@ -142,17 +141,13 @@ func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
 	)
 	oidcProvider := ileapclerk.NewOIDCProvider(clerkClient)
 	tokenValidator := ileapclerk.NewTokenValidator(clerkClient)
-	dataSrv := ileapserver.NewServer(
+	srv := ileapserver.NewServer(
 		ileapserver.WithFootprintHandler(dataHandler),
 		ileapserver.WithTADHandler(dataHandler),
 		ileapserver.WithEventHandler(&ileapdemo.EventHandler{}),
 		ileapserver.WithTokenValidator(tokenValidator),
+		ileapserver.WithTokenIssuer(tokenIssuer),
+		ileapserver.WithOIDCProvider(oidcProvider),
 	)
-	authSrv := ileapauthserver.NewServer(tokenIssuer, oidcProvider)
-	mux := http.NewServeMux()
-	mux.Handle("/auth/", authSrv)
-	mux.Handle("/.well-known/", authSrv)
-	mux.Handle("/jwks", authSrv)
-	mux.Handle("/", dataSrv)
-	return mux, nil
+	return srv, nil
 }
