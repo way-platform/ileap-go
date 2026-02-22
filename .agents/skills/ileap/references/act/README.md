@@ -34,7 +34,7 @@ curl -sSf https://raw.githubusercontent.com/sine-fdn/act/main/act.sh |\
 Example usage with SINE's iLEAP demo API
 ```sh
 curl -sSf https://raw.githubusercontent.com/sine-fdn/act/main/act.sh |\
-  bash -s -- test -b "https://api.ileap.sine.dev" -u "hello" -p "pathfinder"
+  bash -s -- test -b "https://api.ileap.sine.dev" -u "<demo-user>" -p "<demo-password>"
 ```
 
 ### Options
@@ -78,6 +78,23 @@ If you intend to use this action to test live or otherwise production-like syste
      sure that credentials are passed in as secrets (e.g., `${{secrets.ACT_USER}}` and
      `${{secrets.ACT_PASSWORD}}`)
 
+
+## Important Testing Note: ACT Parsing Cascade
+
+ACT parses data records sequentially field by field. When a required field is missing, it stops and reports that specific error — it does not continue to find further missing fields in the same record.
+
+Because of this, fixing one missing field and redeploying may reveal a new missing field in the same record on the next test run. To minimize fix-deploy-test cycles, we highly recommend **validating your demo data against the JSON schemas** (located in `references/ileap-data-model/schemas/`) *before* running ACT.
+
+## Debugging Methodology for Unexpected ACT Failures
+
+When ACT returns an unexpected status code, probe your deployed server directly with `curl` to isolate the cause before diving into code:
+
+1. **Obtain a token** directly from your auth endpoint.
+2. **Reproduce the exact request** the test sends.
+3. **Vary one dimension at a time** (e.g., change timezone suffix from `Z` to `+00:00`, or `specversion` from `"1.0"` to `"0.3"`) to identify the exact trigger.
+4. **Extract strings from the ACT binary** (`strings conformance_x86_64`) to surface embedded error messages and field names that hint at what the test checks.
+
+This approach prevents guessing at ACT's internal expectations and quickly confirms or rules out hypotheses.
 
 ## Limitations
 
