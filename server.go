@@ -92,21 +92,33 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) registerRoutes() {
-	s.serveMux.Handle("GET /2/footprints", s.pactAuthMiddleware(http.HandlerFunc(s.listFootprints)))
 	s.serveMux.Handle(
-		"GET /2/footprints/{id}",
+		"GET "+s.pathPrefix+"/2/footprints",
+		s.pactAuthMiddleware(http.HandlerFunc(s.listFootprints)),
+	)
+	s.serveMux.Handle(
+		"GET "+s.pathPrefix+"/2/footprints/{id}",
 		s.pactAuthMiddleware(http.HandlerFunc(s.getFootprint)),
 	)
-	s.serveMux.Handle("GET /2/ileap/tad", s.ileapAuthMiddleware(http.HandlerFunc(s.listTADs)))
-	s.serveMux.Handle("POST /2/events", s.pactAuthMiddleware(http.HandlerFunc(s.events)))
+	s.serveMux.Handle(
+		"GET "+s.pathPrefix+"/2/ileap/tad",
+		s.ileapAuthMiddleware(http.HandlerFunc(s.listTADs)),
+	)
+	s.serveMux.Handle(
+		"POST "+s.pathPrefix+"/2/events",
+		s.pactAuthMiddleware(http.HandlerFunc(s.events)),
+	)
 	if s.issuer != nil && s.oidc != nil {
-		s.serveMux.HandleFunc("POST /auth/token", s.authToken)
+		s.serveMux.HandleFunc("POST "+s.pathPrefix+"/auth/token", s.authToken)
 		// Workaround for ACT bug: PACT TC18/19 (OpenID Connect flow) mistakenly POSTs
 		// to the base URL (/) instead of the token_endpoint advertised in
 		// /.well-known/openid-configuration.
-		s.serveMux.HandleFunc("POST /", s.authToken)
-		s.serveMux.HandleFunc("GET /.well-known/openid-configuration", s.openIDConfig)
-		s.serveMux.HandleFunc("GET /jwks", s.jwks)
+		s.serveMux.HandleFunc("POST "+s.pathPrefix+"/", s.authToken)
+		s.serveMux.HandleFunc(
+			"GET "+s.pathPrefix+"/.well-known/openid-configuration",
+			s.openIDConfig,
+		)
+		s.serveMux.HandleFunc("GET "+s.pathPrefix+"/jwks", s.jwks)
 	}
 }
 

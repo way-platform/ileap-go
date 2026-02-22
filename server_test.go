@@ -281,7 +281,7 @@ func TestJWKS(t *testing.T) {
 func TestWithPathPrefix(t *testing.T) {
 	t.Run("OIDC discovery uses configured path prefix", func(t *testing.T) {
 		srv := authTestServer(WithPathPrefix("/ileap"))
-		req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
+		req := httptest.NewRequest("GET", "/ileap/.well-known/openid-configuration", nil)
 		req.Host = "api.example.com"
 		req.Header.Set("X-Forwarded-Proto", "https")
 		w := httptest.NewRecorder()
@@ -305,7 +305,7 @@ func TestWithPathPrefix(t *testing.T) {
 
 	t.Run("normalization", func(t *testing.T) {
 		srv := authTestServer(WithPathPrefix("ileap/"))
-		req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
+		req := httptest.NewRequest("GET", "/ileap/.well-known/openid-configuration", nil)
 		req.Host = "api.example.com"
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
@@ -326,7 +326,7 @@ func TestWithPathPrefix(t *testing.T) {
 			}),
 			WithPathPrefix("/ileap"),
 		)
-		req := httptest.NewRequest("GET", "/2/footprints?limit=2", nil)
+		req := httptest.NewRequest("GET", "/ileap/2/footprints?limit=2", nil)
 		req.Header.Set("Authorization", "Bearer valid")
 		req.Host = "api.example.com"
 		req.Header.Set("X-Forwarded-Proto", "https")
