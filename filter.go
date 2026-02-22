@@ -72,7 +72,11 @@ func (f *FilterPredicateV2) UnmarshalString(predicate string) error {
 		f.RHS = data[len("companyIds/any(companyId:(companyId eq ") : len(data)-len("))")]
 		return nil
 	}
-	fields := strings.Fields(data)
+	// Use SplitN to limit splits to 3, so RHS can contain spaces.
+	// This handles timestamps with +HH:MM timezone offsets that URL-decode
+	// '+' as space (e.g., '2023-06-27T13:00:00.000+00:00' becomes
+	// '2023-06-27T13:00:00.000 00:00' after URL decoding).
+	fields := strings.SplitN(data, " ", 3)
 	if len(fields) != 3 {
 		return fmt.Errorf("invalid predicate: `%s`", data)
 	}

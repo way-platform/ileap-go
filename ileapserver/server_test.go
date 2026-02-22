@@ -448,6 +448,10 @@ func TestEventsValidationMissingFields(t *testing.T) {
 			"null data",
 			`{"specversion":"1.0","id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":null}`,
 		},
+		{
+			"wrong specversion",
+			`{"specversion":"0.3","id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":{"pfIds":[]}}`,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

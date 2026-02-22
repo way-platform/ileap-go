@@ -146,6 +146,22 @@ func TestFilterV2_UnmarshalString(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			// ACT sends +00:00 timezone; URL-decoding converts + to space.
+			// The filter RHS becomes '2023-06-27T13:00:00.000 00:00'.
+			name: "updated lt with timezone offset decoded as space",
+			data: "updated lt '2023-06-27T13:00:00.000 00:00'",
+			want: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "updated",
+						Operator: "lt",
+						RHS:      "'2023-06-27T13:00:00.000 00:00'",
+					},
+				},
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

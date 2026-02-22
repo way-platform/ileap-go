@@ -321,7 +321,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
 		return
 	}
-	if event.Specversion == "" || event.ID == "" || event.Source == "" {
+	if event.Specversion != "1.0" || event.ID == "" || event.Source == "" {
 		writeError(
 			w,
 			http.StatusBadRequest,
