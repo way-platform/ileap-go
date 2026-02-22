@@ -23,7 +23,7 @@ type Server struct {
 	tokenValidator   TokenValidator
 	issuer           TokenIssuer
 	oidc             OIDCProvider
-	baseURL          string
+	pathPrefix       string
 	serveMux         *http.ServeMux
 }
 
@@ -60,10 +60,19 @@ func WithOIDCProvider(oidc OIDCProvider) Option {
 	return func(s *Server) { s.oidc = oidc }
 }
 
-// WithBaseURL sets the absolute base URL for the service (e.g. for subpath mounting).
-// Trailing slashes are trimmed. If empty, URLs are derived from the request.
-func WithBaseURL(u string) Option {
-	return func(s *Server) { s.baseURL = strings.TrimRight(u, "/") }
+// WithPathPrefix sets the path prefix for the service (e.g. "/ileap").
+// Leading slashes are added if missing, and trailing slashes are trimmed.
+func WithPathPrefix(p string) Option {
+	return func(s *Server) {
+		if p == "" {
+			s.pathPrefix = ""
+			return
+		}
+		if !strings.HasPrefix(p, "/") {
+			p = "/" + p
+		}
+		s.pathPrefix = strings.TrimRight(p, "/")
+	}
 }
 
 // NewServer creates a new iLEAP data server with the given options.
@@ -200,9 +209,6 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 }
 
 func (s *Server) resolveBaseURL(r *http.Request) string {
-	if s.baseURL != "" {
-		return s.baseURL
-	}
 	scheme := r.Header.Get("X-Forwarded-Proto")
 	if scheme == "" {
 		if r.TLS != nil {
@@ -211,7 +217,7 @@ func (s *Server) resolveBaseURL(r *http.Request) string {
 			scheme = "http"
 		}
 	}
-	return scheme + "://" + r.Host
+	return scheme + "://" + r.Host + s.pathPrefix
 }
 
 func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
@@ -253,8 +259,6 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// OAuth 2.0 (RFC 6749, Section 2.3.1) requires that client_id and
-	// client_secret be URL-encoded before being used in HTTP Basic Auth.
 	clientID, err := url.QueryUnescape(username)
 	if err != nil {
 		clientID = username
@@ -268,7 +272,6 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
 			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
-			// ACT conformance test requires 400.
 			writeOAuthError(
 				w,
 				http.StatusBadRequest,
@@ -322,7 +325,6 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 		writeHandlerError(w, err)
 		return
 	}
-	// Emit Link header for pagination when more data is available.
 	next := offset + len(resp.Data)
 	if next < resp.Total {
 		linkLimit := limit
@@ -365,7 +367,6 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid offset: %v", err)
 		return
 	}
-	// All query params except limit and offset are TAD filters.
 	filters := make(map[string][]string)
 	for key, values := range r.URL.Query() {
 		if key == "limit" || key == "offset" {
@@ -383,7 +384,6 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 		writeHandlerError(w, err)
 		return
 	}
-	// Emit Link header for pagination when more data is available.
 	next := offset + len(resp.Data)
 	if next < resp.Total {
 		linkLimit := limit
@@ -411,8 +411,6 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
 		return
 	}
-	// PACT specification requires "application/cloudevents+json",
-	// but the conformance checker also sends application/json.
 	if mediaType != "application/cloudevents+json" && mediaType != "application/json" {
 		writeError(
 			w,
