@@ -12,4 +12,6 @@ var (
 	ErrTokenExpired = errors.New("token expired")
 	// ErrInvalidCredentials indicates the provided credentials are invalid.
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	// ErrNotImplemented indicates the handler is not configured.
+	ErrNotImplemented = errors.New("not implemented")
 )

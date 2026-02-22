@@ -18,13 +18,17 @@ func newDemoServer(t *testing.T) *ileap.Server {
 	if err != nil {
 		t.Fatalf("create auth provider: %v", err)
 	}
-	dataHandler, err := NewDataHandler()
+	footprintHandler, err := NewFootprintHandler()
 	if err != nil {
-		t.Fatalf("create data handler: %v", err)
+		t.Fatalf("create footprint handler: %v", err)
+	}
+	tadHandler, err := NewTADHandler()
+	if err != nil {
+		t.Fatalf("create TAD handler: %v", err)
 	}
 	return ileap.NewServer(
-		ileap.WithFootprintHandler(dataHandler),
-		ileap.WithTADHandler(dataHandler),
+		ileap.WithFootprintHandler(footprintHandler),
+		ileap.WithTADHandler(tadHandler),
 		ileap.WithEventHandler(&EventHandler{}),
 		ileap.WithTokenValidator(authProvider),
 		ileap.WithTokenIssuer(authProvider),

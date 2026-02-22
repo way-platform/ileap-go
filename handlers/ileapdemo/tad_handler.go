@@ -9,74 +9,24 @@ import (
 	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
-// DataHandler implements ileap.FootprintHandler and ileap.TADHandler
-// using embedded demo data.
-type DataHandler struct {
-	footprints []ileapv1.ProductFootprintForILeapType
-	tads       []ileapv1.TAD
+// TADHandler implements ileap.TADHandler using embedded demo data.
+type TADHandler struct {
+	tads []ileapv1.TAD
 }
 
-// NewDataHandler creates a new DataHandler with the embedded demo data.
-func NewDataHandler() (*DataHandler, error) {
-	footprints, err := LoadFootprints()
-	if err != nil {
-		return nil, err
-	}
+// NewTADHandler creates a new TADHandler with the embedded demo data.
+func NewTADHandler() (*TADHandler, error) {
 	tads, err := LoadTADs()
 	if err != nil {
 		return nil, err
 	}
-	return &DataHandler{
-		footprints: footprints,
-		tads:       tads,
+	return &TADHandler{
+		tads: tads,
 	}, nil
 }
 
-// GetFootprint returns a single footprint by ID.
-func (h *DataHandler) GetFootprint(
-	_ context.Context,
-	id string,
-) (*ileapv1.ProductFootprintForILeapType, error) {
-	for _, fp := range h.footprints {
-		if fp.ID == id {
-			return &fp, nil
-		}
-	}
-	return nil, ileap.ErrNotFound
-}
-
-// ListFootprints returns a filtered, limited list of footprints.
-func (h *DataHandler) ListFootprints(
-	_ context.Context, req ileap.ListFootprintsRequest,
-) (*ileap.ListFootprintsResponse, error) {
-	var filter ileap.FilterV2
-	if err := filter.UnmarshalString(req.Filter); err != nil {
-		return nil, ileap.ErrBadRequest
-	}
-	filtered := make([]ileapv1.ProductFootprintForILeapType, 0, len(h.footprints))
-	for _, fp := range h.footprints {
-		if filter.MatchesFootprint(&fp) {
-			filtered = append(filtered, fp)
-		}
-	}
-	total := len(filtered)
-	// Apply offset.
-	if req.Offset > 0 {
-		if req.Offset >= len(filtered) {
-			filtered = nil
-		} else {
-			filtered = filtered[req.Offset:]
-		}
-	}
-	// Apply limit.
-	if req.Limit > 0 && len(filtered) > req.Limit {
-		filtered = filtered[:req.Limit]
-	}
-	return &ileap.ListFootprintsResponse{Data: filtered, Total: total}, nil
-}
-
 // ListTADs returns a filtered, paginated list of transport activity data.
-func (h *DataHandler) ListTADs(
+func (h *TADHandler) ListTADs(
 	_ context.Context, req ileap.ListTADsRequest,
 ) (*ileap.ListTADsResponse, error) {
 	filtered := h.tads

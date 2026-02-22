@@ -82,6 +82,7 @@ func NewServer(opts ...ServerOption) *Server {
 	for _, opt := range opts {
 		opt(s)
 	}
+	s.setDefaults()
 	s.registerRoutes()
 	return s
 }
@@ -108,33 +109,22 @@ func (s *Server) registerRoutes() {
 		"POST "+s.pathPrefix+"/2/events",
 		s.pactAuthMiddleware(http.HandlerFunc(s.events)),
 	)
-	if s.issuer != nil && s.oidc != nil {
-		s.serveMux.HandleFunc("POST "+s.pathPrefix+"/auth/token", s.authToken)
-		// Workaround for ACT bug: PACT TC18/19 (OpenID Connect flow) mistakenly POSTs
-		// to the base URL (/) instead of the token_endpoint advertised in
-		// /.well-known/openid-configuration.
-		s.serveMux.HandleFunc("POST "+s.pathPrefix+"/", s.authToken)
-		s.serveMux.HandleFunc(
-			"GET "+s.pathPrefix+"/.well-known/openid-configuration",
-			s.openIDConfig,
-		)
-		s.serveMux.HandleFunc("GET "+s.pathPrefix+"/jwks", s.jwks)
-	}
+	s.serveMux.HandleFunc("POST "+s.pathPrefix+"/auth/token", s.authToken)
+	// Workaround for ACT bug: PACT TC18/19 (OpenID Connect flow) mistakenly POSTs
+	// to the base URL (/) instead of the token_endpoint advertised in
+	// /.well-known/openid-configuration.
+	s.serveMux.HandleFunc("POST "+s.pathPrefix+"/", s.authToken)
+	s.serveMux.HandleFunc(
+		"GET "+s.pathPrefix+"/.well-known/openid-configuration",
+		s.openIDConfig,
+	)
+	s.serveMux.HandleFunc("GET "+s.pathPrefix+"/jwks", s.jwks)
 }
 
 // pactAuthMiddleware returns 401 Unauthorized when the token is rejected,
 // and 400 BadRequest for malformed/missing auth headers (PACT spec).
 func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.tokenValidator == nil {
-			writeError(
-				w,
-				http.StatusBadRequest,
-				ErrorCodeBadRequest,
-				"no token validator configured",
-			)
-			return
-		}
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
 			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing authorization")
@@ -155,6 +145,10 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
+			if errors.Is(err, ErrNotImplemented) {
+				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+				return
+			}
 			slog.WarnContext(r.Context(), "token validation failed", "error", err)
 			writeError(
 				w,
@@ -172,15 +166,6 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 // 401 TokenExpired for expired tokens (iLEAP spec).
 func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.tokenValidator == nil {
-			writeError(
-				w,
-				http.StatusForbidden,
-				ErrorCodeAccessDenied,
-				"no token validator configured",
-			)
-			return
-		}
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
 			writeError(
@@ -206,6 +191,10 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
+			if errors.Is(err, ErrNotImplemented) {
+				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+				return
+			}
 			if errors.Is(err, ErrTokenExpired) {
 				slog.WarnContext(r.Context(), "token expired", "error", err)
 				writeError(w, http.StatusUnauthorized, ErrorCodeTokenExpired, "token expired")
@@ -281,6 +270,10 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 
 	creds, err := s.issuer.IssueToken(r.Context(), clientID, clientSecret)
 	if err != nil {
+		if errors.Is(err, ErrNotImplemented) {
+			writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+			return
+		}
 		if errors.Is(err, ErrInvalidCredentials) {
 			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
 			writeOAuthError(
@@ -304,18 +297,24 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) openIDConfig(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, s.oidc.OpenIDConfiguration(s.resolveBaseURL(r)))
-}
-
-func (s *Server) jwks(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, s.oidc.JWKS())
-}
-
-func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
-	if s.footprintHandler == nil {
+	cfg := s.oidc.OpenIDConfiguration(s.resolveBaseURL(r))
+	if cfg == nil {
 		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 		return
 	}
+	writeJSON(w, cfg)
+}
+
+func (s *Server) jwks(w http.ResponseWriter, _ *http.Request) {
+	jwks := s.oidc.JWKS()
+	if jwks == nil {
+		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+		return
+	}
+	writeJSON(w, jwks)
+}
+
+func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 	limit, err := parseLimit(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid limit: %v", err)
@@ -350,10 +349,6 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
-	if s.footprintHandler == nil {
-		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
-		return
-	}
 	id := r.PathValue("id")
 	fp, err := s.footprintHandler.GetFootprint(r.Context(), id)
 	if err != nil {
@@ -364,10 +359,6 @@ func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
-	if s.tadHandler == nil {
-		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
-		return
-	}
 	limit, err := parseLimit(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid limit: %v", err)
@@ -409,10 +400,6 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) events(w http.ResponseWriter, r *http.Request) {
-	if s.eventHandler == nil {
-		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
-		return
-	}
 	if r.Header.Get("Content-Type") == "" {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing content type")
 		return
@@ -493,6 +480,8 @@ func parseOffset(r *http.Request) (int, error) {
 
 func writeHandlerError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, ErrNotImplemented):
+		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 	case errors.Is(err, ErrNotFound):
 		writeError(w, http.StatusNotFound, ErrorCodeNoSuchFootprint, "%s", err)
 	case errors.Is(err, ErrBadRequest):
