@@ -6,11 +6,10 @@ import (
 	"strings"
 
 	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/ileapserver"
 	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
-// DataHandler implements ileapserver.FootprintHandler and ileapserver.TADHandler
+// DataHandler implements ileap.FootprintHandler and ileap.TADHandler
 // using embedded demo data.
 type DataHandler struct {
 	footprints []ileapv1.ProductFootprintForILeapType
@@ -43,16 +42,16 @@ func (h *DataHandler) GetFootprint(
 			return &fp, nil
 		}
 	}
-	return nil, ileapserver.ErrNotFound
+	return nil, ileap.ErrNotFound
 }
 
 // ListFootprints returns a filtered, limited list of footprints.
 func (h *DataHandler) ListFootprints(
-	_ context.Context, req ileapserver.ListFootprintsRequest,
-) (*ileapserver.ListFootprintsResponse, error) {
+	_ context.Context, req ileap.ListFootprintsRequest,
+) (*ileap.ListFootprintsResponse, error) {
 	var filter ileap.FilterV2
 	if err := filter.UnmarshalString(req.Filter); err != nil {
-		return nil, ileapserver.ErrBadRequest
+		return nil, ileap.ErrBadRequest
 	}
 	filtered := make([]ileapv1.ProductFootprintForILeapType, 0, len(h.footprints))
 	for _, fp := range h.footprints {
@@ -73,13 +72,13 @@ func (h *DataHandler) ListFootprints(
 	if req.Limit > 0 && len(filtered) > req.Limit {
 		filtered = filtered[:req.Limit]
 	}
-	return &ileapserver.ListFootprintsResponse{Data: filtered, Total: total}, nil
+	return &ileap.ListFootprintsResponse{Data: filtered, Total: total}, nil
 }
 
 // ListTADs returns a filtered, paginated list of transport activity data.
 func (h *DataHandler) ListTADs(
-	_ context.Context, req ileapserver.ListTADsRequest,
-) (*ileapserver.ListTADsResponse, error) {
+	_ context.Context, req ileap.ListTADsRequest,
+) (*ileap.ListTADsResponse, error) {
 	filtered := h.tads
 	if len(req.Filter) > 0 {
 		filtered = filterTADs(h.tads, req.Filter)
@@ -97,7 +96,7 @@ func (h *DataHandler) ListTADs(
 	if req.Limit > 0 && len(filtered) > req.Limit {
 		filtered = filtered[:req.Limit]
 	}
-	return &ileapserver.ListTADsResponse{Data: filtered, Total: total}, nil
+	return &ileap.ListTADsResponse{Data: filtered, Total: total}, nil
 }
 
 // filterTADs returns TADs matching all filter criteria.

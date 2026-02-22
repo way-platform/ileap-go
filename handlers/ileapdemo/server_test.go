@@ -12,11 +12,28 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func TestServer(t *testing.T) {
-	server, err := NewServer()
+func newDemoServer(t *testing.T) *ileap.Server {
+	t.Helper()
+	authProvider, err := NewAuthProvider()
 	if err != nil {
-		t.Fatalf("failed to create server: %v", err)
+		t.Fatalf("create auth provider: %v", err)
 	}
+	dataHandler, err := NewDataHandler()
+	if err != nil {
+		t.Fatalf("create data handler: %v", err)
+	}
+	return ileap.NewServer(
+		ileap.WithFootprintHandler(dataHandler),
+		ileap.WithTADHandler(dataHandler),
+		ileap.WithEventHandler(&EventHandler{}),
+		ileap.WithTokenValidator(authProvider),
+		ileap.WithTokenIssuer(authProvider),
+		ileap.WithOIDCProvider(authProvider),
+	)
+}
+
+func TestDemoServer(t *testing.T) {
+	server := newDemoServer(t)
 
 	t.Run("POST /auth/token", func(t *testing.T) {
 		t.Run("success", func(t *testing.T) {
@@ -28,7 +45,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			if w.Code != http.StatusOK {
 				t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 			}
@@ -65,7 +82,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json") // Wrong content type
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
 		})
 
@@ -74,7 +91,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
 		})
 
@@ -87,7 +104,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.SetBasicAuth("hello", "pathfinder")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkOAuthErrorResponse(
 				t,
 				w,
@@ -105,7 +122,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			// No basic auth set
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
 		})
 
@@ -118,7 +135,7 @@ func TestServer(t *testing.T) {
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.SetBasicAuth("invalid", "credentials")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkOAuthErrorResponse(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
 		})
 	})
@@ -128,7 +145,7 @@ func TestServer(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints", nil)
 			req.Header.Set("Authorization", "Bearer "+getAccessToken(t, server))
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			if w.Code != http.StatusOK {
 				t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 			}
@@ -141,7 +158,7 @@ func TestServer(t *testing.T) {
 		t.Run("unauthenticated", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints", nil)
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 		})
 
@@ -149,7 +166,7 @@ func TestServer(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints", nil)
 			req.Header.Set("Authorization", "Bearer invalid.token.here")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeAccessDenied)
 		})
 
@@ -157,7 +174,7 @@ func TestServer(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints", nil)
 			req.Header.Set("Authorization", "Basic invalid-auth")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 		})
 
@@ -165,7 +182,7 @@ func TestServer(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints", nil)
 			req.Header.Set("Authorization", "Bearer ")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 		})
 	})
@@ -175,14 +192,14 @@ func TestServer(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints/nonexistent-id", nil)
 			req.Header.Set("Authorization", "Bearer "+getAccessToken(t, server))
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusNotFound, ileap.ErrorCodeNoSuchFootprint)
 		})
 
 		t.Run("unauthenticated", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/footprints/some-id", nil)
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 		})
 	})
@@ -196,7 +213,7 @@ func TestServer(t *testing.T) {
 		)
 		req.Header.Set("Authorization", "Bearer "+token)
 		w := httptest.NewRecorder()
-		server.Handler().ServeHTTP(w, req)
+		server.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
@@ -207,7 +224,7 @@ func TestServer(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
 			req.Header.Set("Authorization", "Bearer "+getAccessToken(t, server))
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			if w.Code != http.StatusOK {
 				t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 			}
@@ -220,7 +237,7 @@ func TestServer(t *testing.T) {
 		t.Run("unauthenticated returns 403", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
 		})
 
@@ -228,7 +245,7 @@ func TestServer(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
 			req.Header.Set("Authorization", "Bearer invalid.token.here")
 			w := httptest.NewRecorder()
-			server.Handler().ServeHTTP(w, req)
+			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
 		})
 	})
@@ -286,7 +303,7 @@ func checkOAuthErrorResponse(
 	}
 }
 
-func getAccessToken(t *testing.T, server *Server) string {
+func getAccessToken(t *testing.T, server *ileap.Server) string {
 	t.Helper()
 	tokenRequest := httptest.NewRequest(
 		"POST",
@@ -296,7 +313,7 @@ func getAccessToken(t *testing.T, server *Server) string {
 	tokenRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	tokenRequest.SetBasicAuth("hello", "pathfinder")
 	tokenResponse := httptest.NewRecorder()
-	server.Handler().ServeHTTP(tokenResponse, tokenRequest)
+	server.ServeHTTP(tokenResponse, tokenRequest)
 	if tokenResponse.Code != http.StatusOK {
 		t.Fatalf(
 			"failed to get access token: %d: %s",

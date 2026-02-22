@@ -1,4 +1,4 @@
-package ileapserver
+package ileap
 
 import (
 	"context"
@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/openapi/ileapv1"
 	"golang.org/x/oauth2"
 )
@@ -150,8 +149,8 @@ func newTestServer() *Server {
 	)
 }
 
-func authTestServer(opts ...Option) *Server {
-	base := []Option{
+func authTestServer(opts ...ServerOption) *Server {
+	base := []ServerOption{
 		WithTokenIssuer(&mockTokenIssuer{}),
 		WithOIDCProvider(&mockOIDCProvider{}),
 	}
@@ -196,7 +195,7 @@ func TestAuthToken(t *testing.T) {
 		req.SetBasicAuth("hello", "pathfinder")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkOAuthError(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
+		checkOAuthError(t, w, http.StatusBadRequest, OAuthErrorCodeInvalidRequest)
 	})
 
 	t.Run("unsupported grant type", func(t *testing.T) {
@@ -209,7 +208,7 @@ func TestAuthToken(t *testing.T) {
 		req.SetBasicAuth("hello", "pathfinder")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkOAuthError(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeUnsupportedGrantType)
+		checkOAuthError(t, w, http.StatusBadRequest, OAuthErrorCodeUnsupportedGrantType)
 	})
 
 	t.Run("missing basic auth", func(t *testing.T) {
@@ -221,7 +220,7 @@ func TestAuthToken(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkOAuthError(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
+		checkOAuthError(t, w, http.StatusBadRequest, OAuthErrorCodeInvalidRequest)
 	})
 
 	t.Run("invalid credentials", func(t *testing.T) {
@@ -234,7 +233,7 @@ func TestAuthToken(t *testing.T) {
 		req.SetBasicAuth("bad", "creds")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkOAuthError(t, w, http.StatusBadRequest, ileap.OAuthErrorCodeInvalidRequest)
+		checkOAuthError(t, w, http.StatusBadRequest, OAuthErrorCodeInvalidRequest)
 	})
 }
 
@@ -351,7 +350,7 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		req := httptest.NewRequest("GET", "/2/footprints", nil)
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 
 	t.Run("non-bearer scheme", func(t *testing.T) {
@@ -359,7 +358,7 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		req.Header.Set("Authorization", "Basic abc")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 
 	t.Run("empty bearer token", func(t *testing.T) {
@@ -367,7 +366,7 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer ")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 
 	t.Run("invalid token returns 401", func(t *testing.T) {
@@ -379,7 +378,7 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer bad-token")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeAccessDenied)
+		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeAccessDenied)
 	})
 }
 
@@ -390,7 +389,7 @@ func TestILeapAuthMiddleware(t *testing.T) {
 		req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
+		checkErrorResponse(t, w, http.StatusForbidden, ErrorCodeAccessDenied)
 	})
 
 	t.Run("invalid token returns 403", func(t *testing.T) {
@@ -402,7 +401,7 @@ func TestILeapAuthMiddleware(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer bad-token")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
+		checkErrorResponse(t, w, http.StatusForbidden, ErrorCodeAccessDenied)
 	})
 
 	t.Run("expired token returns 401", func(t *testing.T) {
@@ -414,7 +413,7 @@ func TestILeapAuthMiddleware(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer expired-token")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeTokenExpired)
+		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeTokenExpired)
 	})
 }
 
@@ -443,7 +442,7 @@ func TestListFootprints(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer valid")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 }
 
@@ -515,7 +514,7 @@ func TestGetFootprint(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer valid")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusNotFound, ileap.ErrorCodeNoSuchFootprint)
+		checkErrorResponse(t, w, http.StatusNotFound, ErrorCodeNoSuchFootprint)
 	})
 }
 
@@ -642,7 +641,7 @@ func TestEvents(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer valid")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 
 	t.Run("invalid content type", func(t *testing.T) {
@@ -651,7 +650,7 @@ func TestEvents(t *testing.T) {
 		req.Header.Set("Content-Type", "text/plain")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 }
 
@@ -693,7 +692,7 @@ func TestEventsValidationMissingFields(t *testing.T) {
 			req.Header.Set("Content-Type", "application/cloudevents+json")
 			w := httptest.NewRecorder()
 			srv.ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+			checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 		})
 	}
 }
@@ -708,7 +707,7 @@ func TestNotImplemented(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer valid")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusNotImplemented, ileap.ErrorCodeNotImplemented)
+		checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
 	})
 
 	t.Run("tads", func(t *testing.T) {
@@ -716,7 +715,7 @@ func TestNotImplemented(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer valid")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusNotImplemented, ileap.ErrorCodeNotImplemented)
+		checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
 	})
 
 	t.Run("events", func(t *testing.T) {
@@ -725,7 +724,7 @@ func TestNotImplemented(t *testing.T) {
 		req.Header.Set("Content-Type", "application/cloudevents+json")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusNotImplemented, ileap.ErrorCodeNotImplemented)
+		checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
 	})
 }
 
@@ -733,7 +732,7 @@ func checkErrorResponse(
 	t *testing.T,
 	w *httptest.ResponseRecorder,
 	expectedStatus int,
-	expectedCode ileap.ErrorCode,
+	expectedCode ErrorCode,
 ) {
 	t.Helper()
 	if w.Code != expectedStatus {
@@ -743,7 +742,7 @@ func checkErrorResponse(
 	if ct != "application/json" {
 		t.Errorf("expected Content-Type application/json, got %s", ct)
 	}
-	var errResp ileap.Error
+	var errResp Error
 	if err := json.NewDecoder(w.Body).Decode(&errResp); err != nil {
 		t.Fatalf("decode error response: %v", err)
 	}
@@ -759,7 +758,7 @@ func checkOAuthError(
 	t *testing.T,
 	w *httptest.ResponseRecorder,
 	expectedStatus int,
-	expectedCode ileap.OAuthErrorCode,
+	expectedCode OAuthErrorCode,
 ) {
 	t.Helper()
 	if w.Code != expectedStatus {
@@ -769,7 +768,7 @@ func checkOAuthError(
 	if ct != "application/json" {
 		t.Errorf("expected Content-Type application/json, got %s", ct)
 	}
-	var errResp ileap.OAuthError
+	var errResp OAuthError
 	if err := json.NewDecoder(w.Body).Decode(&errResp); err != nil {
 		t.Fatalf("decode OAuth error: %v", err)
 	}

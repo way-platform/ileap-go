@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/way-platform/ileap-go/ileapserver"
+	"github.com/way-platform/ileap-go"
 	"golang.org/x/oauth2"
 )
 
-// AuthProvider implements ileapserver.TokenIssuer, ileapserver.OIDCProvider,
-// and ileapserver.TokenValidator using demo credentials and a local RSA keypair.
+// AuthProvider implements ileap.TokenIssuer, ileap.OIDCProvider,
+// and ileap.TokenValidator using demo credentials and a local RSA keypair.
 type AuthProvider struct {
 	keypair *KeyPair
 }
@@ -37,7 +37,7 @@ func (a *AuthProvider) IssueToken(
 		}
 	}
 	if !authorized {
-		return nil, ileapserver.ErrInvalidCredentials
+		return nil, ileap.ErrInvalidCredentials
 	}
 	accessToken, err := a.keypair.CreateJWT(JWTClaims{
 		Username: clientID,
@@ -56,20 +56,20 @@ func (a *AuthProvider) IssueToken(
 func (a *AuthProvider) ValidateToken(
 	_ context.Context,
 	token string,
-) (*ileapserver.TokenInfo, error) {
+) (*ileap.TokenInfo, error) {
 	claims, err := a.keypair.ValidateJWT(token)
 	if err != nil {
-		if errors.Is(err, ileapserver.ErrTokenExpired) {
+		if errors.Is(err, ileap.ErrTokenExpired) {
 			return nil, fmt.Errorf("validate token: %w", err)
 		}
 		return nil, err
 	}
-	return &ileapserver.TokenInfo{Subject: claims.Username}, nil
+	return &ileap.TokenInfo{Subject: claims.Username}, nil
 }
 
 // OpenIDConfiguration returns the OIDC configuration for the given base URL.
-func (a *AuthProvider) OpenIDConfiguration(baseURL string) *ileapserver.OpenIDConfiguration {
-	return &ileapserver.OpenIDConfiguration{
+func (a *AuthProvider) OpenIDConfiguration(baseURL string) *ileap.OpenIDConfiguration {
+	return &ileap.OpenIDConfiguration{
 		IssuerURL:              baseURL,
 		AuthURL:                baseURL + "/auth/token",
 		TokenURL:               baseURL + "/auth/token",
@@ -81,10 +81,10 @@ func (a *AuthProvider) OpenIDConfiguration(baseURL string) *ileapserver.OpenIDCo
 }
 
 // JWKS returns the JSON Web Key Set containing the public key.
-func (a *AuthProvider) JWKS() *ileapserver.JWKSet {
+func (a *AuthProvider) JWKS() *ileap.JWKSet {
 	jwk := a.keypair.JWK()
-	return &ileapserver.JWKSet{
-		Keys: []ileapserver.JWK{{
+	return &ileap.JWKSet{
+		Keys: []ileap.JWK{{
 			KeyType:   jwk.KeyType,
 			Use:       jwk.Use,
 			Algorithm: jwk.Algorithm,

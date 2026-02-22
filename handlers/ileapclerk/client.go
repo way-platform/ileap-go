@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/way-platform/ileap-go/ileapserver"
+	"github.com/way-platform/ileap-go"
 )
 
 // Client is an HTTP client for the Clerk Frontend API.
@@ -140,7 +140,7 @@ func (c *Client) TouchSession(sessionID, activeOrgID, authHeader string) (string
 }
 
 // FetchJWKS fetches the JSON Web Key Set from Clerk's JWKS endpoint.
-func (c *Client) FetchJWKS() (*ileapserver.JWKSet, error) {
+func (c *Client) FetchJWKS() (*ileap.JWKSet, error) {
 	endpoint := fmt.Sprintf("https://%s/.well-known/jwks.json", c.fapiDomain)
 	resp, err := c.httpClient.Get(endpoint)
 	if err != nil {
@@ -150,7 +150,7 @@ func (c *Client) FetchJWKS() (*ileapserver.JWKSet, error) {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("fetch JWKS: HTTP %d", resp.StatusCode)
 	}
-	var jwks ileapserver.JWKSet
+	var jwks ileap.JWKSet
 	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, fmt.Errorf("decode JWKS: %w", err)
 	}

@@ -13,9 +13,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/way-platform/ileap-go/ileapclerk"
-	"github.com/way-platform/ileap-go/ileapdemo"
-	"github.com/way-platform/ileap-go/ileapserver"
+	"github.com/way-platform/ileap-go"
+	"github.com/way-platform/ileap-go/handlers/ileapclerk"
+	"github.com/way-platform/ileap-go/handlers/ileapdemo"
 )
 
 // NewCommand returns the demo-server cobra command.
@@ -108,11 +108,22 @@ func buildHandler(v *viper.Viper) (http.Handler, error) {
 	slog.Info("starting demo server", "auth-backend", authBackend)
 	switch authBackend {
 	case "demo":
-		server, err := ileapdemo.NewServer()
+		authProvider, err := ileapdemo.NewAuthProvider()
 		if err != nil {
 			return nil, err
 		}
-		return server.Handler(), nil
+		dataHandler, err := ileapdemo.NewDataHandler()
+		if err != nil {
+			return nil, err
+		}
+		return ileap.NewServer(
+			ileap.WithFootprintHandler(dataHandler),
+			ileap.WithTADHandler(dataHandler),
+			ileap.WithEventHandler(&ileapdemo.EventHandler{}),
+			ileap.WithTokenValidator(authProvider),
+			ileap.WithTokenIssuer(authProvider),
+			ileap.WithOIDCProvider(authProvider),
+		), nil
 	case "clerk":
 		return buildClerkHandler(v)
 	default:
@@ -141,13 +152,13 @@ func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
 	)
 	oidcProvider := ileapclerk.NewOIDCProvider(clerkClient)
 	tokenValidator := ileapclerk.NewTokenValidator(clerkClient)
-	srv := ileapserver.NewServer(
-		ileapserver.WithFootprintHandler(dataHandler),
-		ileapserver.WithTADHandler(dataHandler),
-		ileapserver.WithEventHandler(&ileapdemo.EventHandler{}),
-		ileapserver.WithTokenValidator(tokenValidator),
-		ileapserver.WithTokenIssuer(tokenIssuer),
-		ileapserver.WithOIDCProvider(oidcProvider),
+	srv := ileap.NewServer(
+		ileap.WithFootprintHandler(dataHandler),
+		ileap.WithTADHandler(dataHandler),
+		ileap.WithEventHandler(&ileapdemo.EventHandler{}),
+		ileap.WithTokenValidator(tokenValidator),
+		ileap.WithTokenIssuer(tokenIssuer),
+		ileap.WithOIDCProvider(oidcProvider),
 	)
 	return srv, nil
 }

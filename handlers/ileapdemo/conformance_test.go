@@ -23,11 +23,23 @@ const (
 // newTestServer creates a demo server wrapped in httptest.Server.
 func newTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	server, err := NewServer()
+	authProvider, err := NewAuthProvider()
 	if err != nil {
-		t.Fatalf("failed to create server: %v", err)
+		t.Fatalf("create auth provider: %v", err)
 	}
-	ts := httptest.NewServer(server.Handler())
+	dataHandler, err := NewDataHandler()
+	if err != nil {
+		t.Fatalf("create data handler: %v", err)
+	}
+	server := ileap.NewServer(
+		ileap.WithFootprintHandler(dataHandler),
+		ileap.WithTADHandler(dataHandler),
+		ileap.WithEventHandler(&EventHandler{}),
+		ileap.WithTokenValidator(authProvider),
+		ileap.WithTokenIssuer(authProvider),
+		ileap.WithOIDCProvider(authProvider),
+	)
+	ts := httptest.NewServer(server)
 	t.Cleanup(ts.Close)
 	return ts
 }

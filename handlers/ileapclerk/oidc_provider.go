@@ -5,17 +5,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/way-platform/ileap-go/ileapserver"
+	"github.com/way-platform/ileap-go"
 )
 
 const jwksCacheTTL = 15 * time.Minute
 
-// OIDCProvider implements ileapserver.OIDCProvider using Clerk's JWKS.
+// OIDCProvider implements ileap.OIDCProvider using Clerk's JWKS.
 type OIDCProvider struct {
 	client     *Client
 	mu         sync.RWMutex
 	cachedAt   time.Time
-	cachedJWKS *ileapserver.JWKSet
+	cachedJWKS *ileap.JWKSet
 }
 
 // NewOIDCProvider creates a new OIDC provider backed by the Clerk client.
@@ -24,8 +24,8 @@ func NewOIDCProvider(client *Client) *OIDCProvider {
 }
 
 // OpenIDConfiguration returns the OIDC configuration for the given base URL.
-func (p *OIDCProvider) OpenIDConfiguration(baseURL string) *ileapserver.OpenIDConfiguration {
-	return &ileapserver.OpenIDConfiguration{
+func (p *OIDCProvider) OpenIDConfiguration(baseURL string) *ileap.OpenIDConfiguration {
+	return &ileap.OpenIDConfiguration{
 		IssuerURL:              baseURL,
 		AuthURL:                baseURL + "/auth/token",
 		TokenURL:               baseURL + "/auth/token",
@@ -37,7 +37,7 @@ func (p *OIDCProvider) OpenIDConfiguration(baseURL string) *ileapserver.OpenIDCo
 }
 
 // JWKS fetches and returns Clerk's JSON Web Key Set, with TTL-based caching.
-func (p *OIDCProvider) JWKS() *ileapserver.JWKSet {
+func (p *OIDCProvider) JWKS() *ileap.JWKSet {
 	// Fast path: serve from cache if fresh.
 	p.mu.RLock()
 	if p.cachedJWKS != nil && time.Since(p.cachedAt) < jwksCacheTTL {
@@ -61,7 +61,7 @@ func (p *OIDCProvider) JWKS() *ileapserver.JWKSet {
 		if p.cachedJWKS != nil {
 			return p.cachedJWKS // serve stale on error
 		}
-		return &ileapserver.JWKSet{}
+		return &ileap.JWKSet{}
 	}
 	p.cachedJWKS = jwks
 	p.cachedAt = time.Now()

@@ -12,14 +12,14 @@ import (
 	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
-// ListTADsRequest is the request for the [Client.ListTADs] method.
-type ListTADsRequest struct {
+// ListTADsParams is the request parameters for the [Client.ListTADs] method.
+type ListTADsParams struct {
 	// Limit is the maximum number of TADs to return.
 	Limit int `json:"limit,omitempty"`
 }
 
-// ListTADsResponse is the response for the [Client.ListTADs] method.
-type ListTADsResponse struct {
+// ListTADsResult is the response for the [Client.ListTADs] method.
+type ListTADsResult struct {
 	// TADs is the list of transport activity data in the current page.
 	TADs []ileapv1.TAD `json:"tads"`
 }
@@ -27,8 +27,8 @@ type ListTADsResponse struct {
 // ListTADs lists transport activity data.
 func (c *Client) ListTADs(
 	ctx context.Context,
-	request *ListTADsRequest,
-) (_ *ListTADsResponse, err error) {
+	request *ListTADsParams,
+) (_ *ListTADsResult, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("list iLEAP TADs: %w", err)
@@ -60,7 +60,7 @@ func (c *Client) ListTADs(
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response body: %w", err)
 	}
-	return &ListTADsResponse{
+	return &ListTADsResult{
 		TADs: response.Data,
 	}, nil
 }
