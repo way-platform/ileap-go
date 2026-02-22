@@ -1,13 +1,10 @@
-package ileapserver
+package ileap
 
 import (
-	"encoding/json"
-	"time"
-
 	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
-// ListFootprintsRequest is the request for listing footprints.
+// ListFootprintsRequest is the request for listing footprints (handler contract).
 type ListFootprintsRequest struct {
 	// Limit is the maximum number of footprints to return. 0 means no limit.
 	Limit int
@@ -17,7 +14,7 @@ type ListFootprintsRequest struct {
 	Filter string
 }
 
-// ListFootprintsResponse is the response for listing footprints.
+// ListFootprintsResponse is the response for listing footprints (handler contract).
 type ListFootprintsResponse struct {
 	// Data is the list of footprints.
 	Data []ileapv1.ProductFootprintForILeapType
@@ -25,7 +22,7 @@ type ListFootprintsResponse struct {
 	Total int
 }
 
-// ListTADsRequest is the request for listing transport activity data.
+// ListTADsRequest is the request for listing transport activity data (handler contract).
 type ListTADsRequest struct {
 	// Limit is the maximum number of TADs to return. 0 means no limit.
 	Limit int
@@ -35,28 +32,12 @@ type ListTADsRequest struct {
 	Filter map[string][]string
 }
 
-// ListTADsResponse is the response for listing transport activity data.
+// ListTADsResponse is the response for listing transport activity data (handler contract).
 type ListTADsResponse struct {
 	// Data is the list of TADs.
 	Data []ileapv1.TAD
 	// Total is the total number of TADs matching the filter (before pagination).
 	Total int
-}
-
-// Event is a PACT CloudEvent received by the server.
-type Event struct {
-	// Type is the type of the event.
-	Type string `json:"type"`
-	// Specversion is the version of the CloudEvents specification.
-	Specversion string `json:"specversion"`
-	// ID is a unique identifier for the event.
-	ID string `json:"id"`
-	// Source is the source of the event.
-	Source string `json:"source"`
-	// Time is the time the event occurred.
-	Time time.Time `json:"time"`
-	// Data is the event data as raw JSON.
-	Data json.RawMessage `json:"data"`
 }
 
 // TokenInfo contains information extracted from a validated token.

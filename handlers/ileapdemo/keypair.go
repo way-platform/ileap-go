@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/way-platform/ileap-go/ileapserver"
+	"github.com/way-platform/ileap-go"
 )
 
 //go:embed testdata/keypair.pem
@@ -31,8 +31,8 @@ type KeyPair struct {
 }
 
 // JWK returns the public key in JWK format.
-func (k *KeyPair) JWK() JWK {
-	return JWK{
+func (k *KeyPair) JWK() ileap.JWK {
+	return ileap.JWK{
 		KeyType:   "RSA",
 		Use:       "sig",
 		Algorithm: "RS256",
@@ -126,7 +126,7 @@ func (k *KeyPair) ValidateJWT(token string) (*JWTClaims, error) {
 	}
 	if claims.Expiration != 0 && time.Unix(claims.Expiration, 0).Before(time.Now()) {
 		return nil, fmt.Errorf("token expired at %v: %w",
-			time.Unix(claims.Expiration, 0), ileapserver.ErrTokenExpired)
+			time.Unix(claims.Expiration, 0), ileap.ErrTokenExpired)
 	}
 	return &claims, nil
 }

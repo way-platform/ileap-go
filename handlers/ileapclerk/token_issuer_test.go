@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/way-platform/ileap-go/ileapserver"
+	"github.com/way-platform/ileap-go"
 )
 
 func TestTokenIssuer(t *testing.T) {
@@ -59,7 +59,7 @@ func TestTokenIssuer(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		if !errors.Is(err, ileapserver.ErrInvalidCredentials) {
+		if !errors.Is(err, ileap.ErrInvalidCredentials) {
 			t.Errorf("expected ErrInvalidCredentials, got: %v", err)
 		}
 	})

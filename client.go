@@ -1,4 +1,4 @@
-// Package ileap provides the client for the iLEAP API.
+// Package ileap provides the iLEAP client and server SDK.
 package ileap
 
 import (

@@ -5,15 +5,14 @@ import (
 	"fmt"
 
 	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/ileapserver"
 )
 
-// EventHandler implements ileapserver.EventHandler for the demo server.
+// EventHandler implements ileap.EventHandler for the demo server.
 type EventHandler struct{}
 
 // HandleEvent processes an incoming PACT event.
-func (h *EventHandler) HandleEvent(_ context.Context, event ileapserver.Event) error {
-	switch ileap.EventType(event.Type) {
+func (h *EventHandler) HandleEvent(_ context.Context, event ileap.Event) error {
+	switch event.Type {
 	case ileap.EventTypeRequestCreatedV1:
 		// TODO: Handle RequestCreated.
 	case ileap.EventTypeRequestFulfilledV1:
@@ -23,7 +22,7 @@ func (h *EventHandler) HandleEvent(_ context.Context, event ileapserver.Event) e
 	case ileap.EventTypePublishedV1:
 		// TODO: Handle Published.
 	default:
-		return fmt.Errorf("invalid event type: %s: %w", event.Type, ileapserver.ErrBadRequest)
+		return fmt.Errorf("invalid event type: %s: %w", event.Type, ileap.ErrBadRequest)
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-package ileapserver
+package ileap
 
 import "errors"
 

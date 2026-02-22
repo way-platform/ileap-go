@@ -1,6 +1,4 @@
-// Package ileapserver provides a reusable HTTP server adapter for
-// iLEAP-compliant data endpoints.
-package ileapserver
+package ileap
 
 import (
 	"context"

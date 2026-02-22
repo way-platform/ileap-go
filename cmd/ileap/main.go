@@ -118,7 +118,7 @@ func newListFootprintsCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		response, err := client.ListFootprints(cmd.Context(), &ileap.ListFootprintsRequest{
+		response, err := client.ListFootprints(cmd.Context(), &ileap.ListFootprintsParams{
 			Limit:  *limit,
 			Filter: *filter,
 		})
@@ -142,7 +142,7 @@ func newListTADsCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		response, err := client.ListTADs(cmd.Context(), &ileap.ListTADsRequest{
+		response, err := client.ListTADs(cmd.Context(), &ileap.ListTADsParams{
 			Limit: *limit,
 		})
 		if err != nil {

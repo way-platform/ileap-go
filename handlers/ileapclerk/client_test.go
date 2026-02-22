@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/way-platform/ileap-go/ileapserver"
+	"github.com/way-platform/ileap-go"
 )
 
 func TestSignIn(t *testing.T) {
@@ -93,8 +93,8 @@ func TestSignIn(t *testing.T) {
 }
 
 func TestFetchJWKS(t *testing.T) {
-	wantJWKS := ileapserver.JWKSet{
-		Keys: []ileapserver.JWK{{
+	wantJWKS := ileap.JWKSet{
+		Keys: []ileap.JWK{{
 			KeyType: "RSA",
 			Use:     "sig",
 			KeyID:   "test-key-id",

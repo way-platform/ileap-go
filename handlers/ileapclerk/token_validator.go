@@ -13,14 +13,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/way-platform/ileap-go/ileapserver"
+	"github.com/way-platform/ileap-go"
 )
 
-// TokenValidator implements ileapserver.TokenValidator using Clerk's JWKS.
+// TokenValidator implements ileap.TokenValidator using Clerk's JWKS.
 type TokenValidator struct {
 	client *Client
 	mu     sync.Mutex
-	jwks   *ileapserver.JWKSet
+	jwks   *ileap.JWKSet
 }
 
 // NewTokenValidator creates a new token validator backed by Clerk's JWKS.
@@ -31,7 +31,7 @@ func NewTokenValidator(client *Client) *TokenValidator {
 // ValidateToken validates a Clerk RS256 JWT against Clerk's JWKS.
 func (v *TokenValidator) ValidateToken(
 	_ context.Context, token string,
-) (*ileapserver.TokenInfo, error) {
+) (*ileap.TokenInfo, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("invalid JWT format")
@@ -74,7 +74,7 @@ func (v *TokenValidator) ValidateToken(
 		}
 	}
 	sub, _ := claims["sub"].(string)
-	return &ileapserver.TokenInfo{Subject: sub}, nil
+	return &ileap.TokenInfo{Subject: sub}, nil
 }
 
 func (v *TokenValidator) findKey(kid string) (*rsa.PublicKey, error) {
@@ -97,7 +97,7 @@ func (v *TokenValidator) findKey(kid string) (*rsa.PublicKey, error) {
 	return pub, nil
 }
 
-func findKeyInSet(jwks *ileapserver.JWKSet, kid string) *rsa.PublicKey {
+func findKeyInSet(jwks *ileap.JWKSet, kid string) *rsa.PublicKey {
 	for _, jwk := range jwks.Keys {
 		if jwk.KeyID != kid {
 			continue

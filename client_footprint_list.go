@@ -12,16 +12,16 @@ import (
 	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
-// ListFootprintsRequest is the request for the [Client.ListFootprints] method.
-type ListFootprintsRequest struct {
+// ListFootprintsParams is the request parameters for the [Client.ListFootprints] method.
+type ListFootprintsParams struct {
 	// Limit is the maximum number of footprints to return.
 	Limit int `json:"limit,omitempty"`
 	// Filter is the OData filter to apply to the request.
 	Filter string `json:"$filter,omitempty"`
 }
 
-// ListFootprintsResponse is the response for the [Client.ListFootprints] method.
-type ListFootprintsResponse struct {
+// ListFootprintsResult is the response for the [Client.ListFootprints] method.
+type ListFootprintsResult struct {
 	// Footprints is the list of footprints in the current page.
 	Footprints []ileapv1.ProductFootprintForILeapType `json:"footprints"`
 }
@@ -29,8 +29,8 @@ type ListFootprintsResponse struct {
 // ListFootprints fetches a list of product carbon footprints.
 func (c *Client) ListFootprints(
 	ctx context.Context,
-	request *ListFootprintsRequest,
-) (_ *ListFootprintsResponse, err error) {
+	request *ListFootprintsParams,
+) (_ *ListFootprintsResult, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("get iLEAP footprint: %w", err)
@@ -65,7 +65,7 @@ func (c *Client) ListFootprints(
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response body: %w", err)
 	}
-	return &ListFootprintsResponse{
+	return &ListFootprintsResult{
 		Footprints: response.Data,
 	}, nil
 }

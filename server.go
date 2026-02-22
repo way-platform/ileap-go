@@ -1,4 +1,4 @@
-package ileapserver
+package ileap
 
 import (
 	"encoding/json"
@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/openapi/ileapv1"
 )
 
@@ -27,42 +26,42 @@ type Server struct {
 	serveMux         *http.ServeMux
 }
 
-// Option configures the server.
-type Option func(*Server)
+// ServerOption configures the server.
+type ServerOption func(*Server)
 
 // WithFootprintHandler sets the footprint handler.
-func WithFootprintHandler(h FootprintHandler) Option {
+func WithFootprintHandler(h FootprintHandler) ServerOption {
 	return func(s *Server) { s.footprintHandler = h }
 }
 
 // WithTADHandler sets the TAD handler.
-func WithTADHandler(h TADHandler) Option {
+func WithTADHandler(h TADHandler) ServerOption {
 	return func(s *Server) { s.tadHandler = h }
 }
 
 // WithEventHandler sets the event handler.
-func WithEventHandler(h EventHandler) Option {
+func WithEventHandler(h EventHandler) ServerOption {
 	return func(s *Server) { s.eventHandler = h }
 }
 
 // WithTokenValidator sets the token validator.
-func WithTokenValidator(v TokenValidator) Option {
+func WithTokenValidator(v TokenValidator) ServerOption {
 	return func(s *Server) { s.tokenValidator = v }
 }
 
 // WithTokenIssuer sets the token issuer for OAuth2 client credentials.
-func WithTokenIssuer(issuer TokenIssuer) Option {
+func WithTokenIssuer(issuer TokenIssuer) ServerOption {
 	return func(s *Server) { s.issuer = issuer }
 }
 
 // WithOIDCProvider sets the OIDC provider for discovery and JWKS.
-func WithOIDCProvider(oidc OIDCProvider) Option {
+func WithOIDCProvider(oidc OIDCProvider) ServerOption {
 	return func(s *Server) { s.oidc = oidc }
 }
 
 // WithPathPrefix sets the path prefix for the service (e.g. "/ileap").
 // Leading slashes are added if missing, and trailing slashes are trimmed.
-func WithPathPrefix(p string) Option {
+func WithPathPrefix(p string) ServerOption {
 	return func(s *Server) {
 		if p == "" {
 			s.pathPrefix = ""
@@ -76,7 +75,7 @@ func WithPathPrefix(p string) Option {
 }
 
 // NewServer creates a new iLEAP data server with the given options.
-func NewServer(opts ...Option) *Server {
+func NewServer(opts ...ServerOption) *Server {
 	s := &Server{
 		serveMux: http.NewServeMux(),
 	}
@@ -119,28 +118,28 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			writeError(
 				w,
 				http.StatusBadRequest,
-				ileap.ErrorCodeBadRequest,
+				ErrorCodeBadRequest,
 				"no token validator configured",
 			)
 			return
 		}
 		auth := r.Header.Get("Authorization")
 		if auth == "" {
-			writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing authorization")
+			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing authorization")
 			return
 		}
 		if !strings.HasPrefix(auth, "Bearer ") {
 			writeError(
 				w,
 				http.StatusBadRequest,
-				ileap.ErrorCodeBadRequest,
+				ErrorCodeBadRequest,
 				"unsupported authentication scheme",
 			)
 			return
 		}
 		token := strings.TrimPrefix(auth, "Bearer ")
 		if token == "" {
-			writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing access token")
+			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
 			return
 		}
 		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
@@ -148,7 +147,7 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			writeError(
 				w,
 				http.StatusUnauthorized,
-				ileap.ErrorCodeAccessDenied,
+				ErrorCodeAccessDenied,
 				"invalid access token",
 			)
 			return
@@ -165,7 +164,7 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 			writeError(
 				w,
 				http.StatusForbidden,
-				ileap.ErrorCodeAccessDenied,
+				ErrorCodeAccessDenied,
 				"no token validator configured",
 			)
 			return
@@ -175,7 +174,7 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 			writeError(
 				w,
 				http.StatusForbidden,
-				ileap.ErrorCodeAccessDenied,
+				ErrorCodeAccessDenied,
 				"missing authorization",
 			)
 			return
@@ -184,24 +183,24 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 			writeError(
 				w,
 				http.StatusForbidden,
-				ileap.ErrorCodeAccessDenied,
+				ErrorCodeAccessDenied,
 				"unsupported authentication scheme",
 			)
 			return
 		}
 		token := strings.TrimPrefix(auth, "Bearer ")
 		if token == "" {
-			writeError(w, http.StatusForbidden, ileap.ErrorCodeAccessDenied, "missing access token")
+			writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "missing access token")
 			return
 		}
 		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
 			if errors.Is(err, ErrTokenExpired) {
 				slog.WarnContext(r.Context(), "token expired", "error", err)
-				writeError(w, http.StatusUnauthorized, ileap.ErrorCodeTokenExpired, "token expired")
+				writeError(w, http.StatusUnauthorized, ErrorCodeTokenExpired, "token expired")
 				return
 			}
 			slog.WarnContext(r.Context(), "token validation failed", "error", err)
-			writeError(w, http.StatusForbidden, ileap.ErrorCodeAccessDenied, "invalid access token")
+			writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "invalid access token")
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -225,7 +224,7 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		writeOAuthError(
 			w,
 			http.StatusBadRequest,
-			ileap.OAuthErrorCodeInvalidRequest,
+			OAuthErrorCodeInvalidRequest,
 			"invalid content type",
 		)
 		return
@@ -234,7 +233,7 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		writeOAuthError(
 			w,
 			http.StatusBadRequest,
-			ileap.OAuthErrorCodeInvalidRequest,
+			OAuthErrorCodeInvalidRequest,
 			"invalid request body",
 		)
 		return
@@ -243,7 +242,7 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		writeOAuthError(
 			w,
 			http.StatusBadRequest,
-			ileap.OAuthErrorCodeUnsupportedGrantType,
+			OAuthErrorCodeUnsupportedGrantType,
 			"unsupported grant type",
 		)
 		return
@@ -253,7 +252,7 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		writeOAuthError(
 			w,
 			http.StatusBadRequest,
-			ileap.OAuthErrorCodeInvalidRequest,
+			OAuthErrorCodeInvalidRequest,
 			"missing HTTP basic authorization",
 		)
 		return
@@ -275,7 +274,7 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 			writeOAuthError(
 				w,
 				http.StatusBadRequest,
-				ileap.OAuthErrorCodeInvalidRequest,
+				OAuthErrorCodeInvalidRequest,
 				"invalid HTTP basic auth",
 			)
 			return
@@ -284,7 +283,7 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		writeOAuthError(
 			w,
 			http.StatusInternalServerError,
-			ileap.OAuthErrorCodeServerError,
+			OAuthErrorCodeServerError,
 			"failed to issue token",
 		)
 		return
@@ -302,17 +301,17 @@ func (s *Server) jwks(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 	if s.footprintHandler == nil {
-		writeError(w, http.StatusNotImplemented, ileap.ErrorCodeNotImplemented, "not implemented")
+		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 		return
 	}
 	limit, err := parseLimit(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid limit: %v", err)
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid limit: %v", err)
 		return
 	}
 	offset, err := parseOffset(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid offset: %v", err)
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid offset: %v", err)
 		return
 	}
 	req := ListFootprintsRequest{
@@ -340,7 +339,7 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
 	if s.footprintHandler == nil {
-		writeError(w, http.StatusNotImplemented, ileap.ErrorCodeNotImplemented, "not implemented")
+		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 		return
 	}
 	id := r.PathValue("id")
@@ -354,17 +353,17 @@ func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 	if s.tadHandler == nil {
-		writeError(w, http.StatusNotImplemented, ileap.ErrorCodeNotImplemented, "not implemented")
+		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 		return
 	}
 	limit, err := parseLimit(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid limit: %v", err)
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid limit: %v", err)
 		return
 	}
 	offset, err := parseOffset(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid offset: %v", err)
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid offset: %v", err)
 		return
 	}
 	filters := make(map[string][]string)
@@ -399,23 +398,23 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	if s.eventHandler == nil {
-		writeError(w, http.StatusNotImplemented, ileap.ErrorCodeNotImplemented, "not implemented")
+		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 		return
 	}
 	if r.Header.Get("Content-Type") == "" {
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "missing content type")
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing content type")
 		return
 	}
 	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid content type")
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid content type")
 		return
 	}
 	if mediaType != "application/cloudevents+json" && mediaType != "application/json" {
 		writeError(
 			w,
 			http.StatusBadRequest,
-			ileap.ErrorCodeBadRequest,
+			ErrorCodeBadRequest,
 			"invalid content type: %s",
 			mediaType,
 		)
@@ -423,14 +422,14 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	}
 	var event Event
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid request body")
 		return
 	}
 	if event.Specversion != "1.0" || event.ID == "" || event.Source == "" {
 		writeError(
 			w,
 			http.StatusBadRequest,
-			ileap.ErrorCodeBadRequest,
+			ErrorCodeBadRequest,
 			"missing required event fields",
 		)
 		return
@@ -439,7 +438,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		writeError(
 			w,
 			http.StatusBadRequest,
-			ileap.ErrorCodeBadRequest,
+			ErrorCodeBadRequest,
 			"missing event data",
 		)
 		return
@@ -483,15 +482,15 @@ func parseOffset(r *http.Request) (int, error) {
 func writeHandlerError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrNotFound):
-		writeError(w, http.StatusNotFound, ileap.ErrorCodeNoSuchFootprint, "%s", err)
+		writeError(w, http.StatusNotFound, ErrorCodeNoSuchFootprint, "%s", err)
 	case errors.Is(err, ErrBadRequest):
-		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "%s", err)
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "%s", err)
 	default:
 		slog.Error("handler error", "error", err)
 		writeError(
 			w,
 			http.StatusInternalServerError,
-			ileap.ErrorCodeInternalError,
+			ErrorCodeInternalError,
 			"internal error",
 		)
 	}
@@ -500,12 +499,12 @@ func writeHandlerError(w http.ResponseWriter, err error) {
 func writeOAuthError(
 	w http.ResponseWriter,
 	status int,
-	code ileap.OAuthErrorCode,
+	code OAuthErrorCode,
 	description string,
 ) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(ileap.OAuthError{
+	if err := json.NewEncoder(w).Encode(OAuthError{
 		Code:        code,
 		Description: description,
 	}); err != nil {
@@ -516,13 +515,13 @@ func writeOAuthError(
 func writeError(
 	w http.ResponseWriter,
 	status int,
-	code ileap.ErrorCode,
+	code ErrorCode,
 	format string,
 	args ...any,
 ) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(ileap.Error{
+	if err := json.NewEncoder(w).Encode(Error{
 		Code:    code,
 		Message: fmt.Sprintf(format, args...),
 	}); err != nil {
