@@ -40,10 +40,12 @@ func WithHTTPClient(hc *http.Client) ClientOption {
 // signInResponse is the response from Clerk's sign_in endpoint.
 type signInResponse struct {
 	Response struct {
-		Status string `json:"status"`
+		Status           string `json:"status"`
+		CreatedSessionID string `json:"created_session_id"`
 	} `json:"response"`
 	Client struct {
 		Sessions []struct {
+			ID              string `json:"id"`
 			LastActiveToken struct {
 				JWT string `json:"jwt"`
 			} `json:"last_active_token"`
@@ -52,7 +54,7 @@ type signInResponse struct {
 }
 
 // SignIn authenticates a user via Clerk's password strategy and returns the session JWT.
-func (c *Client) SignIn(identifier, password string) (string, error) {
+func (c *Client) SignIn(identifier, password, activeOrgID string) (string, error) {
 	endpoint := fmt.Sprintf("https://%s/v1/client/sign_ins", c.fapiDomain)
 	form := url.Values{}
 	form.Set("strategy", "password")
@@ -78,9 +80,51 @@ func (c *Client) SignIn(identifier, password string) (string, error) {
 	if result.Response.Status != "complete" {
 		return "", fmt.Errorf("clerk sign_in not complete: %s", result.Response.Status)
 	}
+
+	sessionID := result.Response.CreatedSessionID
+	if sessionID == "" && len(result.Client.Sessions) > 0 {
+		sessionID = result.Client.Sessions[0].ID
+	}
+
+	if activeOrgID != "" {
+		if sessionID == "" {
+			return "", fmt.Errorf("clerk sign_in: missing session ID for organization activation")
+		}
+		return c.TouchSession(sessionID, activeOrgID)
+	}
+
 	sessions := result.Client.Sessions
 	if len(sessions) == 0 || sessions[0].LastActiveToken.JWT == "" {
 		return "", fmt.Errorf("clerk sign_in: no session JWT in response")
+	}
+	return sessions[0].LastActiveToken.JWT, nil
+}
+
+// TouchSession activates an organization for the given session and returns the new session JWT.
+func (c *Client) TouchSession(sessionID, activeOrgID string) (string, error) {
+	endpoint := fmt.Sprintf("https://%s/v1/client/sessions/%s/touch", c.fapiDomain, sessionID)
+	form := url.Values{}
+	form.Set("active_organization_id", activeOrgID)
+	req, err := http.NewRequest("POST", endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", fmt.Errorf("create touch request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("send touch request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("clerk touch_session failed: HTTP %d", resp.StatusCode)
+	}
+	var result signInResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("decode touch response: %w", err)
+	}
+	sessions := result.Client.Sessions
+	if len(sessions) == 0 || sessions[0].LastActiveToken.JWT == "" {
+		return "", fmt.Errorf("clerk touch_session: no session JWT in response")
 	}
 	return sessions[0].LastActiveToken.JWT, nil
 }

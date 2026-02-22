@@ -34,9 +34,12 @@ func NewCommand() *cobra.Command {
 	cmd.Flags().String("auth-backend", "demo", "auth backend to use (demo, clerk)")
 	cmd.Flags().
 		String("clerk-fapi-domain", "", "Clerk FAPI domain (required when auth-backend=clerk)")
-	v.BindPFlag("port", cmd.Flags().Lookup("port"))                           //nolint:errcheck
-	v.BindPFlag("auth-backend", cmd.Flags().Lookup("auth-backend"))           //nolint:errcheck
-	v.BindPFlag("clerk-fapi-domain", cmd.Flags().Lookup("clerk-fapi-domain")) //nolint:errcheck
+	cmd.Flags().
+		String("clerk-organization-id", "", "Clerk organization ID to activate upon login (optional)")
+	v.BindPFlag("port", cmd.Flags().Lookup("port"))                                       //nolint:errcheck
+	v.BindPFlag("auth-backend", cmd.Flags().Lookup("auth-backend"))                       //nolint:errcheck
+	v.BindPFlag("clerk-fapi-domain", cmd.Flags().Lookup("clerk-fapi-domain"))             //nolint:errcheck
+	v.BindPFlag("clerk-organization-id", cmd.Flags().Lookup("clerk-organization-id"))     //nolint:errcheck
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelDebug,
@@ -112,12 +115,16 @@ func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
 		return nil, fmt.Errorf("--clerk-fapi-domain required when --auth-backend=clerk")
 	}
 	slog.Info("using clerk auth backend", "fapi-domain", fapiDomain)
+
+	activeOrgID := v.GetString("clerk-organization-id")
+
 	dataHandler, err := ileapdemo.NewDataHandler()
 	if err != nil {
 		return nil, fmt.Errorf("create data handler: %w", err)
 	}
+
 	clerkClient := ileapclerk.NewClient(fapiDomain)
-	tokenIssuer := ileapclerk.NewTokenIssuer(clerkClient)
+	tokenIssuer := ileapclerk.NewTokenIssuer(clerkClient, ileapclerk.WithActiveOrganization(activeOrgID))
 	oidcProvider := ileapclerk.NewOIDCProvider(clerkClient)
 	tokenValidator := ileapclerk.NewTokenValidator(clerkClient)
 	dataSrv := ileapserver.NewServer(

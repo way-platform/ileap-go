@@ -32,6 +32,7 @@ func TestSignIn(t *testing.T) {
 			resp := signInResponse{}
 			resp.Response.Status = "complete"
 			resp.Client.Sessions = []struct {
+				ID string `json:"id"`
 				LastActiveToken struct {
 					JWT string `json:"jwt"`
 				} `json:"last_active_token"`
@@ -43,7 +44,7 @@ func TestSignIn(t *testing.T) {
 		c := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		jwt, err := c.SignIn("user@example.com", "secret")
+		jwt, err := c.SignIn("user@example.com", "secret", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -61,7 +62,7 @@ func TestSignIn(t *testing.T) {
 		c := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		jwt, err := c.SignIn("bad@example.com", "wrong")
+		jwt, err := c.SignIn("bad@example.com", "wrong", "")
 		if err == nil {
 			t.Fatal("expected error for invalid credentials")
 		}
@@ -81,7 +82,7 @@ func TestSignIn(t *testing.T) {
 		c := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		jwt, err := c.SignIn("user@example.com", "secret")
+		jwt, err := c.SignIn("user@example.com", "secret", "")
 		if err == nil {
 			t.Fatal("expected error for incomplete sign-in")
 		}
