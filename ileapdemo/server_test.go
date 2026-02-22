@@ -187,6 +187,21 @@ func TestServer(t *testing.T) {
 		})
 	})
 
+	t.Run("list footprints with updated filter", func(t *testing.T) {
+		token := getAccessToken(t, server)
+		req := httptest.NewRequest(
+			"GET",
+			"/2/footprints?$filter=updated+lt+'2099-01-01T00:00:00Z'",
+			nil,
+		)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		server.Handler().ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
 	t.Run("GET /2/ileap/tad", func(t *testing.T) {
 		t.Run("authenticated", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)

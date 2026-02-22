@@ -690,6 +690,7 @@
                 "emissionFactorWTW": "97",
                 "energyCarrier": "Electric",
                 "energyConsumptionUnit": "MJ",
+                "relativeShare": "1",
                 "feedstocks": [
                   {
                     "feedstock": "Grid",
@@ -776,6 +777,7 @@
                 "emissionFactorWTW": "4.13",
                 "energyCarrier": "Diesel",
                 "energyConsumptionUnit": "kg",
+                "relativeShare": "1",
                 "feedstocks": [
                   {
                     "feedstock": "Fossil",
@@ -863,6 +865,7 @@
                 "emissionFactorWTW": "4.13",
                 "energyCarrier": "Diesel",
                 "energyConsumptionUnit": "kg",
+                "relativeShare": "1",
                 "feedstocks": [
                   {
                     "feedstock": "Fossil",
@@ -950,6 +953,7 @@
                 "emissionFactorWTW": "4.13",
                 "energyCarrier": "Diesel",
                 "energyConsumptionUnit": "kg",
+                "relativeShare": "1",
                 "feedstocks": [
                   {
                     "feedstock": "Fossil",
@@ -1035,13 +1039,15 @@
                 "emissionFactorTTW": "3.17",
                 "emissionFactorWTW": "4.13",
                 "energyCarrier": "Diesel",
-                "energyConsumptionUnit": "kg"
+                "energyConsumptionUnit": "kg",
+                "relativeShare": "0.5"
               },
               {
                 "emissionFactorTTW": "0",
                 "emissionFactorWTW": "97",
                 "energyCarrier": "Electric",
-                "energyConsumptionUnit": "MJ"
+                "energyConsumptionUnit": "MJ",
+                "relativeShare": "0.5"
               }
             ],
             "hocId": "hoc-transshipment-1",
@@ -1121,13 +1127,15 @@
                 "emissionFactorTTW": "3.17",
                 "emissionFactorWTW": "4.13",
                 "energyCarrier": "Diesel",
-                "energyConsumptionUnit": "kg"
+                "energyConsumptionUnit": "kg",
+                "relativeShare": "0.5"
               },
               {
                 "emissionFactorTTW": "0",
                 "emissionFactorWTW": "97",
                 "energyCarrier": "Electric",
-                "energyConsumptionUnit": "MJ"
+                "energyConsumptionUnit": "MJ",
+                "relativeShare": "0.5"
               }
             ],
             "hocId": "hoc-warehouse-1",

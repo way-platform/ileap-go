@@ -60,10 +60,20 @@ func (h *DataHandler) ListFootprints(
 			filtered = append(filtered, fp)
 		}
 	}
+	total := len(filtered)
+	// Apply offset.
+	if req.Offset > 0 {
+		if req.Offset >= len(filtered) {
+			filtered = nil
+		} else {
+			filtered = filtered[req.Offset:]
+		}
+	}
+	// Apply limit.
 	if req.Limit > 0 && len(filtered) > req.Limit {
 		filtered = filtered[:req.Limit]
 	}
-	return &ileapserver.ListFootprintsResponse{Data: filtered}, nil
+	return &ileapserver.ListFootprintsResponse{Data: filtered, Total: total}, nil
 }
 
 // ListTADs returns a filtered, paginated list of transport activity data.

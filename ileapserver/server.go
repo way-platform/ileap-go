@@ -174,14 +174,44 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid limit: %v", err)
 		return
 	}
+	offset, err := parseOffset(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid offset: %v", err)
+		return
+	}
 	req := ListFootprintsRequest{
 		Limit:  limit,
+		Offset: offset,
 		Filter: r.URL.Query().Get("$filter"),
 	}
 	resp, err := s.footprintHandler.ListFootprints(r.Context(), req)
 	if err != nil {
 		writeHandlerError(w, err)
 		return
+	}
+	// Emit Link header for pagination when more data is available.
+	next := offset + len(resp.Data)
+	if next < resp.Total {
+		host := r.Host
+		scheme := "https"
+		if r.TLS == nil {
+			scheme = "http"
+		}
+		if fwd := r.Header.Get("X-Forwarded-Proto"); fwd != "" {
+			scheme = fwd
+		}
+		linkLimit := limit
+		if linkLimit == 0 {
+			linkLimit = len(resp.Data)
+		}
+		linkURL := fmt.Sprintf(
+			"%s://%s/2/footprints?limit=%d&offset=%d",
+			scheme,
+			host,
+			linkLimit,
+			next,
+		)
+		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"next\"", linkURL))
 	}
 	writeJSON(w, ileapv1.PfListingResponseInner{Data: resp.Data})
 }
@@ -289,6 +319,15 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	var event Event
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 		writeError(w, http.StatusBadRequest, ileap.ErrorCodeBadRequest, "invalid request body")
+		return
+	}
+	if event.Specversion == "" || event.ID == "" || event.Source == "" {
+		writeError(
+			w,
+			http.StatusBadRequest,
+			ileap.ErrorCodeBadRequest,
+			"missing required event fields",
+		)
 		return
 	}
 	if err := s.eventHandler.HandleEvent(r.Context(), event); err != nil {

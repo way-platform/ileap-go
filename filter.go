@@ -77,7 +77,7 @@ func (f *FilterPredicateV2) UnmarshalString(predicate string) error {
 		return fmt.Errorf("invalid predicate: `%s`", data)
 	}
 	switch lhs := fields[0]; lhs {
-	case "pcf/geographyCountry", "productCategoryCpc", "created":
+	case "pcf/geographyCountry", "productCategoryCpc", "created", "updated":
 		f.LHS = lhs
 	default:
 		return fmt.Errorf("invalid predicate LHS: `%s`", lhs)
@@ -110,6 +110,10 @@ func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv1.ProductFootprint
 		lhsValue = footprint.ProductCategoryCpc
 	case "created":
 		lhsValue = footprint.Created.Format(time.RFC3339)
+	case "updated":
+		if footprint.Updated != nil {
+			lhsValue = footprint.Updated.Format(time.RFC3339)
+		}
 	default:
 		return false
 	}

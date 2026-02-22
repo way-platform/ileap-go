@@ -44,9 +44,21 @@ func (m *mockFootprintHandler) GetFootprint(
 }
 
 func (m *mockFootprintHandler) ListFootprints(
-	_ context.Context, _ ListFootprintsRequest,
+	_ context.Context, req ListFootprintsRequest,
 ) (*ListFootprintsResponse, error) {
-	return &ListFootprintsResponse{Data: m.footprints}, nil
+	result := m.footprints
+	total := len(result)
+	if req.Offset > 0 {
+		if req.Offset >= len(result) {
+			result = nil
+		} else {
+			result = result[req.Offset:]
+		}
+	}
+	if req.Limit > 0 && len(result) > req.Limit {
+		result = result[:req.Limit]
+	}
+	return &ListFootprintsResponse{Data: result, Total: total}, nil
 }
 
 type mockTADHandler struct {
@@ -199,6 +211,49 @@ func TestListFootprints(t *testing.T) {
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+	})
+}
+
+func TestListFootprintsPagination(t *testing.T) {
+	srv := NewServer(
+		WithTokenValidator(&mockTokenValidator{valid: true}),
+		WithFootprintHandler(&mockFootprintHandler{
+			footprints: []ileapv1.ProductFootprintForILeapType{
+				{ID: "fp-1"}, {ID: "fp-2"}, {ID: "fp-3"},
+			},
+		}),
+	)
+
+	t.Run("link header on first page", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/2/footprints?limit=2", nil)
+		req.Header.Set("Authorization", "Bearer valid")
+		req.Host = "example.com"
+		req.Header.Set("X-Forwarded-Proto", "https")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		got := w.Header().Get("Link")
+		want := `<https://example.com/2/footprints?limit=2&offset=2>; rel="next"`
+		if got != want {
+			t.Errorf("Link = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("no link header on last page", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/2/footprints?limit=2&offset=2", nil)
+		req.Header.Set("Authorization", "Bearer valid")
+		req.Host = "example.com"
+		req.Header.Set("X-Forwarded-Proto", "https")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		if w.Header().Get("Link") != "" {
+			t.Errorf("expected no Link header on last page")
+		}
 	})
 }
 
@@ -365,6 +420,37 @@ func TestEvents(t *testing.T) {
 		srv.ServeHTTP(w, req)
 		checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
 	})
+}
+
+func TestEventsValidationMissingFields(t *testing.T) {
+	srv := newTestServer()
+	cases := []struct {
+		name string
+		body string
+	}{
+		{
+			"missing specversion",
+			`{"id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
+		},
+		{
+			"missing id",
+			`{"specversion":"1.0","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
+		},
+		{
+			"missing source",
+			`{"specversion":"1.0","id":"1","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("POST", "/2/events", strings.NewReader(tc.body))
+			req.Header.Set("Authorization", "Bearer valid")
+			req.Header.Set("Content-Type", "application/cloudevents+json")
+			w := httptest.NewRecorder()
+			srv.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusBadRequest, ileap.ErrorCodeBadRequest)
+		})
+	}
 }
 
 func TestNotImplemented(t *testing.T) {

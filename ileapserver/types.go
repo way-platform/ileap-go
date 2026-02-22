@@ -11,6 +11,8 @@ import (
 type ListFootprintsRequest struct {
 	// Limit is the maximum number of footprints to return. 0 means no limit.
 	Limit int
+	// Offset is the starting index for pagination.
+	Offset int
 	// Filter is the raw OData $filter query string.
 	Filter string
 }
@@ -19,6 +21,8 @@ type ListFootprintsRequest struct {
 type ListFootprintsResponse struct {
 	// Data is the list of footprints.
 	Data []ileapv1.ProductFootprintForILeapType
+	// Total is the total number of footprints matching the filter (before pagination).
+	Total int
 }
 
 // ListTADsRequest is the request for listing transport activity data.

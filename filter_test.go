@@ -113,6 +113,39 @@ func TestFilterV2_UnmarshalString(t *testing.T) {
 				},
 			},
 		},
+
+		{
+			name: "updated lt",
+			data: "updated lt '2023-06-27T13:00:00.000Z'",
+			want: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "updated",
+						Operator: "lt",
+						RHS:      "'2023-06-27T13:00:00.000Z'",
+					},
+				},
+			},
+		},
+
+		{
+			name: "updated combined with geographyCountry",
+			data: "pcf/geographyCountry eq 'FR' and updated lt '2023-06-27T13:00:00.000Z'",
+			want: FilterV2{
+				Conjuctions: []FilterPredicateV2{
+					{
+						LHS:      "pcf/geographyCountry",
+						Operator: "eq",
+						RHS:      "'FR'",
+					},
+					{
+						LHS:      "updated",
+						Operator: "lt",
+						RHS:      "'2023-06-27T13:00:00.000Z'",
+					},
+				},
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
