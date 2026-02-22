@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/way-platform/ileap-go/ileapauthserver"
 	"github.com/way-platform/ileap-go/ileapserver"
 )
 
@@ -21,7 +20,7 @@ import (
 type TokenValidator struct {
 	client *Client
 	mu     sync.Mutex
-	jwks   *ileapauthserver.JWKSet
+	jwks   *ileapserver.JWKSet
 }
 
 // NewTokenValidator creates a new token validator backed by Clerk's JWKS.
@@ -98,7 +97,7 @@ func (v *TokenValidator) findKey(kid string) (*rsa.PublicKey, error) {
 	return pub, nil
 }
 
-func findKeyInSet(jwks *ileapauthserver.JWKSet, kid string) *rsa.PublicKey {
+func findKeyInSet(jwks *ileapserver.JWKSet, kid string) *rsa.PublicKey {
 	for _, jwk := range jwks.Keys {
 		if jwk.KeyID != kid {
 			continue

@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/way-platform/ileap-go/ileapauthserver"
+	"github.com/way-platform/ileap-go/ileapserver"
 )
 
-func testJWKS() ileapauthserver.JWKSet {
-	return ileapauthserver.JWKSet{
-		Keys: []ileapauthserver.JWK{{
+func testJWKS() ileapserver.JWKSet {
+	return ileapserver.JWKSet{
+		Keys: []ileapserver.JWK{{
 			KeyType: "RSA",
 			Use:     "sig",
 			KeyID:   testKID,

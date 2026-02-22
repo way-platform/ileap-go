@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/way-platform/ileap-go/ileapauthserver"
 	"github.com/way-platform/ileap-go/ileapserver"
 	"golang.org/x/oauth2"
 )
 
-// AuthProvider implements ileapauthserver.TokenIssuer, ileapauthserver.OIDCProvider,
+// AuthProvider implements ileapserver.TokenIssuer, ileapserver.OIDCProvider,
 // and ileapserver.TokenValidator using demo credentials and a local RSA keypair.
 type AuthProvider struct {
 	keypair *KeyPair
@@ -38,7 +37,7 @@ func (a *AuthProvider) IssueToken(
 		}
 	}
 	if !authorized {
-		return nil, ileapauthserver.ErrInvalidCredentials
+		return nil, ileapserver.ErrInvalidCredentials
 	}
 	accessToken, err := a.keypair.CreateJWT(JWTClaims{
 		Username: clientID,
@@ -69,8 +68,8 @@ func (a *AuthProvider) ValidateToken(
 }
 
 // OpenIDConfiguration returns the OIDC configuration for the given base URL.
-func (a *AuthProvider) OpenIDConfiguration(baseURL string) *ileapauthserver.OpenIDConfiguration {
-	return &ileapauthserver.OpenIDConfiguration{
+func (a *AuthProvider) OpenIDConfiguration(baseURL string) *ileapserver.OpenIDConfiguration {
+	return &ileapserver.OpenIDConfiguration{
 		IssuerURL:              baseURL,
 		AuthURL:                baseURL + "/auth/token",
 		TokenURL:               baseURL + "/auth/token",
@@ -82,10 +81,10 @@ func (a *AuthProvider) OpenIDConfiguration(baseURL string) *ileapauthserver.Open
 }
 
 // JWKS returns the JSON Web Key Set containing the public key.
-func (a *AuthProvider) JWKS() *ileapauthserver.JWKSet {
+func (a *AuthProvider) JWKS() *ileapserver.JWKSet {
 	jwk := a.keypair.JWK()
-	return &ileapauthserver.JWKSet{
-		Keys: []ileapauthserver.JWK{{
+	return &ileapserver.JWKSet{
+		Keys: []ileapserver.JWK{{
 			KeyType:   jwk.KeyType,
 			Use:       jwk.Use,
 			Algorithm: jwk.Algorithm,
