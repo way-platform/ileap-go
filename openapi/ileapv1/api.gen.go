@@ -5,10 +5,7 @@ package ileapv1
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
-
-	"github.com/oapi-codegen/runtime"
 )
 
 // Defines values for AccessDeniedCode.
@@ -18,22 +15,22 @@ const (
 
 // Defines values for AssuranceBoundary.
 const (
-	AssuranceBoundaryCradleToGate AssuranceBoundary = "Cradle-to-Gate"
-	AssuranceBoundaryGateToGate   AssuranceBoundary = "Gate-to-Gate"
+	CradleToGate AssuranceBoundary = "Cradle-to-Gate"
+	GateToGate   AssuranceBoundary = "Gate-to-Gate"
 )
 
 // Defines values for AssuranceCoverage.
 const (
-	AssuranceCoverageCorporateLevel AssuranceCoverage = "corporate level"
-	AssuranceCoveragePCFSystem      AssuranceCoverage = "PCF system"
-	AssuranceCoverageProductLevel   AssuranceCoverage = "product level"
-	AssuranceCoverageProductLine    AssuranceCoverage = "product line"
+	CorporateLevel AssuranceCoverage = "corporate level"
+	PCFSystem      AssuranceCoverage = "PCF system"
+	ProductLevel   AssuranceCoverage = "product level"
+	ProductLine    AssuranceCoverage = "product line"
 )
 
 // Defines values for AssuranceLevel.
 const (
-	AssuranceLevelLimited    AssuranceLevel = "limited"
-	AssuranceLevelReasonable AssuranceLevel = "reasonable"
+	Limited    AssuranceLevel = "limited"
+	Reasonable AssuranceLevel = "reasonable"
 )
 
 // Defines values for BadRequestCode.
@@ -43,67 +40,67 @@ const (
 
 // Defines values for BiogenicAccountingMethodology.
 const (
-	BiogenicAccountingMethodologyGHGP    BiogenicAccountingMethodology = "GHGP"
-	BiogenicAccountingMethodologyISO     BiogenicAccountingMethodology = "ISO"
-	BiogenicAccountingMethodologyPEF     BiogenicAccountingMethodology = "PEF"
-	BiogenicAccountingMethodologyQuantis BiogenicAccountingMethodology = "Quantis"
+	GHGP    BiogenicAccountingMethodology = "GHGP"
+	ISO     BiogenicAccountingMethodology = "ISO"
+	PEF     BiogenicAccountingMethodology = "PEF"
+	Quantis BiogenicAccountingMethodology = "Quantis"
 )
 
 // Defines values for CharacterizationFactors.
 const (
-	CharacterizationFactorsAR5 CharacterizationFactors = "AR5"
-	CharacterizationFactorsAR6 CharacterizationFactors = "AR6"
+	AR5 CharacterizationFactors = "AR5"
+	AR6 CharacterizationFactors = "AR6"
 )
 
 // Defines values for CrossSectoralStandard.
 const (
-	CrossSectoralStandardGHGProtocolProductStandard CrossSectoralStandard = "GHG Protocol Product standard"
-	CrossSectoralStandardISOStandard14044           CrossSectoralStandard = "ISO Standard 14044"
-	CrossSectoralStandardISOStandard14067           CrossSectoralStandard = "ISO Standard 14067"
+	GHGProtocolProductStandard CrossSectoralStandard = "GHG Protocol Product standard"
+	ISOStandard14044           CrossSectoralStandard = "ISO Standard 14044"
+	ISOStandard14067           CrossSectoralStandard = "ISO Standard 14067"
 )
 
 // Defines values for DeclaredUnit.
 const (
-	DeclaredUnitCubicMeter   DeclaredUnit = "cubic meter"
-	DeclaredUnitKilogram     DeclaredUnit = "kilogram"
-	DeclaredUnitKilowattHour DeclaredUnit = "kilowatt hour"
-	DeclaredUnitLiter        DeclaredUnit = "liter"
-	DeclaredUnitMegajoule    DeclaredUnit = "megajoule"
-	DeclaredUnitSquareMeter  DeclaredUnit = "square meter"
-	DeclaredUnitTonKilometer DeclaredUnit = "ton kilometer"
+	CubicMeter   DeclaredUnit = "cubic meter"
+	Kilogram     DeclaredUnit = "kilogram"
+	KilowattHour DeclaredUnit = "kilowatt hour"
+	Liter        DeclaredUnit = "liter"
+	Megajoule    DeclaredUnit = "megajoule"
+	SquareMeter  DeclaredUnit = "square meter"
+	TonKilometer DeclaredUnit = "ton kilometer"
 )
 
 // Defines values for EnergyCarrierType.
 const (
-	EnergyCarrierTypeAviationFuel EnergyCarrierType = "Aviation fuel"
-	EnergyCarrierTypeCNG          EnergyCarrierType = "CNG"
-	EnergyCarrierTypeDiesel       EnergyCarrierType = "Diesel"
-	EnergyCarrierTypeElectric     EnergyCarrierType = "Electric"
-	EnergyCarrierTypeHFO          EnergyCarrierType = "HFO"
-	EnergyCarrierTypeHVO          EnergyCarrierType = "HVO"
-	EnergyCarrierTypeHydrogen     EnergyCarrierType = "Hydrogen"
-	EnergyCarrierTypeLNG          EnergyCarrierType = "LNG"
-	EnergyCarrierTypeLPG          EnergyCarrierType = "LPG"
-	EnergyCarrierTypeMGO          EnergyCarrierType = "MGO"
-	EnergyCarrierTypeMethanol     EnergyCarrierType = "Methanol"
-	EnergyCarrierTypePetrol       EnergyCarrierType = "Petrol"
+	AviationFuel EnergyCarrierType = "Aviation fuel"
+	CNG          EnergyCarrierType = "CNG"
+	Diesel       EnergyCarrierType = "Diesel"
+	Electric     EnergyCarrierType = "Electric"
+	HFO          EnergyCarrierType = "HFO"
+	HVO          EnergyCarrierType = "HVO"
+	Hydrogen     EnergyCarrierType = "Hydrogen"
+	LNG          EnergyCarrierType = "LNG"
+	LPG          EnergyCarrierType = "LPG"
+	MGO          EnergyCarrierType = "MGO"
+	Methanol     EnergyCarrierType = "Methanol"
+	Petrol       EnergyCarrierType = "Petrol"
 )
 
 // Defines values for EnergyConsumptionUnit.
 const (
-	EnergyConsumptionUnitKWh EnergyConsumptionUnit = "kWh"
-	EnergyConsumptionUnitKg  EnergyConsumptionUnit = "kg"
-	EnergyConsumptionUnitL   EnergyConsumptionUnit = "l"
-	EnergyConsumptionUnitMJ  EnergyConsumptionUnit = "MJ"
+	KWh EnergyConsumptionUnit = "kWh"
+	Kg  EnergyConsumptionUnit = "kg"
+	L   EnergyConsumptionUnit = "l"
+	MJ  EnergyConsumptionUnit = "MJ"
 )
 
 // Defines values for FeedstockType.
 const (
-	FeedstockTypeCookingOil           FeedstockType = "Cooking oil"
-	FeedstockTypeFossil               FeedstockType = "Fossil"
-	FeedstockTypeGrid                 FeedstockType = "Grid"
-	FeedstockTypeNaturalGas           FeedstockType = "Natural gas"
-	FeedstockTypeRenewableElectricity FeedstockType = "Renewable electricity"
+	CookingOil           FeedstockType = "Cooking oil"
+	Fossil               FeedstockType = "Fossil"
+	Grid                 FeedstockType = "Grid"
+	NaturalGas           FeedstockType = "Natural gas"
+	RenewableElectricity FeedstockType = "Renewable electricity"
 )
 
 // Defines values for NoSuchFootprintCode.
@@ -118,75 +115,75 @@ const (
 
 // Defines values for PackagingOrTrEqType.
 const (
-	PackagingOrTrEqTypeBox          PackagingOrTrEqType = "Box"
-	PackagingOrTrEqTypeContainer    PackagingOrTrEqType = "Container"
-	PackagingOrTrEqTypeContainerFEU PackagingOrTrEqType = "Container-FEU"
-	PackagingOrTrEqTypeContainerTEU PackagingOrTrEqType = "Container-TEU"
-	PackagingOrTrEqTypePallet       PackagingOrTrEqType = "Pallet"
+	Box          PackagingOrTrEqType = "Box"
+	Container    PackagingOrTrEqType = "Container"
+	ContainerFEU PackagingOrTrEqType = "Container-FEU"
+	ContainerTEU PackagingOrTrEqType = "Container-TEU"
+	Pallet       PackagingOrTrEqType = "Pallet"
 )
 
-// Defines values for PathfinderEvent0Type.
+// Defines values for PathfinderRequestEventType.
 const (
-	PathfinderEvent0TypeOrgWbcsdPathfinderProductFootprintPublishedV1 PathfinderEvent0Type = "org.wbcsd.pathfinder.ProductFootprint.Published.v1"
+	PathfinderRequestEventTypeCreatedV1 PathfinderRequestEventType = "org.wbcsd.pathfinder.ProductFootprintRequest.Created.v1"
 )
 
-// Defines values for PathfinderEvent1Type.
+// Defines values for PathfinderUpdateEventType.
 const (
-	PathfinderEvent1TypeOrgWbcsdPathfinderProductFootprintRequestCreatedV1 PathfinderEvent1Type = "org.wbcsd.pathfinder.ProductFootprintRequest.Created.v1"
+	PathfinderUpdateEventTypePublishedV1 PathfinderUpdateEventType = "org.wbcsd.pathfinder.ProductFootprint.Published.v1"
 )
 
 // Defines values for PfStatus.
 const (
-	PfStatusActive     PfStatus = "Active"
-	PfStatusDeprecated PfStatus = "Deprecated"
+	Active     PfStatus = "Active"
+	Deprecated PfStatus = "Deprecated"
 )
 
 // Defines values for ProductOrSectorSpecificRuleOperator.
 const (
-	ProductOrSectorSpecificRuleOperatorEPDInternational ProductOrSectorSpecificRuleOperator = "EPD International"
-	ProductOrSectorSpecificRuleOperatorOther            ProductOrSectorSpecificRuleOperator = "Other"
-	ProductOrSectorSpecificRuleOperatorPEF              ProductOrSectorSpecificRuleOperator = "PEF"
+	EPDInternational         ProductOrSectorSpecificRuleOperator = "EPD International"
+	ProductRuleOperatorOther ProductOrSectorSpecificRuleOperator = "Other"
+	ProductRulePEF           ProductOrSectorSpecificRuleOperator = "PEF"
 )
 
 // Defines values for TadTempControl.
 const (
-	TadTempControlAmbient      TadTempControl = "ambient"
-	TadTempControlRefrigerated TadTempControl = "refrigerated"
+	Ambient      TadTempControl = "ambient"
+	Refrigerated TadTempControl = "refrigerated"
 )
 
 // Defines values for TransportMode.
 const (
-	TransportModeAir            TransportMode = "Air"
-	TransportModeInlandWaterway TransportMode = "InlandWaterway"
-	TransportModeRail           TransportMode = "Rail"
-	TransportModeRoad           TransportMode = "Road"
-	TransportModeSea            TransportMode = "Sea"
+	Air            TransportMode = "Air"
+	InlandWaterway TransportMode = "InlandWaterway"
+	Rail           TransportMode = "Rail"
+	Road           TransportMode = "Road"
+	Sea            TransportMode = "Sea"
 )
 
 // Defines values for UNRegionOrSubregion.
 const (
-	UNRegionOrSubregionAfrica                      UNRegionOrSubregion = "Africa"
-	UNRegionOrSubregionAmericas                    UNRegionOrSubregion = "Americas"
-	UNRegionOrSubregionAsia                        UNRegionOrSubregion = "Asia"
-	UNRegionOrSubregionAustraliaAndNewZealand      UNRegionOrSubregion = "Australia and New Zealand"
-	UNRegionOrSubregionCentralAsia                 UNRegionOrSubregion = "Central Asia"
-	UNRegionOrSubregionEasternAsia                 UNRegionOrSubregion = "Eastern Asia"
-	UNRegionOrSubregionEasternEurope               UNRegionOrSubregion = "Eastern Europe"
-	UNRegionOrSubregionEurope                      UNRegionOrSubregion = "Europe"
-	UNRegionOrSubregionLatinAmericaAndTheCaribbean UNRegionOrSubregion = "Latin America and the Caribbean"
-	UNRegionOrSubregionMelanesia                   UNRegionOrSubregion = "Melanesia"
-	UNRegionOrSubregionMicronesia                  UNRegionOrSubregion = "Micronesia"
-	UNRegionOrSubregionNorthernAfrica              UNRegionOrSubregion = "Northern Africa"
-	UNRegionOrSubregionNorthernAmerica             UNRegionOrSubregion = "Northern America"
-	UNRegionOrSubregionNorthernEurope              UNRegionOrSubregion = "Northern Europe"
-	UNRegionOrSubregionOceania                     UNRegionOrSubregion = "Oceania"
-	UNRegionOrSubregionPolynesia                   UNRegionOrSubregion = "Polynesia"
-	UNRegionOrSubregionSouthEasternAsia            UNRegionOrSubregion = "South-eastern Asia"
-	UNRegionOrSubregionSouthernAsia                UNRegionOrSubregion = "Southern Asia"
-	UNRegionOrSubregionSouthernEurope              UNRegionOrSubregion = "Southern Europe"
-	UNRegionOrSubregionSubSaharanAfrica            UNRegionOrSubregion = "Sub-Saharan Africa"
-	UNRegionOrSubregionWesternAsia                 UNRegionOrSubregion = "Western Asia"
-	UNRegionOrSubregionWesternEurope               UNRegionOrSubregion = "Western Europe"
+	Africa                      UNRegionOrSubregion = "Africa"
+	Americas                    UNRegionOrSubregion = "Americas"
+	Asia                        UNRegionOrSubregion = "Asia"
+	AustraliaAndNewZealand      UNRegionOrSubregion = "Australia and New Zealand"
+	CentralAsia                 UNRegionOrSubregion = "Central Asia"
+	EasternAsia                 UNRegionOrSubregion = "Eastern Asia"
+	EasternEurope               UNRegionOrSubregion = "Eastern Europe"
+	Europe                      UNRegionOrSubregion = "Europe"
+	LatinAmericaAndTheCaribbean UNRegionOrSubregion = "Latin America and the Caribbean"
+	Melanesia                   UNRegionOrSubregion = "Melanesia"
+	Micronesia                  UNRegionOrSubregion = "Micronesia"
+	NorthernAfrica              UNRegionOrSubregion = "Northern Africa"
+	NorthernAmerica             UNRegionOrSubregion = "Northern America"
+	NorthernEurope              UNRegionOrSubregion = "Northern Europe"
+	Oceania                     UNRegionOrSubregion = "Oceania"
+	Polynesia                   UNRegionOrSubregion = "Polynesia"
+	SouthEasternAsia            UNRegionOrSubregion = "South-eastern Asia"
+	SouthernAsia                UNRegionOrSubregion = "Southern Asia"
+	SouthernEurope              UNRegionOrSubregion = "Southern Europe"
+	SubSaharanAfrica            UNRegionOrSubregion = "Sub-Saharan Africa"
+	WesternAsia                 UNRegionOrSubregion = "Western Asia"
+	WesternEurope               UNRegionOrSubregion = "Western Europe"
 )
 
 // AccessDenied Response with an error code of `AccessDenied`. See Chapter "Error Codes" of the Tech Specs for mor details.
@@ -202,13 +199,13 @@ type AccessDeniedCode string
 // Assurance Data Type "Assurance" of Spec Version 2
 type Assurance struct {
 	Assurance    bool               `json:"assurance"`
-	Boundary     *AssuranceBoundary `json:"boundary,omitempty"`
-	Comments     *string            `json:"comments,omitempty"`
-	CompletedAt  *time.Time         `json:"completedAt,omitempty"`
-	Coverage     *AssuranceCoverage `json:"coverage,omitempty"`
-	Level        *AssuranceLevel    `json:"level,omitempty"`
+	Boundary     *AssuranceBoundary `json:"boundary"`
+	Comments     *string            `json:"comments"`
+	CompletedAt  *time.Time         `json:"completedAt"`
+	Coverage     *AssuranceCoverage `json:"coverage"`
+	Level        *AssuranceLevel    `json:"level"`
 	ProviderName string             `json:"providerName"`
-	StandardName *string            `json:"standardName,omitempty"`
+	StandardName *string            `json:"standardName"`
 }
 
 // AssuranceBoundary defines model for AssuranceBoundary.
@@ -235,43 +232,43 @@ type BiogenicAccountingMethodology string
 
 // CarbonFootprint Data Type "CarbonFootprint" of Spec Version 2
 type CarbonFootprint struct {
-	AircraftGhgEmissions          *PositiveDecimal               `json:"aircraftGhgEmissions,omitempty"`
-	AllocationRulesDescription    *string                        `json:"allocationRulesDescription,omitempty"`
-	Assurance                     *Assurance                     `json:"assurance,omitempty"`
-	BiogenicAccountingMethodology *BiogenicAccountingMethodology `json:"biogenicAccountingMethodology,omitempty"`
+	AircraftGHGEmissions          *PositiveDecimal               `json:"aircraftGhgEmissions"`
+	AllocationRulesDescription    *string                        `json:"allocationRulesDescription"`
+	Assurance                     *Assurance                     `json:"assurance"`
+	BiogenicAccountingMethodology *BiogenicAccountingMethodology `json:"biogenicAccountingMethodology"`
 	BiogenicCarbonContent         PositiveDecimal                `json:"biogenicCarbonContent"`
-	BiogenicCarbonWithdrawal      *NegativeDecimal               `json:"biogenicCarbonWithdrawal,omitempty"`
+	BiogenicCarbonWithdrawal      *NegativeDecimal               `json:"biogenicCarbonWithdrawal"`
 	BoundaryProcessesDescription  string                         `json:"boundaryProcessesDescription"`
 	CharacterizationFactors       CharacterizationFactors        `json:"characterizationFactors"`
 	CrossSectoralStandardsUsed    CrossSectoralStandardSet       `json:"crossSectoralStandardsUsed"`
-	DLucGhgEmissions              *PositiveDecimal               `json:"dLucGhgEmissions,omitempty"`
+	DLUCGHGEmissions              *PositiveDecimal               `json:"dLucGhgEmissions"`
 
 	// DeclaredUnit Data Type "DeclaredUnit" of Spec Version 2
 	DeclaredUnit                 DeclaredUnit             `json:"declaredUnit"`
-	Dqi                          *DataQualityIndicators   `json:"dqi,omitempty"`
+	Dqi                          *DataQualityIndicators   `json:"dqi"`
 	ExemptedEmissionsDescription string                   `json:"exemptedEmissionsDescription"`
 	ExemptedEmissionsPercent     ExemptedEmissionsPercent `json:"exemptedEmissionsPercent"`
 	FossilCarbonContent          PositiveDecimal          `json:"fossilCarbonContent"`
-	FossilGhgEmissions           PositiveDecimal          `json:"fossilGhgEmissions"`
+	FossilGHGEmissions           PositiveDecimal          `json:"fossilGhgEmissions"`
 	GeographyCountry             *ISO3166CC               `json:"geographyCountry,omitempty"`
 	GeographyCountrySubdivision  *NonEmptyString          `json:"geographyCountrySubdivision,omitempty"`
 
 	// GeographyRegionOrSubregion List of UN regions and subregions
 	GeographyRegionOrSubregion         *UNRegionOrSubregion               `json:"geographyRegionOrSubregion,omitempty"`
-	ILucGhgEmissions                   *PositiveDecimal                   `json:"iLucGhgEmissions,omitempty"`
+	ILUCGHGEmissions                   *PositiveDecimal                   `json:"iLucGhgEmissions"`
 	IpccCharacterizationFactorsSources IpccCharacterizationFactorsSources `json:"ipccCharacterizationFactorsSources"`
-	LandManagementGhgEmissions         *PositiveDecimal                   `json:"landManagementGhgEmissions,omitempty"`
-	OtherBiogenicGhgEmissions          *PositiveDecimal                   `json:"otherBiogenicGhgEmissions,omitempty"`
-	PCfExcludingBiogenic               PositiveDecimal                    `json:"pCfExcludingBiogenic"`
-	PCfIncludingBiogenic               *Decimal                           `json:"pCfIncludingBiogenic,omitempty"`
+	LandManagementGHGEmissions         *PositiveDecimal                   `json:"landManagementGhgEmissions"`
+	OtherBiogenicGHGEmissions          *PositiveDecimal                   `json:"otherBiogenicGhgEmissions"`
+	PCFExcludingBiogenic               PositiveDecimal                    `json:"pCfExcludingBiogenic"`
+	PCFIncludingBiogenic               *Decimal                           `json:"pCfIncludingBiogenic"`
 	PackagingEmissionsIncluded         bool                               `json:"packagingEmissionsIncluded"`
-	PackagingGhgEmissions              *PositiveDecimal                   `json:"packagingGhgEmissions,omitempty"`
-	PrimaryDataShare                   *Percent                           `json:"primaryDataShare,omitempty"`
-	ProductOrSectorSpecificRules       *ProductOrSectorSpecificRuleSet    `json:"productOrSectorSpecificRules,omitempty"`
+	PackagingGHGEmissions              *PositiveDecimal                   `json:"packagingGhgEmissions"`
+	PrimaryDataShare                   *Percent                           `json:"primaryDataShare"`
+	ProductOrSectorSpecificRules       *ProductOrSectorSpecificRuleSet    `json:"productOrSectorSpecificRules"`
 	ReferencePeriodEnd                 time.Time                          `json:"referencePeriodEnd"`
 	ReferencePeriodStart               time.Time                          `json:"referencePeriodStart"`
-	SecondaryEmissionFactorSources     *EmissionFactorDSSet               `json:"secondaryEmissionFactorSources,omitempty"`
-	UncertaintyAssessmentDescription   *string                            `json:"uncertaintyAssessmentDescription,omitempty"`
+	SecondaryEmissionFactorSources     EmissionFactorDSSet                `json:"secondaryEmissionFactorSources"`
+	UncertaintyAssessmentDescription   *string                            `json:"uncertaintyAssessmentDescription"`
 	UnitaryProductAmount               StrictlyPositiveDecimal            `json:"unitaryProductAmount"`
 }
 
@@ -289,10 +286,10 @@ type CrossSectoralStandardSet = []CrossSectoralStandard
 
 // DataModelExtension defines model for DataModelExtension.
 type DataModelExtension struct {
-	Data          map[string]interface{} `json:"data"`
-	DataSchema    string                 `json:"dataSchema"`
-	Documentation *string                `json:"documentation,omitempty"`
-	SpecVersion   VersionString          `json:"specVersion"`
+	Data          json.RawMessage `json:"data"`
+	DataSchema    string          `json:"dataSchema"`
+	Documentation *string         `json:"documentation,omitempty"`
+	SpecVersion   VersionString   `json:"specVersion"`
 }
 
 // DataQualityIndicators Data Type "DataQualityIndicators" of Spec Version 2
@@ -318,19 +315,16 @@ type EmissionFactorDS struct {
 }
 
 // EmissionFactorDSSet defines model for EmissionFactorDSSet.
-type EmissionFactorDSSet = []struct {
-	Name    NonEmptyString `json:"name"`
-	Version NonEmptyString `json:"version"`
-}
+type EmissionFactorDSSet = []EmissionFactorDS
 
 // EnergyCarrier defines model for EnergyCarrier.
 type EnergyCarrier struct {
 	EmissionFactorTTW     Decimal                `json:"emissionFactorTTW"`
 	EmissionFactorWTW     Decimal                `json:"emissionFactorWTW"`
 	EnergyCarrier         EnergyCarrierType      `json:"energyCarrier"`
-	EnergyConsumption     *Decimal               `json:"energyConsumption,omitempty"`
-	EnergyConsumptionUnit *EnergyConsumptionUnit `json:"energyConsumptionUnit,omitempty"`
-	Feedstocks            *[]Feedstock           `json:"feedstocks,omitempty"`
+	EnergyConsumption     *Decimal               `json:"energyConsumption"`
+	EnergyConsumptionUnit *EnergyConsumptionUnit `json:"energyConsumptionUnit"`
+	Feedstocks            []Feedstock            `json:"feedstocks"`
 	RelativeShare         Decimal                `json:"relativeShare"`
 }
 
@@ -346,8 +340,8 @@ type ExemptedEmissionsPercent = float64
 // Feedstock defines model for Feedstock.
 type Feedstock struct {
 	Feedstock        FeedstockType `json:"feedstock"`
-	FeedstockShare   *Decimal      `json:"feedstockShare,omitempty"`
-	RegionProvenance *string       `json:"regionProvenance,omitempty"`
+	FeedstockShare   *Decimal      `json:"feedstockShare"`
+	RegionProvenance *string       `json:"regionProvenance"`
 }
 
 // FeedstockType defines model for FeedstockType.
@@ -361,28 +355,9 @@ type GenericURN = string
 
 // GlecDistance defines model for GlecDistance.
 type GlecDistance struct {
-	union json.RawMessage
-}
-
-// GlecDistance0 defines model for .
-type GlecDistance0 struct {
-	Actual Decimal  `json:"actual"`
-	Gcd    *Decimal `json:"gcd,omitempty"`
-	Sfd    *Decimal `json:"sfd,omitempty"`
-}
-
-// GlecDistance1 defines model for .
-type GlecDistance1 struct {
 	Actual *Decimal `json:"actual,omitempty"`
-	Gcd    Decimal  `json:"gcd"`
-	Sfd    *Decimal `json:"sfd,omitempty"`
-}
-
-// GlecDistance2 defines model for .
-type GlecDistance2 struct {
-	Actual *Decimal `json:"actual,omitempty"`
-	Gcd    *Decimal `json:"gcd,omitempty"`
-	Sfd    Decimal  `json:"sfd"`
+	GCD    *Decimal `json:"gcd,omitempty"`
+	SFD    *Decimal `json:"sfd,omitempty"`
 }
 
 // ISO3166CC defines model for ISO3166CC.
@@ -401,13 +376,13 @@ type IpccCharacterizationFactorsSources = []string
 type Location struct {
 	City    string    `json:"city"`
 	Country ISO3166CC `json:"country"`
-	Iata    *IataCode `json:"iata,omitempty"`
-	Lat     *Decimal  `json:"lat,omitempty"`
-	Lng     *Decimal  `json:"lng,omitempty"`
-	Locode  *Locode   `json:"locode,omitempty"`
-	Street  *string   `json:"street,omitempty"`
-	Uic     *UicCode  `json:"uic,omitempty"`
-	Zip     *string   `json:"zip,omitempty"`
+	Iata    *IataCode `json:"iata"`
+	Lat     *Decimal  `json:"lat"`
+	Lng     *Decimal  `json:"lng"`
+	Locode  *Locode   `json:"locode"`
+	Street  *string   `json:"street"`
+	Uic     *UicCode  `json:"uic"`
+	Zip     *string   `json:"zip"`
 }
 
 // Locode defines model for Locode.
@@ -450,8 +425,8 @@ type NotImplementedCode string
 
 // PFRequestEventBody defines model for PFRequestEventBody.
 type PFRequestEventBody struct {
-	Comment *string     `json:"comment,omitempty"`
-	Pf      interface{} `json:"pf"`
+	Comment *string         `json:"comment"`
+	Pf      json.RawMessage `json:"pf"`
 }
 
 // PFUpdateEventBody defines model for PFUpdateEventBody.
@@ -464,30 +439,39 @@ type PackagingOrTrEqType string
 
 // PathfinderEvent possible contents of `data` property of events - see tech specs section 6 for details
 type PathfinderEvent struct {
-	ID          string    `json:"id"`
-	Source      string    `json:"source"`
-	Specversion string    `json:"specversion"`
-	Time        time.Time `json:"time"`
-	union       json.RawMessage
+	Data        *json.RawMessage `json:"data,omitempty"`
+	ID          string           `json:"id"`
+	Source      string           `json:"source"`
+	SpecVersion string           `json:"specversion"`
+	Time        time.Time        `json:"time"`
+	Type        *string          `json:"type,omitempty"`
 }
 
-// PathfinderEvent0 the contents of the `data` field of a `PF Update Event` – see Tech Specs section 6.8.3
-type PathfinderEvent0 struct {
-	Data PFUpdateEventBody    `json:"data"`
-	Type PathfinderEvent0Type `json:"type"`
+// PathfinderRequestEvent PF Request Event – see Tech Specs section 6.8.4.1
+type PathfinderRequestEvent struct {
+	Data        PFRequestEventBody         `json:"data"`
+	ID          string                     `json:"id"`
+	Source      string                     `json:"source"`
+	SpecVersion string                     `json:"specversion"`
+	Time        time.Time                  `json:"time"`
+	Type        PathfinderRequestEventType `json:"type"`
 }
 
-// PathfinderEvent0Type defines model for PathfinderEvent.0.Type.
-type PathfinderEvent0Type string
+// PathfinderRequestEventType defines model for PathfinderRequestEvent.Type.
+type PathfinderRequestEventType string
 
-// PathfinderEvent1 the contents of the `data` field of a `PF Request Event` – see Tech Specs section 6.8.4.1
-type PathfinderEvent1 struct {
-	Data PFRequestEventBody   `json:"data"`
-	Type PathfinderEvent1Type `json:"type"`
+// PathfinderUpdateEvent PF Update Event – see Tech Specs section 6.8.3
+type PathfinderUpdateEvent struct {
+	Data        PFUpdateEventBody         `json:"data"`
+	ID          string                    `json:"id"`
+	Source      string                    `json:"source"`
+	SpecVersion string                    `json:"specversion"`
+	Time        time.Time                 `json:"time"`
+	Type        PathfinderUpdateEventType `json:"type"`
 }
 
-// PathfinderEvent1Type defines model for PathfinderEvent.1.Type.
-type PathfinderEvent1Type string
+// PathfinderUpdateEventType defines model for PathfinderUpdateEvent.Type.
+type PathfinderUpdateEventType string
 
 // Percent defines model for Percent.
 type Percent = float64
@@ -517,28 +501,28 @@ type ProductFootprintResponse struct {
 
 // ProductFootprintForILeapType Data Type "ProductFootprint" of Tech Spec Version 2
 type ProductFootprintForILeapType struct {
-	Comment          string                `json:"comment"`
-	CompanyIds       CompanyIDSet          `json:"companyIds"`
-	CompanyName      NonEmptyString        `json:"companyName"`
-	Created          time.Time             `json:"created"`
-	Extensions       *[]DataModelExtension `json:"extensions,omitempty"`
-	ID               PfID                  `json:"id"`
-	OrganizationName *NonEmptyString       `json:"organizationName,omitempty"`
+	Comment          string               `json:"comment"`
+	CompanyIds       CompanyIDSet         `json:"companyIds"`
+	CompanyName      NonEmptyString       `json:"companyName"`
+	Created          time.Time            `json:"created"`
+	Extensions       []DataModelExtension `json:"extensions"`
+	ID               PfID                 `json:"id"`
+	OrganizationName *NonEmptyString      `json:"organizationName,omitempty"`
 
 	// Pcf Data Type "CarbonFootprint" of Spec Version 2
-	Pcf                 CarbonFootprint  `json:"pcf"`
-	PrecedingPfIds      *NonEmptyPfIDVec `json:"precedingPfIds,omitempty"`
-	ProductCategoryCpc  NonEmptyString   `json:"productCategoryCpc"`
-	ProductDescription  string           `json:"productDescription"`
-	ProductIds          ProductIDSet     `json:"productIds"`
-	ProductNameCompany  NonEmptyString   `json:"productNameCompany"`
-	SpecVersion         VersionString    `json:"specVersion"`
-	Status              PfStatus         `json:"status"`
-	StatusComment       *string          `json:"statusComment,omitempty"`
-	Updated             *time.Time       `json:"updated,omitempty"`
-	ValidityPeriodEnd   *time.Time       `json:"validityPeriodEnd,omitempty"`
-	ValidityPeriodStart *time.Time       `json:"validityPeriodStart,omitempty"`
-	Version             VersionInteger   `json:"version"`
+	Pcf                 CarbonFootprint `json:"pcf"`
+	PrecedingPfIds      NonEmptyPfIDVec `json:"precedingPfIds"`
+	ProductCategoryCpc  NonEmptyString  `json:"productCategoryCpc"`
+	ProductDescription  string          `json:"productDescription"`
+	ProductIds          ProductIDSet    `json:"productIds"`
+	ProductNameCompany  NonEmptyString  `json:"productNameCompany"`
+	SpecVersion         VersionString   `json:"specVersion"`
+	Status              PfStatus        `json:"status"`
+	StatusComment       *string         `json:"statusComment"`
+	Updated             *time.Time      `json:"updated"`
+	ValidityPeriodEnd   *time.Time      `json:"validityPeriodEnd"`
+	ValidityPeriodStart *time.Time      `json:"validityPeriodStart"`
+	Version             VersionInteger  `json:"version"`
 }
 
 // ProductIDSet defines model for ProductIdSet.
@@ -547,7 +531,7 @@ type ProductIDSet = []string
 // ProductOrSectorSpecificRule defines model for ProductOrSectorSpecificRule.
 type ProductOrSectorSpecificRule struct {
 	Operator          ProductOrSectorSpecificRuleOperator `json:"operator"`
-	OtherOperatorName *NonEmptyString                     `json:"otherOperatorName,omitempty"`
+	OtherOperatorName *NonEmptyString                     `json:"otherOperatorName"`
 	RuleNames         NonEmptyStringVec                   `json:"ruleNames"`
 }
 
@@ -555,32 +539,28 @@ type ProductOrSectorSpecificRule struct {
 type ProductOrSectorSpecificRuleOperator string
 
 // ProductOrSectorSpecificRuleSet defines model for ProductOrSectorSpecificRuleSet.
-type ProductOrSectorSpecificRuleSet = []struct {
-	Operator          ProductOrSectorSpecificRuleOperator `json:"operator"`
-	OtherOperatorName *NonEmptyString                     `json:"otherOperatorName,omitempty"`
-	RuleNames         NonEmptyStringVec                   `json:"ruleNames"`
-}
+type ProductOrSectorSpecificRuleSet = []ProductOrSectorSpecificRule
 
 // StrictlyPositiveDecimal defines model for StrictlyPositiveDecimal.
 type StrictlyPositiveDecimal = string
 
 // TAD Data Type "Transport Activity Data" of the iLEAP Technical Specifications
 type TAD struct {
-	ActivityID            string                       `json:"activityId"`
-	ArrivalAt             time.Time                    `json:"arrivalAt"`
-	ConsignmentIds        []string                     `json:"consignmentIds"`
-	DepartureAt           time.Time                    `json:"departureAt"`
-	Destination           Location                     `json:"destination"`
-	Distance              GlecDistance                 `json:"distance"`
-	EmptyDistanceFactor   *Decimal                     `json:"emptyDistanceFactor,omitempty"`
-	EnergyCarriers        *NonEmptyVecForEnergyCarrier `json:"energyCarriers,omitempty"`
-	LoadFactor            *Decimal                     `json:"loadFactor,omitempty"`
-	Mass                  *Decimal                     `json:"mass,omitempty"`
-	Mode                  TransportMode                `json:"mode"`
-	Origin                Location                     `json:"origin"`
-	PackagingOrTrEqAmount *uint                        `json:"packagingOrTrEqAmount,omitempty"`
-	PackagingOrTrEqType   *PackagingOrTrEqType         `json:"packagingOrTrEqType,omitempty"`
-	TemperatureControl    *TadTempControl              `json:"temperatureControl,omitempty"`
+	ActivityID            string                      `json:"activityId"`
+	ArrivalAt             time.Time                   `json:"arrivalAt"`
+	ConsignmentIds        []string                    `json:"consignmentIds"`
+	DepartureAt           time.Time                   `json:"departureAt"`
+	Destination           Location                    `json:"destination"`
+	Distance              GlecDistance                `json:"distance"`
+	EmptyDistanceFactor   *Decimal                    `json:"emptyDistanceFactor"`
+	EnergyCarriers        NonEmptyVecForEnergyCarrier `json:"energyCarriers"`
+	LoadFactor            *Decimal                    `json:"loadFactor"`
+	Mass                  *Decimal                    `json:"mass"`
+	Mode                  TransportMode               `json:"mode"`
+	Origin                Location                    `json:"origin"`
+	PackagingOrTrEqAmount *uint                       `json:"packagingOrTrEqAmount"`
+	PackagingOrTrEqType   *PackagingOrTrEqType        `json:"packagingOrTrEqType"`
+	TemperatureControl    *TadTempControl             `json:"temperatureControl"`
 }
 
 // TadListingResponseInner HTTP Body of Action `TransportActivityData`
@@ -605,222 +585,3 @@ type VersionInteger = int32
 
 // VersionString defines model for VersionString.
 type VersionString = string
-
-// AsGlecDistance0 returns the union data inside the GlecDistance as a GlecDistance0
-func (t GlecDistance) AsGlecDistance0() (GlecDistance0, error) {
-	var body GlecDistance0
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromGlecDistance0 overwrites any union data inside the GlecDistance as the provided GlecDistance0
-func (t *GlecDistance) FromGlecDistance0(v GlecDistance0) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeGlecDistance0 performs a merge with any union data inside the GlecDistance, using the provided GlecDistance0
-func (t *GlecDistance) MergeGlecDistance0(v GlecDistance0) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsGlecDistance1 returns the union data inside the GlecDistance as a GlecDistance1
-func (t GlecDistance) AsGlecDistance1() (GlecDistance1, error) {
-	var body GlecDistance1
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromGlecDistance1 overwrites any union data inside the GlecDistance as the provided GlecDistance1
-func (t *GlecDistance) FromGlecDistance1(v GlecDistance1) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeGlecDistance1 performs a merge with any union data inside the GlecDistance, using the provided GlecDistance1
-func (t *GlecDistance) MergeGlecDistance1(v GlecDistance1) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsGlecDistance2 returns the union data inside the GlecDistance as a GlecDistance2
-func (t GlecDistance) AsGlecDistance2() (GlecDistance2, error) {
-	var body GlecDistance2
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromGlecDistance2 overwrites any union data inside the GlecDistance as the provided GlecDistance2
-func (t *GlecDistance) FromGlecDistance2(v GlecDistance2) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeGlecDistance2 performs a merge with any union data inside the GlecDistance, using the provided GlecDistance2
-func (t *GlecDistance) MergeGlecDistance2(v GlecDistance2) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-func (t GlecDistance) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	return b, err
-}
-
-func (t *GlecDistance) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	return err
-}
-
-// AsPathfinderEvent0 returns the union data inside the PathfinderEvent as a PathfinderEvent0
-func (t PathfinderEvent) AsPathfinderEvent0() (PathfinderEvent0, error) {
-	var body PathfinderEvent0
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromPathfinderEvent0 overwrites any union data inside the PathfinderEvent as the provided PathfinderEvent0
-func (t *PathfinderEvent) FromPathfinderEvent0(v PathfinderEvent0) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergePathfinderEvent0 performs a merge with any union data inside the PathfinderEvent, using the provided PathfinderEvent0
-func (t *PathfinderEvent) MergePathfinderEvent0(v PathfinderEvent0) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsPathfinderEvent1 returns the union data inside the PathfinderEvent as a PathfinderEvent1
-func (t PathfinderEvent) AsPathfinderEvent1() (PathfinderEvent1, error) {
-	var body PathfinderEvent1
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromPathfinderEvent1 overwrites any union data inside the PathfinderEvent as the provided PathfinderEvent1
-func (t *PathfinderEvent) FromPathfinderEvent1(v PathfinderEvent1) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergePathfinderEvent1 performs a merge with any union data inside the PathfinderEvent, using the provided PathfinderEvent1
-func (t *PathfinderEvent) MergePathfinderEvent1(v PathfinderEvent1) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-func (t PathfinderEvent) MarshalJSON() ([]byte, error) {
-	b, err := t.union.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	object := make(map[string]json.RawMessage)
-	if t.union != nil {
-		err = json.Unmarshal(b, &object)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	object["id"], err = json.Marshal(t.ID)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'id': %w", err)
-	}
-
-	object["source"], err = json.Marshal(t.Source)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'source': %w", err)
-	}
-
-	object["specversion"], err = json.Marshal(t.Specversion)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'specversion': %w", err)
-	}
-
-	object["time"], err = json.Marshal(t.Time)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'time': %w", err)
-	}
-
-	b, err = json.Marshal(object)
-	return b, err
-}
-
-func (t *PathfinderEvent) UnmarshalJSON(b []byte) error {
-	err := t.union.UnmarshalJSON(b)
-	if err != nil {
-		return err
-	}
-	object := make(map[string]json.RawMessage)
-	err = json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if raw, found := object["id"]; found {
-		err = json.Unmarshal(raw, &t.ID)
-		if err != nil {
-			return fmt.Errorf("error reading 'id': %w", err)
-		}
-	}
-
-	if raw, found := object["source"]; found {
-		err = json.Unmarshal(raw, &t.Source)
-		if err != nil {
-			return fmt.Errorf("error reading 'source': %w", err)
-		}
-	}
-
-	if raw, found := object["specversion"]; found {
-		err = json.Unmarshal(raw, &t.Specversion)
-		if err != nil {
-			return fmt.Errorf("error reading 'specversion': %w", err)
-		}
-	}
-
-	if raw, found := object["time"]; found {
-		err = json.Unmarshal(raw, &t.Time)
-		if err != nil {
-			return fmt.Errorf("error reading 'time': %w", err)
-		}
-	}
-
-	return err
-}

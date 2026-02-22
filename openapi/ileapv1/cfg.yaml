@@ -6,14 +6,15 @@ output: api.gen.go
 generate:
   models: true
 
-compatibility:
-  always-prefix-enum-values: true
-
 output-options:
   skip-prune: true
   name-normalizer: ToCamelCaseWithInitialisms
   initialism-overrides: true
   additional-initialisms:
+    - GHG
+    - LUC
+    - GCD
+    - SFD
     - VIN
     - OEM
     - GNSS
