@@ -3,7 +3,7 @@ package ileap
 import (
 	"context"
 
-	"github.com/way-platform/ileap-go/ileapv1pb"
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"golang.org/x/oauth2"
 )
 
@@ -24,7 +24,7 @@ type OIDCProvider interface {
 // FootprintHandler handles product footprint requests.
 type FootprintHandler interface {
 	// GetFootprint returns a single footprint by ID.
-	GetFootprint(ctx context.Context, id string) (*ileapv1pb.ProductFootprint, error)
+	GetFootprint(ctx context.Context, id string) (*ileapv1.ProductFootprint, error)
 	// ListFootprints returns a filtered, limited list of footprints.
 	ListFootprints(ctx context.Context, req ListFootprintsRequest) (*ListFootprintsResponse, error)
 }

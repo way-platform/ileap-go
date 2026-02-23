@@ -5,9 +5,8 @@ import (
 	"testing"
 	"time"
 
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 func TestFilterV2_UnmarshalString(t *testing.T) {
@@ -181,22 +180,22 @@ func TestFilterV2_UnmarshalString(t *testing.T) {
 func TestFilterV2_MatchesFootprint(t *testing.T) {
 	testCases := []struct {
 		name      string
-		footprint *ileapv1pb.ProductFootprint
+		footprint *ileapv1.ProductFootprint
 		filter    FilterV2
 		want      bool
 	}{
 		{
 			name:      "empty",
-			footprint: &ileapv1pb.ProductFootprint{},
+			footprint: &ileapv1.ProductFootprint{},
 			filter:    FilterV2{},
 			want:      true,
 		},
 
 		{
 			name: "single predicate",
-			footprint: func() *ileapv1pb.ProductFootprint {
-				pf := &ileapv1pb.ProductFootprint{}
-				pcf := &ileapv1pb.CarbonFootprint{}
+			footprint: func() *ileapv1.ProductFootprint {
+				pf := &ileapv1.ProductFootprint{}
+				pcf := &ileapv1.CarbonFootprint{}
 				pcf.SetGeographyCountry("US")
 				pf.SetPcf(pcf)
 				return pf
@@ -215,9 +214,9 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "single predicate, no match",
-			footprint: func() *ileapv1pb.ProductFootprint {
-				pf := &ileapv1pb.ProductFootprint{}
-				pcf := &ileapv1pb.CarbonFootprint{}
+			footprint: func() *ileapv1.ProductFootprint {
+				pf := &ileapv1.ProductFootprint{}
+				pcf := &ileapv1.CarbonFootprint{}
 				pcf.SetGeographyCountry("FR")
 				pf.SetPcf(pcf)
 				return pf
@@ -236,8 +235,8 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "created gt",
-			footprint: func() *ileapv1pb.ProductFootprint {
-				pf := &ileapv1pb.ProductFootprint{}
+			footprint: func() *ileapv1.ProductFootprint {
+				pf := &ileapv1.ProductFootprint{}
 				pf.SetCreated(timestamppb.New(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)))
 				return pf
 			}(),
@@ -255,8 +254,8 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "created gt, no match",
-			footprint: func() *ileapv1pb.ProductFootprint {
-				pf := &ileapv1pb.ProductFootprint{}
+			footprint: func() *ileapv1.ProductFootprint {
+				pf := &ileapv1.ProductFootprint{}
 				pf.SetCreated(timestamppb.New(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)))
 				return pf
 			}(),
@@ -274,10 +273,10 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "multiple predicates",
-			footprint: func() *ileapv1pb.ProductFootprint {
-				pf := &ileapv1pb.ProductFootprint{}
+			footprint: func() *ileapv1.ProductFootprint {
+				pf := &ileapv1.ProductFootprint{}
 				pf.SetProductCategoryCpc("6398")
-				pcf := &ileapv1pb.CarbonFootprint{}
+				pcf := &ileapv1.CarbonFootprint{}
 				pcf.SetGeographyCountry("US")
 				pf.SetPcf(pcf)
 				return pf
@@ -301,8 +300,8 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "productIds, any eq",
-			footprint: func() *ileapv1pb.ProductFootprint {
-				pf := &ileapv1pb.ProductFootprint{}
+			footprint: func() *ileapv1.ProductFootprint {
+				pf := &ileapv1.ProductFootprint{}
 				pf.SetProductIds([]string{"urn:gtin:1234"})
 				return pf
 			}(),
@@ -320,8 +319,8 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "productIds, any eq, no match",
-			footprint: func() *ileapv1pb.ProductFootprint {
-				pf := &ileapv1pb.ProductFootprint{}
+			footprint: func() *ileapv1.ProductFootprint {
+				pf := &ileapv1.ProductFootprint{}
 				pf.SetProductIds([]string{"urn:gtin:1234"})
 				return pf
 			}(),
@@ -346,4 +345,3 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 		})
 	}
 }
-

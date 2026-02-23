@@ -7,9 +7,8 @@ import (
 	"io"
 	"net/http"
 
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 // GetFootprintRequest is the request for the [Client.GetFootprint] method.
@@ -22,7 +21,7 @@ type GetFootprintRequest struct {
 func (c *Client) GetFootprint(
 	ctx context.Context,
 	request *GetFootprintRequest,
-) (_ *ileapv1pb.ProductFootprint, err error) {
+) (_ *ileapv1.ProductFootprint, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("get iLEAP footprint: %w", err)
@@ -50,7 +49,7 @@ func (c *Client) GetFootprint(
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response body: %w", err)
 	}
-	pf := &ileapv1pb.ProductFootprint{}
+	pf := &ileapv1.ProductFootprint{}
 	if err := protojson.Unmarshal(response.Data, pf); err != nil {
 		return nil, fmt.Errorf("unmarshal footprint: %w", err)
 	}

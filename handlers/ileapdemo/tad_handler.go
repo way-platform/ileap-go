@@ -5,15 +5,14 @@ import (
 	"encoding/json"
 	"strings"
 
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/ileapv1pb"
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // TADHandler implements ileap.TADHandler using embedded demo data.
 type TADHandler struct {
-	tads []*ileapv1pb.TAD
+	tads []*ileapv1.TAD
 }
 
 // NewTADHandler creates a new TADHandler with the embedded demo data.
@@ -54,8 +53,8 @@ func (h *TADHandler) ListTADs(
 // filterTADs returns TADs matching all filter criteria.
 // Filter matching: serialize TAD to JSON, flatten to key→values,
 // then check each filter key/value pair (case-insensitive value match).
-func filterTADs(tads []*ileapv1pb.TAD, filters map[string][]string) []*ileapv1pb.TAD {
-	result := make([]*ileapv1pb.TAD, 0, len(tads))
+func filterTADs(tads []*ileapv1.TAD, filters map[string][]string) []*ileapv1.TAD {
+	result := make([]*ileapv1.TAD, 0, len(tads))
 	for _, tad := range tads {
 		if tadMatchesFilters(tad, filters) {
 			result = append(result, tad)
@@ -64,7 +63,7 @@ func filterTADs(tads []*ileapv1pb.TAD, filters map[string][]string) []*ileapv1pb
 	return result
 }
 
-func tadMatchesFilters(tad *ileapv1pb.TAD, filters map[string][]string) bool {
+func tadMatchesFilters(tad *ileapv1.TAD, filters map[string][]string) bool {
 	data, err := protojson.Marshal(tad)
 	if err != nil {
 		return false

@@ -2,75 +2,635 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
-
+import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 
-// CarbonFootprint is the PACT CarbonFootprint data type.
+// CarbonFootprint represents the carbon footprint of a product and related
+// data in accordance with the Pathfinder Framework.
+//
+// Each CarbonFootprint is scoped by:
+//   1. Time Period: defined by referencePeriodStart and referencePeriodEnd
+//      (see Pathfinder Framework section 6.1.2.1)
+//   2. Geography: set by geographyRegionOrSubregion, geographyCountry,
+//      and geographyCountrySubdivision (see Pathfinder Framework section
+//      6.1.2.2)
+//
+// Geographic scope rules (mutually exclusive):
+//   - Global: all three geography properties MUST be undefined
+//   - Regional/Subregional: only geographyRegionOrSubregion is defined
+//   - Country: only geographyCountry is defined
+//   - Subdivision: only geographyCountrySubdivision is defined
+//
+// Properties marked O* are OPTIONAL only for reporting periods before 2025.
+// For reporting periods including the beginning of calendar year 2025 or
+// later, properties marked O* MUST be defined.
+//
+// See PACT Technical Specifications v2.1.0, section "Data Type CarbonFootprint".
+// Reference: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/#dt-carbonfootprint
 message CarbonFootprint {
+  // DataQualityIndicators represents data quality indicators in accordance
+  // with the Pathfinder Framework Sections 4.2.1 and 4.2.3, Appendix B.
+  //
+  // See PACT Technical Specifications v2.1.0, section "Data Type DataQualityIndicators".
   message DataQualityIndicators {
-    double completeness_dqr = 1 [json_name = "completenessDQR"];
-    double coverage_percent = 2 [json_name = "coveragePercent"];
-    double geographical_dqr = 3 [json_name = "geographicalDQR"];
-    double reliability_dqr = 4 [json_name = "reliabilityDQR"];
-    double technological_dqr = 5 [json_name = "technologicalDQR"];
-    double temporal_dqr = 6 [json_name = "temporalDQR"];
+    // Coverage of PCF by primary data as a percentage. Required.
+    double coverage_percent = 1 [
+      json_name = "coveragePercent",
+      (buf.validate.field) = {
+        required: true
+        double: {
+          gte: 0
+          lte: 100
+        }
+      }
+    ];
+
+    // Technological representativeness DQR (1.0 to 3.0). Required.
+    double technological_dqr = 2 [
+      json_name = "technologicalDQR",
+      (buf.validate.field) = {
+        required: true
+        double: {
+          gte: 1
+          lte: 3
+        }
+      }
+    ];
+
+    // Temporal representativeness DQR (1.0 to 3.0). Required.
+    double temporal_dqr = 3 [
+      json_name = "temporalDQR",
+      (buf.validate.field) = {
+        required: true
+        double: {
+          gte: 1
+          lte: 3
+        }
+      }
+    ];
+
+    // Geographical representativeness DQR (1.0 to 3.0). Required.
+    double geographical_dqr = 4 [
+      json_name = "geographicalDQR",
+      (buf.validate.field) = {
+        required: true
+        double: {
+          gte: 1
+          lte: 3
+        }
+      }
+    ];
+
+    // Completeness DQR (1.0 to 3.0). Required.
+    double completeness_dqr = 5 [
+      json_name = "completenessDQR",
+      (buf.validate.field) = {
+        required: true
+        double: {
+          gte: 1
+          lte: 3
+        }
+      }
+    ];
+
+    // Reliability DQR (1.0 to 3.0). Required.
+    double reliability_dqr = 6 [
+      json_name = "reliabilityDQR",
+      (buf.validate.field) = {
+        required: true
+        double: {
+          gte: 1
+          lte: 3
+        }
+      }
+    ];
   }
 
+  // Assurance represents assurance information in accordance with the
+  // Pathfinder Framework.
+  //
+  // See PACT Technical Specifications v2.1.0, section "Data Type Assurance".
   message Assurance {
-    bool assurance = 1;
-    string boundary = 2;
-    string comments = 3;
-    google.protobuf.Timestamp completed_at = 4 [json_name = "completedAt"];
-    string coverage = 5;
-    string level = 6;
-    string provider_name = 7 [json_name = "providerName"];
-    string standard_name = 8 [json_name = "standardName"];
+    // Whether the ProductFootprint has been assured. Required.
+    bool assurance = 1 [(buf.validate.field).required = true];
+
+    // The coverage of the assurance. Optional.
+    //
+    // Valid values: "corporate level", "product line", "PCF system",
+    // "product level".
+    string coverage = 2 [(buf.validate.field).string = {
+      in: [
+        "corporate level",
+        "product line",
+        "PCF system",
+        "product level"
+      ]
+    }];
+
+    // The level of assurance. Optional.
+    //
+    // Valid values: "limited", "reasonable".
+    string level = 3 [(buf.validate.field).string = {
+      in: [
+        "limited",
+        "reasonable"
+      ]
+    }];
+
+    // The boundary of the assurance. Optional.
+    //
+    // Valid values: "Gate-to-Gate", "Cradle-to-Gate".
+    string boundary = 4 [(buf.validate.field).string = {
+      in: [
+        "Gate-to-Gate",
+        "Cradle-to-Gate"
+      ]
+    }];
+
+    // The name of the assurance provider. Required.
+    string provider_name = 5 [
+      json_name = "providerName",
+      (buf.validate.field).required = true,
+      (buf.validate.field).string.min_len = 1
+    ];
+
+    // The timestamp of completion of the assurance. Optional.
+    google.protobuf.Timestamp completed_at = 6 [json_name = "completedAt"];
+
+    // The name of the standard used for the assurance. Optional.
+    string standard_name = 7 [json_name = "standardName"];
+
+    // Any comments related to the assurance. Optional.
+    string comments = 8;
   }
 
+  // ProductOrSectorSpecificRule represents a product-specific or
+  // sector-specific rule applied for calculating or allocating GHG
+  // emissions.
+  //
+  // See PACT Technical Specifications v2.1.0, section
+  // "Data Type ProductOrSectorSpecificRule".
   message ProductOrSectorSpecificRule {
-    string operator = 1;
+    // The operator of the rule. Required.
+    //
+    // Valid values: "PEF", "EPD International", "Other".
+    // If "Other", otherOperatorName MUST be defined.
+    string operator = 1 [(buf.validate.field) = {
+      required: true
+      string: {
+        in: [
+          "PEF",
+          "EPD International",
+          "Other"
+        ]
+      }
+    }];
+
+    // If operator is "Other", the name of the operator. Optional.
     string other_operator_name = 2 [json_name = "otherOperatorName"];
-    repeated string rule_names = 3 [json_name = "ruleNames"];
+
+    // The non-empty list of rule names. Required.
+    repeated string rule_names = 3 [
+      json_name = "ruleNames",
+      (buf.validate.field).repeated.min_items = 1
+    ];
   }
 
+  // EmissionFactorDS identifies a secondary emission factor data source.
+  //
+  // See PACT Technical Specifications v2.1.0, section
+  // "Data Type EmissionFactorDS".
   message EmissionFactorDS {
-    string name = 1;
-    string version = 2;
+    // The name of the emission factor data source. Required.
+    string name = 1 [
+      (buf.validate.field).required = true,
+      (buf.validate.field).string.min_len = 1
+    ];
+
+    // The version of the emission factor data source. Required.
+    string version = 2 [
+      (buf.validate.field).required = true,
+      (buf.validate.field).string.min_len = 1
+    ];
   }
 
-  string aircraft_ghg_emissions = 1 [json_name = "aircraftGhgEmissions"];
-  string allocation_rules_description = 2 [json_name = "allocationRulesDescription"];
-  Assurance assurance = 3;
-  string biogenic_accounting_methodology = 4 [json_name = "biogenicAccountingMethodology"];
-  string biogenic_carbon_content = 5 [json_name = "biogenicCarbonContent"];
-  string biogenic_carbon_withdrawal = 6 [json_name = "biogenicCarbonWithdrawal"];
-  string boundary_processes_description = 7 [json_name = "boundaryProcessesDescription"];
-  string characterization_factors = 8 [json_name = "characterizationFactors"];
-  repeated string cross_sectoral_standards_used = 9 [json_name = "crossSectoralStandardsUsed"];
-  string d_luc_ghg_emissions = 10 [json_name = "dLucGhgEmissions"];
-  string declared_unit = 11 [json_name = "declaredUnit"];
-  DataQualityIndicators dqi = 12;
-  string exempted_emissions_description = 13 [json_name = "exemptedEmissionsDescription"];
-  double exempted_emissions_percent = 14 [json_name = "exemptedEmissionsPercent"];
-  string fossil_carbon_content = 15 [json_name = "fossilCarbonContent"];
-  string fossil_ghg_emissions = 16 [json_name = "fossilGhgEmissions"];
-  string geography_country = 17 [json_name = "geographyCountry"];
-  string geography_country_subdivision = 18 [json_name = "geographyCountrySubdivision"];
-  string geography_region_or_subregion = 19 [json_name = "geographyRegionOrSubregion"];
-  string i_luc_ghg_emissions = 20 [json_name = "iLucGhgEmissions"];
-  repeated string ipcc_characterization_factors_sources = 21 [json_name = "ipccCharacterizationFactorsSources"];
-  string land_management_ghg_emissions = 22 [json_name = "landManagementGhgEmissions"];
-  string other_biogenic_ghg_emissions = 23 [json_name = "otherBiogenicGhgEmissions"];
-  string p_cf_excluding_biogenic = 24 [json_name = "pCfExcludingBiogenic"];
-  string p_cf_including_biogenic = 25 [json_name = "pCfIncludingBiogenic"];
-  bool packaging_emissions_included = 26 [json_name = "packagingEmissionsIncluded"];
-  string packaging_ghg_emissions = 27 [json_name = "packagingGhgEmissions"];
-  double primary_data_share = 28 [json_name = "primaryDataShare"];
-  repeated ProductOrSectorSpecificRule product_or_sector_specific_rules = 29 [json_name = "productOrSectorSpecificRules"];
-  google.protobuf.Timestamp reference_period_end = 30 [json_name = "referencePeriodEnd"];
-  google.protobuf.Timestamp reference_period_start = 31 [json_name = "referencePeriodStart"];
-  repeated EmissionFactorDS secondary_emission_factor_sources = 32 [json_name = "secondaryEmissionFactorSources"];
-  string uncertainty_assessment_description = 33 [json_name = "uncertaintyAssessmentDescription"];
-  string unitary_product_amount = 34 [json_name = "unitaryProductAmount"];
+  // The unit of analysis of the product. Required.
+  //
+  // Valid values (see PACT spec DeclaredUnit):
+  //   - "liter": for special SI Unit litre
+  //   - "kilogram": for SI Base Unit kilogram
+  //   - "cubic meter": for cubic meter
+  //   - "kilowatt hour": for kilowatt hour
+  //   - "megajoule": for megajoule
+  //   - "ton kilometer": for ton kilometer
+  //   - "square meter": for square meter
+  //
+  // For iLEAP:
+  //   - ShipmentFootprint: MUST be "ton kilometer"
+  //   - TOC: MUST be "ton kilometer"
+  //   - HOC: MUST be "kilogram"
+  string declared_unit = 1 [
+    json_name = "declaredUnit",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        in: [
+          "liter",
+          "kilogram",
+          "cubic meter",
+          "kilowatt hour",
+          "megajoule",
+          "ton kilometer",
+          "square meter"
+        ]
+      }
+    }
+  ];
+
+  // The amount of Declared Units contained within the product to which
+  // the PCF is referring to. Required. Type: Decimal.
+  //
+  // The value MUST be strictly greater than 0.
+  //
+  // For iLEAP:
+  //   - ShipmentFootprint: sum(tces[].transportActivity)
+  //   - TOC: "1"
+  //   - HOC: "1000"
+  string unitary_product_amount = 2 [
+    json_name = "unitaryProductAmount",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // The product carbon footprint of the product excluding biogenic CO2
+  // emissions. Required. Type: Decimal.
+  //
+  // The value MUST be calculated per declared unit with unit kgCO2e per
+  // declared unit, expressed as a decimal equal to or greater than zero.
+  //
+  // For iLEAP:
+  //   - ShipmentFootprint: sum(tces[].co2eWTW)
+  //   - TOC: co2eIntensityWTW
+  //   - HOC: co2eIntensityWTW
+  string p_cf_excluding_biogenic = 3 [
+    json_name = "pCfExcludingBiogenic",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // If present, the product carbon footprint of the product including all
+  // biogenic emissions (CO2 and otherwise). O*. Type: Decimal.
+  //
+  // The value MUST be calculated per declared unit with unit kgCO2e per
+  // declared unit, expressed as a decimal.
+  //
+  // Note: the value of this property can be less than 0 (zero).
+  string p_cf_including_biogenic = 4 [
+    json_name = "pCfIncludingBiogenic",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // The emissions from fossil sources as a result of fuel combustion, from
+  // fugitive emissions, and from process emissions. Required. Type: Decimal.
+  //
+  // The value MUST be calculated per declared unit with unit kgCO2e per
+  // declared unit, expressed as a decimal equal to or greater than zero.
+  string fossil_ghg_emissions = 5 [
+    json_name = "fossilGhgEmissions",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // The fossil carbon content of the product (mass of carbon). Required.
+  // Type: Decimal.
+  //
+  // The value MUST be calculated per declared unit with unit kgC per
+  // declared unit, expressed as a decimal equal to or greater than zero.
+  string fossil_carbon_content = 6 [
+    json_name = "fossilCarbonContent",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // The biogenic carbon content of the product (mass of carbon). Required.
+  // Type: Decimal.
+  //
+  // The value MUST be calculated per declared unit with unit kgC per
+  // declared unit, expressed as a decimal equal to or greater than zero.
+  //
+  // For iLEAP: SHOULD be "0".
+  string biogenic_carbon_content = 7 [
+    json_name = "biogenicCarbonContent",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // If present, emissions resulting from recent (i.e., previous 20 years)
+  // carbon stock loss due to land conversion directly on the area of land
+  // under consideration. O*. Type: Decimal.
+  //
+  // The value MUST include direct land use change (dLUC) where available,
+  // otherwise statistical land use change (sLUC) can be used.
+  // Expressed as kgCO2e per declared unit, equal to or greater than zero.
+  string d_luc_ghg_emissions = 8 [
+    json_name = "dLucGhgEmissions",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // If present, GHG emissions and removals associated with
+  // land-management-related changes, including non-CO2 sources. O*.
+  // Type: Decimal.
+  //
+  // Expressed as kgCO2e per declared unit.
+  string land_management_ghg_emissions = 9 [
+    json_name = "landManagementGhgEmissions",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // If present, all other biogenic GHG emissions associated with product
+  // manufacturing and transport that are not included in dLUC, iLUC, and
+  // land management. O*. Type: Decimal.
+  //
+  // Expressed as kgCO2e per declared unit, equal to or greater than zero.
+  string other_biogenic_ghg_emissions = 10 [
+    json_name = "otherBiogenicGhgEmissions",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // If present, emissions resulting from recent (i.e., previous 20 years)
+  // carbon stock loss due to land conversion on land not owned or
+  // controlled by the company or in its supply chain. Optional.
+  // Type: Decimal.
+  //
+  // Expressed as kgCO2e per declared unit, equal to or greater than zero.
+  string i_luc_ghg_emissions = 11 [
+    json_name = "iLucGhgEmissions",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // If present, the Biogenic Carbon contained in the product converted to
+  // kgCO2e. O*. Type: Decimal.
+  //
+  // Expressed as kgCO2e per declared unit, equal to or less than zero.
+  string biogenic_carbon_withdrawal = 12 [
+    json_name = "biogenicCarbonWithdrawal",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // If present, the GHG emissions resulting from aircraft engine usage for
+  // the transport of the product. Optional. Type: Decimal.
+  //
+  // Expressed as kgCO2e per declared unit, equal to or greater than zero.
+  string aircraft_ghg_emissions = 13 [
+    json_name = "aircraftGhgEmissions",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // The IPCC version of the GWP characterization factors used in the
+  // calculation of the PCF. Required.
+  //
+  // Valid values:
+  //   - "AR6": Sixth Assessment Report of the IPCC
+  //   - "AR5": Fifth Assessment Report of the IPCC
+  //
+  // Note: The set of characterization factor identifiers will likely change
+  // in future revisions.
+  string characterization_factors = 14 [
+    json_name = "characterizationFactors",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        in: [
+          "AR5",
+          "AR6"
+        ]
+      }
+    }
+  ];
+
+  // The IPCC characterization factors sources used. Required.
+  //
+  // Non-empty array of strings matching pattern "^AR\\d+$".
+  repeated string ipcc_characterization_factors_sources = 15 [
+    json_name = "ipccCharacterizationFactorsSources",
+    (buf.validate.field).repeated = {
+      min_items: 1
+      items: {
+        string: {pattern: "^AR\\d+$"}
+      }
+    }
+  ];
+
+  // The cross-sectoral standards applied for calculating or allocating GHG
+  // emissions. Required.
+  //
+  // Valid values: "GHG Protocol Product standard", "ISO Standard 14067",
+  // "ISO Standard 14044".
+  repeated string cross_sectoral_standards_used = 16 [
+    json_name = "crossSectoralStandardsUsed",
+    (buf.validate.field).repeated = {
+      min_items: 1
+      items: {
+        string: {
+          in: [
+            "GHG Protocol Product standard",
+            "ISO Standard 14067",
+            "ISO Standard 14044"
+          ]
+        }
+      }
+    }
+  ];
+
+  // The product-specific or sector-specific rules applied for calculating
+  // or allocating GHG emissions. Optional.
+  //
+  // If no product or sector specific rules were followed, this set MUST
+  // be empty.
+  repeated ProductOrSectorSpecificRule product_or_sector_specific_rules = 17 [json_name = "productOrSectorSpecificRules"];
+
+  // The standard followed to account for biogenic emissions and removals.
+  // O*.
+  //
+  // Valid values:
+  //   - "PEF": EU Product Environmental Footprint Guide
+  //   - "ISO": ISO 14067 standard
+  //   - "GHGP": Greenhouse Gas Protocol Land sector and Removals Guidance
+  //   - "Quantis": Quantis Accounting for Natural Climate Solutions Guidance
+  //
+  // Note: The enumeration of standards above will be evolved in future
+  // revisions.
+  string biogenic_accounting_methodology = 18 [
+    json_name = "biogenicAccountingMethodology",
+    (buf.validate.field).string = {
+      in: [
+        "PEF",
+        "ISO",
+        "GHGP",
+        "Quantis"
+      ]
+    }
+  ];
+
+  // The processes attributable to each lifecycle stage. Required.
+  string boundary_processes_description = 19 [
+    json_name = "boundaryProcessesDescription",
+    (buf.validate.field).required = true
+  ];
+
+  // The start (including) of the time boundary for which the PCF value is
+  // considered to be representative. Required.
+  //
+  // Specifically, this start date represents the earliest date from which
+  // activity data was collected to include in the PCF calculation.
+  google.protobuf.Timestamp reference_period_start = 20 [
+    json_name = "referencePeriodStart",
+    (buf.validate.field).required = true
+  ];
+
+  // The end (excluding) of the time boundary for which the PCF value is
+  // considered to be representative. Required.
+  //
+  // Specifically, this end date represents the latest date from which
+  // activity data was collected to include in the PCF calculation.
+  google.protobuf.Timestamp reference_period_end = 21 [
+    json_name = "referencePeriodEnd",
+    (buf.validate.field).required = true
+  ];
+
+  // If present, an ISO 3166-2 Subdivision Code. Conditionally required.
+  //
+  // See geographic scope rules in the message-level comment.
+  string geography_country_subdivision = 22 [json_name = "geographyCountrySubdivision"];
+
+  // If present, an ISO 3166-1 alpha-2 country code. Conditionally required.
+  //
+  // See geographic scope rules in the message-level comment.
+  string geography_country = 23 [
+    json_name = "geographyCountry",
+    (buf.validate.field).string.pattern = "^[A-Z]{2}$"
+  ];
+
+  // If present, a UN geographic region or subregion. Conditionally required.
+  //
+  // See geographic scope rules in the message-level comment.
+  //
+  // Valid values: "Africa", "Americas", "Asia", "Europe", "Oceania",
+  // "Australia and New Zealand", "Central Asia", "Eastern Asia",
+  // "Eastern Europe", "Latin America and the Caribbean", "Melanesia",
+  // "Micronesia", "Northern Africa", "Northern America", "Northern Europe",
+  // "Polynesia", "South-eastern Asia", "Southern Asia", "Southern Europe",
+  // "Sub-Saharan Africa", "Western Asia", "Western Europe".
+  string geography_region_or_subregion = 24 [json_name = "geographyRegionOrSubregion"];
+
+  // If secondary data was used to calculate the CarbonFootprint, then it
+  // MUST include this property with the emission factors used. Optional.
+  //
+  // If no secondary data is used, this property MUST be undefined (not
+  // null, not an empty array -- absent from JSON).
+  repeated EmissionFactorDS secondary_emission_factor_sources = 25 [json_name = "secondaryEmissionFactorSources"];
+
+  // The percentage of emissions excluded from PCF. Required.
+  //
+  // Expressed as a decimal number between 0.0 and 5.0 including.
+  double exempted_emissions_percent = 26 [
+    json_name = "exemptedEmissionsPercent",
+    (buf.validate.field) = {
+      required: true
+      double: {
+        gte: 0
+        lte: 5
+      }
+    }
+  ];
+
+  // Rationale behind exclusion of specific PCF emissions. Required.
+  //
+  // CAN be the empty string if no emissions were excluded.
+  string exempted_emissions_description = 27 [
+    json_name = "exemptedEmissionsDescription",
+    (buf.validate.field).required = true
+  ];
+
+  // A boolean flag indicating whether packaging emissions are included in
+  // pCfExcludingBiogenic and pCfIncludingBiogenic. Required.
+  //
+  // For iLEAP: MUST be false.
+  bool packaging_emissions_included = 28 [
+    json_name = "packagingEmissionsIncluded",
+    (buf.validate.field).required = true
+  ];
+
+  // Emissions resulting from the packaging of the product. Optional.
+  // Type: Decimal.
+  //
+  // Expressed as kgCO2e per declared unit, equal to or greater than zero.
+  // MUST NOT be defined if packagingEmissionsIncluded is false.
+  string packaging_ghg_emissions = 29 [
+    json_name = "packagingGhgEmissions",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // If present, a description of any allocation rules applied and the
+  // rationale explaining how the selected approach aligns with Pathfinder
+  // Framework rules (see Section 3.3.1.4). Optional.
+  string allocation_rules_description = 30 [json_name = "allocationRulesDescription"];
+
+  // If present, the results, key drivers, and a short qualitative
+  // description of the uncertainty assessment. Optional.
+  string uncertainty_assessment_description = 31 [json_name = "uncertaintyAssessmentDescription"];
+
+  // The share of primary data in percent. O*.
+  //
+  // For reporting periods ending before the beginning of year 2025, at
+  // least primaryDataShare or dqi MUST be defined.
+  //
+  // For reporting periods including the beginning of year 2025 or after,
+  // this property MUST be defined.
+  double primary_data_share = 32 [
+    json_name = "primaryDataShare",
+    (buf.validate.field).double = {
+      gte: 0
+      lte: 100
+    }
+  ];
+
+  // If present, the Data Quality Indicators in accordance with the
+  // Pathfinder Framework Sections 4.2.1 and 4.2.3, Appendix B. O*.
+  //
+  // For reporting periods ending before the beginning of year 2025, at
+  // least primaryDataShare or dqi MUST be defined.
+  //
+  // For reporting periods including the beginning of year 2025 or after,
+  // this property MUST be defined.
+  DataQualityIndicators dqi = 33;
+
+  // If present, the Assurance information in accordance with the Pathfinder
+  // Framework. Optional.
+  Assurance assurance = 34;
 }

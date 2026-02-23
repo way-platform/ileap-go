@@ -2,11 +2,39 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+import "buf/validate/validate.proto";
 
-// GlecDistance represents distance values per GLEC Framework.
-message GlecDistance {
-  string actual = 1;
-  string glec = 2 [json_name = "gcd"];
-  string sfd = 3;
+// GLECDistance represents a distance in kilometers between origin and
+// destination as defined in the GLEC Framework.
+//
+// At least one of the properties (actual, gcd, sfd) MUST be defined.
+//
+// In JSON, a GLECDistance MUST be encoded as a JSON Object.
+//
+// See iLEAP Technical Specifications, section "Data Type GLECDistance".
+// Reference: https://sine-fdn.github.io/ileap-extension/#dt-glecdistance
+message GLECDistance {
+  option (buf.validate.message).cel = {
+    id: "at_least_one_distance"
+    message: "at least one of actual, gcd, or sfd must be set"
+    expression: "has(this.actual) || has(this.gcd) || has(this.sfd)"
+  };
+
+  // Actual Distance: Distance between the origin and the destination of a
+  // consignment of freight or a vehicle, along a specified route (or from
+  // telematics), as defined in the GLEC Framework.
+  // Optional. Type: Decimal. Unit: kilometers.
+  string actual = 1 [(buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"];
+
+  // Great Circle Distance (GCD): The shortest distance between two points
+  // by crow-line, including the curving of the Earth. It is an approach
+  // used in air transport. As defined in the GLEC Framework.
+  // Optional. Type: Decimal. Unit: kilometers.
+  string gcd = 2 [(buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"];
+
+  // Shortest Feasible Distance (SFD): Represents the shortest practical
+  // route between two places taking into account the real operating
+  // conditions. As defined in the GLEC Framework.
+  // Optional. Type: Decimal. Unit: kilometers.
+  string sfd = 3 [(buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"];
 }

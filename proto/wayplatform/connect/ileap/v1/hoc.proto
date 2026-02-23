@@ -2,22 +2,229 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
-
+import "buf/validate/validate.proto";
 import "wayplatform/connect/ileap/v1/energy_carrier.proto";
+import "wayplatform/connect/ileap/v1/location.proto";
 
-// HOC (Hub Operation Category) is the iLEAP extension for hub operation footprints.
+// HOC (Hub Operation Category) contains hub operation category data.
+// It is referenced in a Transport Chain Element through the TCE.hocId
+// property.
+//
+// HOCs are the building blocks for the calculation of a Transport Chain
+// Element with hub operations.
+//
+// HOCs are exchanged as PACT DataModelExtensions in ProductFootprints via
+// the GET /2/footprints endpoint (Data Transaction DT#2).
+//
+// PACT integration (see iLEAP spec "PCF Mapping for HOC"):
+//   - productIds: "urn:pathfinder:product:customcode:vendor-assigned:hoc:{hocId}"
+//   - productCategoryCpc: MUST be "83117"
+//   - pcf.declaredUnit: MUST be "kilogram"
+//   - pcf.unitaryProductAmount: "1000"
+//   - pcf.pCfExcludingBiogenic: co2eIntensityWTW
+//   - pcf.packagingEmissionsIncluded: MUST be false
+//   - extensions[].dataSchema: "https://api.ileap.sine.dev/hoc.json"
+//
+// See iLEAP Technical Specifications, section "Hub Operation Category (HOC)".
+// Reference: https://sine-fdn.github.io/ileap-extension/#dt-hoc
 message HOC {
-  string hoc_id = 1 [json_name = "hocId"];
-  string hub_type = 2 [json_name = "hubType"];
-  string hub_activity_unit = 3 [json_name = "hubActivityUnit"];
-  string inbound_transport_mode = 4 [json_name = "inboundTransportMode"];
-  string outbound_transport_mode = 5 [json_name = "outboundTransportMode"];
-  string temperature_control = 6 [json_name = "temperatureControl"];
-  string co2e_intensity_ttw = 7 [json_name = "co2eIntensityTTW"];
-  string co2e_intensity_wtw = 8 [json_name = "co2eIntensityWTW"];
-  string co2e_intensity_throughput = 9 [json_name = "co2eIntensityThroughput"];
-  repeated EnergyCarrier energy_carriers = 10 [json_name = "energyCarriers"];
-  bool is_verified = 11 [json_name = "isVerified"];
-  bool is_accredited = 12 [json_name = "isAccredited"];
+  // The id of the HOC. Required.
+  string hoc_id = 1 [
+    json_name = "hocId",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Text description of the applicable HOC. Including hub type, contract
+  // type, equipment type, freight temperature, etc. Optional.
+  string description = 2;
+
+  // The non-empty set (without duplicates) of certifications of the
+  // calculation methodology used to calculate the GHG emissions value
+  // and related variables. Optional.
+  //
+  // Elements of the array MUST be one of:
+  //   - "ISO14083:2023": Compliant with ISO 14083:2023
+  //   - "GLECv2": Compliant with GLEC Framework v2.0
+  //   - "GLECv3": Compliant with GLEC Framework v3
+  //   - "GLECv3.1": Compliant with GLEC Framework v3.1
+  //
+  // Note: The enumeration of certifications will be evolved in future
+  // revisions. Account for this when implementing the validation of this
+  // property.
+  repeated string certifications = 3 [(buf.validate.field).repeated = {
+    unique: true
+    items: {
+      string: {
+        in: [
+          "ISO14083:2023",
+          "GLECv2",
+          "GLECv3",
+          "GLECv3.1"
+        ]
+      }
+    }
+  }];
+
+  // Type of Hub. Required.
+  //
+  // Valid values (see iLEAP spec HubType enum):
+  //   - "Transshipment": Hubs where transshipment is the main service (>80% of goods)
+  //   - "StorageAndTransshipment": Hubs where both transshipment and warehousing are relevant
+  //   - "Warehouse": Hubs where warehousing is the main service (>80% of goods)
+  //   - "LiquidBulkTerminal": Terminals equipped to handle cargo in liquid and gaseous forms
+  //   - "MaritimeContainerTerminal": Hubs where maritime containers are handled
+  string hub_type = 4 [
+    json_name = "hubType",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        in: [
+          "Transshipment",
+          "StorageAndTransshipment",
+          "Warehouse",
+          "LiquidBulkTerminal",
+          "MaritimeContainerTerminal"
+        ]
+      }
+    }
+  ];
+
+  // Temperature control status of the hub. Optional.
+  //
+  // If defined, the value MUST be one of:
+  //   - "ambient": For HOCs comprising non-temperature controlled freight only
+  //   - "refrigerated": For HOCs comprising refrigerated freight only
+  //   - "mixed": For HOCs comprising both ambient and refrigerated freight
+  string temperature_control = 5 [
+    json_name = "temperatureControl",
+    (buf.validate.field).string = {
+      in: [
+        "ambient",
+        "refrigerated",
+        "mixed"
+      ]
+    }
+  ];
+
+  // The address of the hub. Optional.
+  Location hub_location = 6 [json_name = "hubLocation"];
+
+  // Indicates the transport mode upstream the hub for this HOC. Optional.
+  //
+  // Valid values: "Road", "Rail", "Air", "Sea", "InlandWaterway".
+  string inbound_transport_mode = 7 [
+    json_name = "inboundTransportMode",
+    (buf.validate.field).string = {
+      in: [
+        "Road",
+        "Rail",
+        "Air",
+        "Sea",
+        "InlandWaterway"
+      ]
+    }
+  ];
+
+  // Indicates the transport mode downstream the hub for this HOC. Optional.
+  //
+  // Valid values: "Road", "Rail", "Air", "Sea", "InlandWaterway".
+  string outbound_transport_mode = 8 [
+    json_name = "outboundTransportMode",
+    (buf.validate.field).string = {
+      in: [
+        "Road",
+        "Rail",
+        "Air",
+        "Sea",
+        "InlandWaterway"
+      ]
+    }
+  ];
+
+  // Category of relevant packaging or transport equipment units utilized
+  // for the transport of the consignment. Optional.
+  //
+  // Valid values: "Box", "Pallet", "Container-TEU", "Container-FEU",
+  // "Container".
+  string packaging_or_tr_eq_type = 9 [
+    json_name = "packagingOrTrEqType",
+    (buf.validate.field).string = {
+      in: [
+        "Box",
+        "Pallet",
+        "Container-TEU",
+        "Container-FEU",
+        "Container"
+      ]
+    }
+  ];
+
+  // Number of packaging or transport equipment units utilized to transport
+  // the related consignment by the Transport Operator or Transport Service
+  // Organizer. Optional.
+  int32 packaging_or_tr_eq_amount = 10 [json_name = "packagingOrTrEqAmount"];
+
+  // The non-empty array of EnergyCarriers used to generate mechanical
+  // movement or heat and to generate chemical or physical processes, as
+  // defined in the GLEC Framework. Required.
+  //
+  // The sum of the relative shares of the energy carriers used in the HOC
+  // MUST equal 1. The relative share of each energy carrier MUST be
+  // computed relative to (total) hub activity (with unit at the denominator
+  // of hubActivityUnit) of the HOC.
+  repeated EnergyCarrier energy_carriers = 11 [
+    json_name = "energyCarriers",
+    (buf.validate.field).repeated.min_items = 1
+  ];
+
+  // The Coefficient relating specified hub activity and WTW GHG emissions,
+  // with unit kgCO2e per hubActivityUnit as defined in the GLEC Framework.
+  // Required. Type: Decimal.
+  string co2e_intensity_wtw = 12 [
+    json_name = "co2eIntensityWTW",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // The Coefficient relating specified hub activity and TTW GHG emissions,
+  // with unit kgCO2e per hubActivityUnit as defined in the GLEC Framework.
+  // Required. Type: Decimal.
+  string co2e_intensity_ttw = 13 [
+    json_name = "co2eIntensityTTW",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // Indicates the freight hub activity unit at the denominator of
+  // co2eIntensityWTW and co2eIntensityTTW. Required.
+  //
+  // Valid values:
+  //   - "TEU": Leaving the hub for sea and inland waterways as outbound transport mode
+  //   - "tonnes": Leaving the hub
+  //
+  // Note: The enumeration will be evolved in future revisions. Account for
+  // this when implementing the validation of this property.
+  string hub_activity_unit = 14 [
+    json_name = "hubActivityUnit",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        in: [
+          "TEU",
+          "tonnes"
+        ]
+      }
+    }
+  ];
 }

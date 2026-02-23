@@ -2,16 +2,138 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
-
+import "buf/validate/validate.proto";
 import "wayplatform/connect/ileap/v1/feedstock.proto";
 
-// EnergyCarrier represents an energy carrier with emission factors.
+// EnergyCarrier represents an energy carrier, including its feedstocks.
+//
+// In JSON, an EnergyCarrier MUST be encoded as a JSON Object.
+//
+// See iLEAP Technical Specifications, section "Data Type EnergyCarrier".
+// Reference: https://sine-fdn.github.io/ileap-extension/#dt-energy-carrier
 message EnergyCarrier {
-  string energy_carrier = 1;
-  string energy_consumption_unit = 2;
-  string emission_factor_ttw = 3 [json_name = "emissionFactorTTW"];
-  string emission_factor_wtw = 4 [json_name = "emissionFactorWTW"];
-  string relative_share = 5;
-  repeated Feedstock feedstocks = 6;
+  // The substance used to generate mechanical movement or heat and to
+  // generate chemical or physical processes as per the GLEC Framework.
+  // Required.
+  //
+  // Valid values (see iLEAP spec EnergyCarrierType):
+  //   - "Diesel": Refers to diesel
+  //   - "HVO": Refers to Hydrotreated Vegetable Oil
+  //   - "Petrol": Refers to petrol
+  //   - "CNG": Refers to Compressed Natural Gas
+  //   - "LNG": Refers to Liquefied Natural Gas
+  //   - "LPG": Refers to Liquefied Petroleum Gas
+  //   - "HFO": Refers to Heavy Fuel Oil
+  //   - "MGO": Refers to Marine Gas Oil
+  //   - "Aviation fuel": Refers to aviation fuel
+  //   - "Hydrogen": Refers to hydrogen
+  //   - "Methanol": Refers to methanol
+  //   - "Electric": Refers to electricity
+  //
+  // Note: The enumeration of energy carrier types will be evolved in future
+  // revisions. Account for this when implementing the validation of this
+  // property.
+  string energy_carrier = 1 [
+    json_name = "energyCarrier",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        in: [
+          "Diesel",
+          "HVO",
+          "Petrol",
+          "CNG",
+          "LNG",
+          "LPG",
+          "HFO",
+          "MGO",
+          "Aviation fuel",
+          "Hydrogen",
+          "Methanol",
+          "Electric"
+        ]
+      }
+    }
+  ];
+
+  // The relative share of this energy carrier. Required. Type: Decimal.
+  //
+  // Its value MUST be between 0 (excluding) and 1 (including).
+  //
+  // See the respective use in (TOC.energyCarriers, HOC.energyCarriers,
+  // and TAD.energyCarriers) for further details.
+  string relative_share = 2 [
+    json_name = "relativeShare",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // If defined, the non-empty array of feedstocks of the energy carrier.
+  // Optional.
+  //
+  // The sum total of the feedstock shares MUST be smaller than or equal
+  // to 1.
+  repeated Feedstock feedstocks = 3;
+
+  // Amount of energy carrier consumed per transport activity, as defined
+  // for the TOC or HOC. Optional. Type: Decimal.
+  //
+  // If defined, energyConsumptionUnit MUST be defined as well.
+  string energy_consumption = 4 [
+    json_name = "energyConsumption",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // Unit of the energy consumed corresponding to energyConsumption.
+  // Optional.
+  //
+  // MUST be defined if energyConsumption is defined.
+  //
+  // Valid values:
+  //   - "l": For liters
+  //   - "kg": For kilograms
+  //   - "kWh": For kiloWatt-hour
+  //   - "MJ": For MegaJoules
+  //
+  // Note: The enumeration of energy consumption units will be evolved in
+  // future revisions. Account for this when implementing the validation
+  // of this property.
+  string energy_consumption_unit = 5 [
+    json_name = "energyConsumptionUnit",
+    (buf.validate.field).string = {
+      in: [
+        "l",
+        "kg",
+        "kWh",
+        "MJ"
+      ]
+    }
+  ];
+
+  // The WTW fuel emission factor (certified) with unit kgCO2e per
+  // energy consumption unit (energyConsumptionUnit).
+  // Optional. Type: Decimal.
+  //
+  // This property MUST be defined when EnergyCarrier is used in the
+  // context of a TOC or HOC.
+  string emission_factor_wtw = 6 [
+    json_name = "emissionFactorWTW",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // The TTW fuel emission factor (certified) with unit kgCO2e per
+  // energy consumption unit (energyConsumptionUnit).
+  // Optional. Type: Decimal.
+  //
+  // This property MUST be defined when EnergyCarrier is used in the
+  // context of a TOC or HOC.
+  string emission_factor_ttw = 7 [
+    json_name = "emissionFactorTTW",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
 }

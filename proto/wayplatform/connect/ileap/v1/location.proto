@@ -2,17 +2,62 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+import "buf/validate/validate.proto";
 
-// Location represents a geographic location.
+// Location represents a geographic location as defined in the iLEAP
+// Technical Specifications.
+//
+// See iLEAP Technical Specifications, section "Data Type Location".
+// Reference: https://sine-fdn.github.io/ileap-extension/#dt-location
 message Location {
-  string city = 1;
-  string country = 2;
-  string locode = 3;
-  string iata = 4;
-  string uic = 5;
-  string lat = 6;
-  string lng = 7;
-  string street = 8;
-  string zip = 9;
+  option (buf.validate.message).cel = {
+    id: "lat_lng_pair"
+    message: "lat and lng must both be set or both be unset"
+    expression: "has(this.lat) == has(this.lng)"
+  };
+
+  // Street of the location. Optional.
+  string street = 1;
+
+  // Postal code of the location. Optional.
+  string zip = 2;
+
+  // City of the location. Required.
+  string city = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // An ISO 3166-2 alpha-2 country code. Required.
+  //
+  // See the PACT Technical Specifications ISO3166CC data type for details.
+  string country = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[A-Z]{2}$"
+  ];
+
+  // IATA code of airport. Optional.
+  //
+  // Applies only to (i) TCEs referring to a TOC with mode "Air"
+  // and (ii) TADs with mode "Air".
+  string iata = 5;
+
+  // UN/LOCODE of the location. Optional.
+  string locode = 6;
+
+  // UIC Code of the location. Optional.
+  //
+  // Applies only to (i) TCEs referring to a TOC with mode "Rail"
+  // and (ii) TADs with mode "Rail".
+  string uic = 7;
+
+  // Latitude of the location. Optional. Type: Decimal.
+  //
+  // If lng is defined, lat MUST also be defined.
+  string lat = 8 [(buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"];
+
+  // Longitude of the location. Optional. Type: Decimal.
+  //
+  // If lat is defined, lng MUST also be defined.
+  string lng = 9 [(buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"];
 }

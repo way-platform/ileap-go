@@ -2,23 +2,243 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
-
+import "buf/validate/validate.proto";
 import "wayplatform/connect/ileap/v1/energy_carrier.proto";
 
-// TOC (Transport Operation Category) is the iLEAP extension for transport operation footprints.
+// TOC (Transport Operation Category) contains transport operation category
+// data as defined in the GLEC Framework.
+//
+// The Transport Operator or Transport Service Organizer MUST calculate the
+// TOC in accordance with the GLEC Framework.
+//
+// The Transport Operator or Transport Service Organizer SHOULD then make
+// the TOC available through the PACT Network API as a ProductFootprint.
+//
+// Transport Operation Category data can be obtained from direct measurement
+// (see Primary Data definition of ISO 14083) or other measurements (see
+// Secondary Data definition of ISO 14083) such as modeled data or default
+// values.
+//
+// TOCs are exchanged as PACT DataModelExtensions in ProductFootprints via
+// the GET /2/footprints endpoint (Data Transaction DT#2).
+//
+// PACT integration (see iLEAP spec "PCF Mapping for TOC"):
+//   - productIds: "urn:pathfinder:product:customcode:vendor-assigned:toc:{tocId}"
+//   - productCategoryCpc: MUST be "83117"
+//   - pcf.declaredUnit: MUST be "ton kilometer"
+//   - pcf.unitaryProductAmount: "1"
+//   - pcf.pCfExcludingBiogenic: co2eIntensityWTW
+//   - pcf.packagingEmissionsIncluded: MUST be false
+//   - extensions[].dataSchema: "https://api.ileap.sine.dev/toc.json"
+//
+// See iLEAP Technical Specifications, section "Transport Operation Category (TOC)".
+// Reference: https://sine-fdn.github.io/ileap-extension/#dt-toc
 message TOC {
-  string toc_id = 1 [json_name = "tocId"];
-  string mode = 2;
-  string temperature_control = 3 [json_name = "temperatureControl"];
-  string co2e_intensity_ttw = 4 [json_name = "co2eIntensityTTW"];
-  string co2e_intensity_wtw = 5 [json_name = "co2eIntensityWTW"];
-  string co2e_intensity_throughput = 6 [json_name = "co2eIntensityThroughput"];
-  repeated EnergyCarrier energy_carriers = 7 [json_name = "energyCarriers"];
-  string load_factor = 8 [json_name = "loadFactor"];
-  string empty_distance_factor = 9 [json_name = "emptyDistanceFactor"];
-  string transport_activity_unit = 10 [json_name = "transportActivityUnit"];
-  string truck_loading_sequence = 11 [json_name = "truckLoadingSequence"];
-  bool is_verified = 12 [json_name = "isVerified"];
-  bool is_accredited = 13 [json_name = "isAccredited"];
+  // Unique id of the TOC relative to the host system. Required.
+  string toc_id = 1 [
+    json_name = "tocId",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // The non-empty set (without duplicates) of certifications of the
+  // calculation methodology used to calculate the GHG emissions value
+  // and related variables. Optional.
+  //
+  // Elements of the array MUST be one of:
+  //   - "ISO14083:2023": Compliant with ISO 14083:2023
+  //   - "GLECv2": Compliant with GLEC Framework v2.0
+  //   - "GLECv3": Compliant with GLEC Framework v3
+  //   - "GLECv3.1": Compliant with GLEC Framework v3.1
+  //
+  // Note: The enumeration of certifications will be evolved in future
+  // revisions. Account for this when implementing the validation of this
+  // property.
+  repeated string certifications = 2 [(buf.validate.field).repeated = {
+    unique: true
+    items: {
+      string: {
+        in: [
+          "ISO14083:2023",
+          "GLECv2",
+          "GLECv3",
+          "GLECv3.1"
+        ]
+      }
+    }
+  }];
+
+  // Text description of the applicable TOC. Including mode of transport,
+  // contract type, equipment type, vehicle type, freight temperature,
+  // LTL/FTL etc. Optional.
+  string description = 3;
+
+  // Mode of transport. Required.
+  //
+  // Valid values (see iLEAP spec TransportMode enum):
+  //   - "Road": For transport mode road
+  //   - "Rail": For transport mode rail
+  //   - "Air": For transport mode air
+  //   - "Sea": For transport mode sea
+  //   - "InlandWaterway": For transport mode inland waterway
+  string mode = 4 [(buf.validate.field) = {
+    required: true
+    string: {
+      in: [
+        "Road",
+        "Rail",
+        "Air",
+        "Sea",
+        "InlandWaterway"
+      ]
+    }
+  }];
+
+  // Ratio of the mass of the actual load to the maximum legally authorized
+  // load of a particular vehicle on a TOC level. It is applied to the
+  // loaded distance of the transport. Optional. Type: Decimal.
+  //
+  // The value MUST be between 0 (excluding) and 1 (including).
+  string load_factor = 5 [
+    json_name = "loadFactor",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // Ratio of the section of the route of a vehicle during which no freight
+  // is transported over the total distance (loaded plus empty distance) of
+  // a vehicle on a TOC level. Optional. Type: Decimal.
+  //
+  // The value MUST be between 0 (including) and 1 (excluding).
+  string empty_distance_factor = 6 [
+    json_name = "emptyDistanceFactor",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // Temperature control status of the TOC. Optional.
+  //
+  // If defined, the value MUST be one of:
+  //   - "ambient": For TOCs comprising non-temperature controlled freight only
+  //   - "refrigerated": For TOCs comprising refrigerated freight only
+  //   - "mixed": For TOCs comprising both ambient and refrigerated freight
+  string temperature_control = 7 [
+    json_name = "temperatureControl",
+    (buf.validate.field).string = {
+      in: [
+        "ambient",
+        "refrigerated",
+        "mixed"
+      ]
+    }
+  ];
+
+  // Only for road. Optional.
+  //
+  // If defined, the value MUST be one of:
+  //   - "LTL": Less than truck load (PU-PU-DO-DO), as defined in the GLEC Framework
+  //   - "FTL": Full truck load (PU-DO-PU-DO), as defined in the GLEC Framework
+  string truck_loading_sequence = 8 [
+    json_name = "truckLoadingSequence",
+    (buf.validate.field).string = {
+      in: [
+        "LTL",
+        "FTL"
+      ]
+    }
+  ];
+
+  // Only for air transport. Indicates if the movement of freight is
+  // combined with passenger transport (belly freight), or a dedicated
+  // aircraft for the movement of freight (freighter). Optional.
+  //
+  // If defined, the value MUST be one of:
+  //   - "belly freight": Freight combined with passenger transport
+  //   - "freighter": Freight moved by a dedicated aircraft
+  string air_shipping_option = 9 [
+    json_name = "airShippingOption",
+    (buf.validate.field).string = {
+      in: [
+        "belly freight",
+        "freighter"
+      ]
+    }
+  ];
+
+  // Only for air transport. Indicates if the distance travelled is smaller
+  // or greater than 1500 km, as defined in the GLEC Framework. Optional.
+  //
+  // If defined, the value MUST be one of:
+  //   - "short-haul": Distances smaller than 1500 km
+  //   - "long-haul": Distances greater than 1500 km
+  string flight_length = 10 [
+    json_name = "flightLength",
+    (buf.validate.field).string = {
+      in: [
+        "short-haul",
+        "long-haul"
+      ]
+    }
+  ];
+
+  // The non-empty array of EnergyCarriers used to generate mechanical
+  // movement or heat and to generate chemical or physical processes, as
+  // defined in the GLEC Framework. Required.
+  //
+  // The sum of the relative shares of the energy carriers used in the TOC
+  // MUST equal 1. The relative share of each energy carrier MUST be
+  // computed relative to (total) transport activity (with unit at the
+  // denominator of transportActivityUnit) of the TOC.
+  repeated EnergyCarrier energy_carriers = 11 [
+    json_name = "energyCarriers",
+    (buf.validate.field).repeated.min_items = 1
+  ];
+
+  // The Coefficient relating specified transport activity with WTW GHG
+  // emissions with unit kgCO2e per transportActivityUnit as defined in
+  // the GLEC Framework. Required. Type: Decimal.
+  string co2e_intensity_wtw = 12 [
+    json_name = "co2eIntensityWTW",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // The Coefficient relating specified transport activity with TTW GHG
+  // emissions with unit kgCO2e per transportActivityUnit as defined in
+  // the GLEC Framework. Required. Type: Decimal.
+  string co2e_intensity_ttw = 13 [
+    json_name = "co2eIntensityTTW",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // Indicates the freight transport activity unit at the denominator of
+  // co2eIntensityWTW and co2eIntensityTTW. Required.
+  //
+  // Valid values:
+  //   - "TEUkm": For sea and inland waterways
+  //   - "tkm": For everything else
+  //
+  // Note: The enumeration will be evolved in future revisions. Account for
+  // this when implementing the validation of this property.
+  string transport_activity_unit = 14 [
+    json_name = "transportActivityUnit",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        in: [
+          "TEUkm",
+          "tkm"
+        ]
+      }
+    }
+  ];
 }

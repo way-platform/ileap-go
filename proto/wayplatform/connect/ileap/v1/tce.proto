@@ -2,20 +2,272 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
-
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
 import "wayplatform/connect/ileap/v1/glec_distance.proto";
+import "wayplatform/connect/ileap/v1/location.proto";
 
-// TCE (Transport Chain Element) represents a single leg in a shipment.
+// TCE (Transport Chain Element) models information related to a single
+// Transport Chain Element.
+//
+// The data related to TCEs can be obtained from direct measurement (see
+// Primary Data) or other measurements (see Secondary Data).
+//
+// TCEs are typically calculated by Transport Operators and Transport Service
+// Organizers. They are made available to Transport Service Users through the
+// ShipmentFootprint data type and the PACT Data Exchange Protocol.
+//
+// Ordering of TCEs:
+//
+// For reasons of transparency, traceability, auditability, and
+// comprehensibility, the recipients of TCE data should also receive
+// information on the order in which the TCEs occurred during transport.
+// Order means "happens-before" relationship between TCEs relative to other
+// TCEs of the same ShipmentFootprint. The prevTceIds property facilitates
+// this ordering. If defined and the array is empty, the current TCE MUST
+// be the first TCE of the shipment in relation to the ShipmentFootprint.
+//
+// Note: The properties tocId and hocId are mutually exclusive, but one of
+// them MUST be defined.
+//
+// See iLEAP Technical Specifications, section "Transport Chain Element (TCE)".
+// Reference: https://sine-fdn.github.io/ileap-extension/#dt-tce
 message TCE {
-  string tce_id = 1 [json_name = "tceId"];
-  string toc_id = 2 [json_name = "tocId"];
-  string hoc_id = 3 [json_name = "hocId"];
-  string shipment_id = 4 [json_name = "shipmentId"];
-  string co2e_ttw = 5 [json_name = "co2eTTW"];
-  string co2e_wtw = 6 [json_name = "co2eWTW"];
-  string mass = 7;
-  string transport_activity = 8;
-  GlecDistance distance = 9;
-  repeated string prev_tce_ids = 10 [json_name = "prevTceIds"];
+  option (buf.validate.message).cel = {
+    id: "toc_id_or_hoc_id"
+    message: "either tocId or hocId must be set"
+    expression: "has(this.toc_id) || has(this.hoc_id)"
+  };
+
+  // The id of the Transport Chain Element. Required.
+  string tce_id = 1 [
+    json_name = "tceId",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // If defined, the tceIds of Transport Chain Elements preceding the
+  // current TCE. Optional.
+  //
+  // If defined and the array is empty, the current TCE MUST be the first
+  // TCE of the shipment in relation to the ShipmentFootprint.
+  //
+  // See iLEAP spec section "Ordering of TCEs" for more information.
+  repeated string prev_tce_ids = 2 [json_name = "prevTceIds"];
+
+  // If defined, the id of the TOC used for the calculation of this TCE.
+  // Conditionally required.
+  //
+  // Either tocId or hocId MUST be defined.
+  string toc_id = 3 [
+    json_name = "tocId",
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // If defined, the id of the HOC used for the calculation of this TCE.
+  // Conditionally required.
+  //
+  // Either tocId or hocId MUST be defined.
+  string hoc_id = 4 [
+    json_name = "hocId",
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // The shipment id of the shipment related to this TCE. Required.
+  string shipment_id = 5 [
+    json_name = "shipmentId",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // The consignment id of the consignment corresponding to this TCE.
+  // Optional.
+  string consignment_id = 6 [json_name = "consignmentId"];
+
+  // The freight mass of the consignment (SI derived Unit kilograms) and
+  // the packaging provided for transport by the Transport Service User,
+  // excluding any additional packaging or handling equipment used by the
+  // Transport Operator or Transport Service Organizer, in accordance with
+  // the GLEC Framework. Required. Type: Decimal.
+  string mass = 7 [(buf.validate.field) = {
+    required: true
+    string: {
+      min_len: 1
+      pattern: "^-?\\d+(\\.\\d+)?$"
+    }
+  }];
+
+  // Category of relevant packaging or transport equipment units utilized
+  // for the transport of the consignment. Optional.
+  //
+  // Valid values (see iLEAP spec PackagingOrTrEqType):
+  //   - "Box": Refers to boxes
+  //   - "Pallet": Refers to pallets
+  //   - "Container-TEU": Container amount in TEU (Twenty-foot Equivalent Unit)
+  //   - "Container-FEU": Container amount in FEU (Forty-foot Equivalent Unit)
+  //   - "Container": Container where the size is unknown (use discouraged)
+  string packaging_or_tr_eq_type = 8 [
+    json_name = "packagingOrTrEqType",
+    (buf.validate.field).string = {
+      in: [
+        "Box",
+        "Pallet",
+        "Container-TEU",
+        "Container-FEU",
+        "Container"
+      ]
+    }
+  ];
+
+  // Number of packaging or transport equipment units utilized to transport
+  // the related consignment by the Transport Operator or Transport Service
+  // Organizer. Optional. Type: Decimal.
+  //
+  // Example: A 40 ft container is encoded as packagingOrTrEqType
+  // "Container-TEU" with packagingOrTrEqAmount "2".
+  string packaging_or_tr_eq_amount = 9 [
+    json_name = "packagingOrTrEqAmount",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // The distance between the origin and the destination of the activity
+  // related to the TCE. Required.
+  GLECDistance distance = 10 [(buf.validate.field).required = true];
+
+  // The origin of the activity related to the TCE. Optional.
+  Location origin = 11;
+
+  // The destination of the activity related to the TCE. Optional.
+  Location destination = 12;
+
+  // The transport activity of the TCE (SI derived Unit ton kilometers).
+  // Required. Type: Decimal.
+  //
+  // Example: If the transport distance is 700 kilometers and the mass is
+  // 230 kilograms, then the value MUST be "161" ((700 * 230) / 1000).
+  string transport_activity = 13 [
+    json_name = "transportActivity",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // Timestamp of departure. Optional.
+  //
+  // The value MUST be a date and time string conforming to ISO 8601 with
+  // timezone UTC.
+  google.protobuf.Timestamp departure_at = 14 [json_name = "departureAt"];
+
+  // Timestamp of arrival. Optional.
+  //
+  // The value MUST be a date and time string conforming to ISO 8601 with
+  // timezone UTC.
+  google.protobuf.Timestamp arrival_at = 15 [json_name = "arrivalAt"];
+
+  // Identification number of the IATA flight number. Optional.
+  string flight_no = 16 [json_name = "flightNo"];
+
+  // Identification number of a specific vessel operating on a specific
+  // route. Optional.
+  string voyage_no = 17 [json_name = "voyageNo"];
+
+  // Incoterms are a set of internationally recognized rules defining the
+  // responsibilities of sellers and buyers in relation to the logistics
+  // activities between the parties. Optional.
+  //
+  // If defined, the value MUST be one of:
+  //   - "EXW": Ex Works
+  //   - "FCA": Free Carrier
+  //   - "CPT": Carriage Paid to
+  //   - "CIP": Carriage and Insurance Paid to
+  //   - "DAP": Delivered at Place
+  //   - "DPU": Delivered at Place Unloaded
+  //   - "DDP": Delivered Duty Paid
+  //   - "FAS": Free Alongside Ship
+  //   - "FOB": Free on Board
+  //   - "CFR": Cost and Freight
+  //   - "CIF": Cost, Insurance and Freight
+  string incoterms = 18 [(buf.validate.field).string = {
+    in: [
+      "EXW",
+      "FCA",
+      "CPT",
+      "CIP",
+      "DAP",
+      "DPU",
+      "DDP",
+      "FAS",
+      "FOB",
+      "CFR",
+      "CIF"
+    ]
+  }];
+
+  // GHG emissions released to atmosphere during the process of producing,
+  // storing, processing and distributing an energy carrier for vehicle
+  // operation + GHG emissions released to atmosphere as a result of
+  // vehicle operation.
+  // The value MUST be calculated for the TCE with unit kgCO2e.
+  // Required. Type: Decimal.
+  string co2e_wtw = 19 [
+    json_name = "co2eWTW",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // GHG emissions released to atmosphere as a result of vehicle operation.
+  // The value MUST be calculated for the TCE with unit kgCO2e.
+  // Required. Type: Decimal.
+  string co2e_ttw = 20 [
+    json_name = "co2eTTW",
+    (buf.validate.field) = {
+      required: true
+      string: {
+        min_len: 1
+        pattern: "^-?\\d+(\\.\\d+)?$"
+      }
+    }
+  ];
+
+  // Nitrogen oxide released to atmosphere as a result of vehicle operation.
+  // The value MUST be calculated for the TCE with unit kg.
+  // Optional. Type: Decimal.
+  string nox_ttw = 21 [
+    json_name = "noxTTW",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // Sulphur oxide released to atmosphere as a result of vehicle operation.
+  // The value MUST be calculated for the TCE with unit kg.
+  // Optional. Type: Decimal.
+  string sox_ttw = 22 [
+    json_name = "soxTTW",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // Methane released to atmosphere as a result of vehicle operation.
+  // The value MUST be calculated for the TCE with unit kg.
+  // Optional. Type: Decimal.
+  string ch4_ttw = 23 [
+    json_name = "ch4TTW",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // Particulate matter (PM10 and PM2.5) released to atmosphere as a result
+  // of vehicle operation.
+  // The value MUST be calculated for the TCE with unit kg.
+  // Optional. Type: Decimal.
+  string pm_ttw = 24 [
+    json_name = "pmTTW",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
 }

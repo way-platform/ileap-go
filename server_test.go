@@ -9,10 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/way-platform/ileap-go/ileapv1pb"
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"golang.org/x/oauth2"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type mockTokenValidator struct {
@@ -31,12 +30,12 @@ func (m *mockTokenValidator) ValidateToken(_ context.Context, _ string) (*TokenI
 }
 
 type mockFootprintHandler struct {
-	footprints []*ileapv1pb.ProductFootprint
+	footprints []*ileapv1.ProductFootprint
 }
 
 func (m *mockFootprintHandler) GetFootprint(
 	_ context.Context, id string,
-) (*ileapv1pb.ProductFootprint, error) {
+) (*ileapv1.ProductFootprint, error) {
 	for _, fp := range m.footprints {
 		if fp.GetId() == id {
 			return fp, nil
@@ -64,7 +63,7 @@ func (m *mockFootprintHandler) ListFootprints(
 }
 
 type mockTADHandler struct {
-	tads []*ileapv1pb.TAD
+	tads []*ileapv1.TAD
 }
 
 func (m *mockTADHandler) ListTADs(
@@ -137,14 +136,14 @@ func newTestServer() *Server {
 	return NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithFootprintHandler(&mockFootprintHandler{
-			footprints: []*ileapv1pb.ProductFootprint{
-				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-1"); return p }(),
-				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-2"); return p }(),
+			footprints: []*ileapv1.ProductFootprint{
+				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-1"); return p }(),
+				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-2"); return p }(),
 			},
 		}),
 		WithTADHandler(&mockTADHandler{
-			tads: []*ileapv1pb.TAD{
-				func() *ileapv1pb.TAD { t := &ileapv1pb.TAD{}; t.SetActivityId("tad-1"); return t }(),
+			tads: []*ileapv1.TAD{
+				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-1"); return t }(),
 			},
 		}),
 		WithEventHandler(&mockEventHandler{}),
@@ -322,10 +321,10 @@ func TestWithPathPrefix(t *testing.T) {
 		srv := NewServer(
 			WithTokenValidator(&mockTokenValidator{valid: true}),
 			WithFootprintHandler(&mockFootprintHandler{
-				footprints: []*ileapv1pb.ProductFootprint{
-					func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-1"); return p }(),
-					func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-2"); return p }(),
-					func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-3"); return p }(),
+				footprints: []*ileapv1.ProductFootprint{
+					func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-1"); return p }(),
+					func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-2"); return p }(),
+					func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-3"); return p }(),
 				},
 			}),
 			WithPathPrefix("/ileap"),
@@ -456,10 +455,10 @@ func TestListFootprintsPagination(t *testing.T) {
 	srv := NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithFootprintHandler(&mockFootprintHandler{
-			footprints: []*ileapv1pb.ProductFootprint{
-				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-1"); return p }(),
-				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-2"); return p }(),
-				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-3"); return p }(),
+			footprints: []*ileapv1.ProductFootprint{
+				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-1"); return p }(),
+				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-2"); return p }(),
+				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-3"); return p }(),
 			},
 		}),
 	)
@@ -514,7 +513,7 @@ func TestGetFootprint(t *testing.T) {
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		pf := &ileapv1pb.ProductFootprint{}
+		pf := &ileapv1.ProductFootprint{}
 		if err := protojson.Unmarshal(resp.Data, pf); err != nil {
 			t.Fatalf("unmarshal footprint: %v", err)
 		}
@@ -536,10 +535,10 @@ func TestListTads(t *testing.T) {
 	srv := NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithTADHandler(&mockTADHandler{
-			tads: []*ileapv1pb.TAD{
-				func() *ileapv1pb.TAD { t := &ileapv1pb.TAD{}; t.SetActivityId("tad-1"); return t }(),
-				func() *ileapv1pb.TAD { t := &ileapv1pb.TAD{}; t.SetActivityId("tad-2"); return t }(),
-				func() *ileapv1pb.TAD { t := &ileapv1pb.TAD{}; t.SetActivityId("tad-3"); return t }(),
+			tads: []*ileapv1.TAD{
+				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-1"); return t }(),
+				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-2"); return t }(),
+				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-3"); return t }(),
 			},
 		}),
 	)

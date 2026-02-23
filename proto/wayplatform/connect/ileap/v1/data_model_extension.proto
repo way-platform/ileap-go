@@ -2,14 +2,47 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
-
+import "buf/validate/validate.proto";
 import "google/protobuf/struct.proto";
 
-// DataModelExtension is the PACT extension envelope for iLEAP extension data.
+// DataModelExtension is the PACT data model extension envelope.
+//
+// Each data model extension MUST be a valid JSON object conforming with the
+// JSON Representation of Data Model Extensions.
+//
+// For iLEAP, the extension data contains one of: ShipmentFootprint, TOC,
+// or HOC. The dataSchema URL identifies which iLEAP type is contained.
+//
+// iLEAP dataSchema URLs:
+//   - ShipmentFootprint: "https://api.ileap.sine.dev/shipment-footprint.json"
+//   - TOC:               "https://api.ileap.sine.dev/toc.json"
+//   - HOC:               "https://api.ileap.sine.dev/hoc.json"
+//
+// See PACT Technical Specifications v2.1.0, section "Data Type DataModelExtension".
+// Reference: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/#dt-datamodelextension
 message DataModelExtension {
-  string spec_version = 1 [json_name = "specVersion"];
-  string data_schema = 2 [json_name = "dataSchema"];
+  // The version of the DataModelExtension specification. Required.
+  //
+  // For iLEAP, the value MUST be "2.0.0".
+  string spec_version = 1 [
+    json_name = "specVersion",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // A URL pointing to the JSON schema of the extension data. Required.
+  string data_schema = 2 [
+    json_name = "dataSchema",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uri = true
+  ];
+
+  // A URL pointing to the documentation of the extension. Optional.
   string documentation = 3;
-  google.protobuf.Struct data = 4;
+
+  // The actual extension data. Required.
+  //
+  // For iLEAP, this contains the JSON representation of a
+  // ShipmentFootprint, TOC, or HOC.
+  google.protobuf.Struct data = 4 [(buf.validate.field).required = true];
 }

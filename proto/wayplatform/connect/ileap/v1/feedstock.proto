@@ -2,11 +2,48 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+import "buf/validate/validate.proto";
 
-// Feedstock represents feedstock information for energy carriers.
+// Feedstock represents one feedstock of an EnergyCarrier.
+//
+// In JSON, a Feedstock MUST be encoded as a JSON Object.
+//
+// See iLEAP Technical Specifications, section "Data Type Feedstock".
+// Reference: https://sine-fdn.github.io/ileap-extension/#dt-feedstock
 message Feedstock {
-  string feedstock = 1;
-  string feedstock_percentage = 2 [json_name = "feedstockPercentage"];
+  // A feedstock of an EnergyCarrier. Required.
+  //
+  // The value MUST be one of the following:
+  //   - "Fossil": Refers to fossil sources
+  //   - "Natural gas": Refers to natural gas
+  //   - "Grid": Refers to grid electricity
+  //   - "Renewable electricity": Refers to renewable sources of electricity
+  //   - "Cooking oil": Refers to cooking (e.g., vegetable) oil
+  //
+  // Note: The enumeration of feedstocks will be evolved in future revisions.
+  // Account for this when implementing the validation of this property.
+  string feedstock = 1 [(buf.validate.field) = {
+    required: true
+    string: {
+      in: [
+        "Fossil",
+        "Natural gas",
+        "Grid",
+        "Renewable electricity",
+        "Cooking oil"
+      ]
+    }
+  }];
+
+  // The share of the feedstock in the total composition of the energy carrier.
+  // Optional. Type: Decimal.
+  //
+  // The value MUST be between 0 (including) and 1 (including).
+  string feedstock_share = 2 [
+    json_name = "feedstockShare",
+    (buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"
+  ];
+
+  // Country or region of provenance of the feedstock. Optional.
   string region_provenance = 3 [json_name = "regionProvenance"];
 }

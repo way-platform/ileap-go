@@ -11,9 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 // Server is an iLEAP data server HTTP handler.
@@ -533,7 +532,7 @@ func writeJSON(w http.ResponseWriter, v any) {
 	}
 }
 
-func writeGetFootprintResponse(w http.ResponseWriter, fp *ileapv1pb.ProductFootprint) {
+func writeGetFootprintResponse(w http.ResponseWriter, fp *ileapv1.ProductFootprint) {
 	w.Header().Set("Content-Type", "application/json")
 	data, err := protojson.Marshal(fp)
 	if err != nil {
@@ -541,17 +540,32 @@ func writeGetFootprintResponse(w http.ResponseWriter, fp *ileapv1pb.ProductFootp
 		writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
 		return
 	}
-	w.Write([]byte(`{"data":`))
-	w.Write(data)
-	w.Write([]byte(`}`))
+	if _, err := w.Write([]byte(`{"data":`)); err != nil {
+		slog.Error("failed to write response", "error", err)
+		return
+	}
+	if _, err := w.Write(data); err != nil {
+		slog.Error("failed to write response", "error", err)
+		return
+	}
+	if _, err := w.Write([]byte(`}`)); err != nil {
+		slog.Error("failed to write response", "error", err)
+		return
+	}
 }
 
-func writeListFootprintsResponse(w http.ResponseWriter, fps []*ileapv1pb.ProductFootprint) {
+func writeListFootprintsResponse(w http.ResponseWriter, fps []*ileapv1.ProductFootprint) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"data":[`))
+	if _, err := w.Write([]byte(`{"data":[`)); err != nil {
+		slog.Error("failed to write response", "error", err)
+		return
+	}
 	for i, fp := range fps {
 		if i > 0 {
-			w.Write([]byte(","))
+			if _, err := w.Write([]byte(",")); err != nil {
+				slog.Error("failed to write response", "error", err)
+				return
+			}
 		}
 		data, err := protojson.Marshal(fp)
 		if err != nil {
@@ -559,17 +573,29 @@ func writeListFootprintsResponse(w http.ResponseWriter, fps []*ileapv1pb.Product
 			writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
 			return
 		}
-		w.Write(data)
+		if _, err := w.Write(data); err != nil {
+			slog.Error("failed to write response", "error", err)
+			return
+		}
 	}
-	w.Write([]byte(`]}`))
+	if _, err := w.Write([]byte(`]}`)); err != nil {
+		slog.Error("failed to write response", "error", err)
+		return
+	}
 }
 
-func writeListTADsResponse(w http.ResponseWriter, tads []*ileapv1pb.TAD) {
+func writeListTADsResponse(w http.ResponseWriter, tads []*ileapv1.TAD) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"data":[`))
+	if _, err := w.Write([]byte(`{"data":[`)); err != nil {
+		slog.Error("failed to write response", "error", err)
+		return
+	}
 	for i, tad := range tads {
 		if i > 0 {
-			w.Write([]byte(","))
+			if _, err := w.Write([]byte(",")); err != nil {
+				slog.Error("failed to write response", "error", err)
+				return
+			}
 		}
 		data, err := protojson.Marshal(tad)
 		if err != nil {
@@ -577,7 +603,13 @@ func writeListTADsResponse(w http.ResponseWriter, tads []*ileapv1pb.TAD) {
 			writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
 			return
 		}
-		w.Write(data)
+		if _, err := w.Write(data); err != nil {
+			slog.Error("failed to write response", "error", err)
+			return
+		}
 	}
-	w.Write([]byte(`]}`))
+	if _, err := w.Write([]byte(`]}`)); err != nil {
+		slog.Error("failed to write response", "error", err)
+		return
+	}
 }
