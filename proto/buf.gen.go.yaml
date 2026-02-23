@@ -1,5 +1,17 @@
 version: v2
 
+clean: true
+
+managed:
+  enabled: true
+  disable:
+    - module: buf.build/bufbuild/protovalidate
+    - module: buf.build/googleapis/googleapis
+  override:
+    - file_option: go_package
+      path: wayplatform/connect/ileap/v1
+      value: "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1;ileapv1"
+
 inputs:
   - directory: .
     paths:
@@ -7,7 +19,7 @@ inputs:
 
 plugins:
   - local: ["go", "tool", "-modfile=../tools/go.mod", "protoc-gen-go"]
-    out: ..
+    out: gen
     opt:
-      - module=github.com/way-platform/ileap-go
+      - paths=source_relative
       - default_api_level=API_OPAQUE

@@ -1,0 +1,330 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+import "buf/validate/validate.proto";
+import "wayplatform/connect/ileap/v1/product_footprint.proto";
+import "wayplatform/connect/ileap/v1/tad.proto";
+
+// ILeapService mirrors the iLEAP API endpoints as a gRPC/Connect service for
+// forwarding iLEAP requests within internal networks.
+//
+// IMPORTANT: A gRPC or Connect RPC implementation of these endpoints is NOT
+// and is NOT meant to be iLEAP-conformant. iLEAP conformance requires a
+// specific HTTP REST API contract (JSON over HTTP, OData filtering, Link
+// header pagination, OAuth2 Client Credentials authentication, etc.) that
+// cannot be satisfied by gRPC or Connect transports. This service definition
+// exists to provide a typed internal API for systems that need to forward or
+// proxy iLEAP data, where iLEAP conformance is handled by an external
+// HTTP server at the network boundary.
+//
+// The RPCs below correspond to the following iLEAP/PACT HTTP API actions:
+//
+//   - ListFootprints:            PACT Action ListFootprints (GET /2/footprints)
+//   - GetFootprint:              PACT Action GetFootprint (GET /2/footprints/{id})
+//   - ListTransportActivityData: iLEAP Action TransportActivityData (GET /2/ileap/tad)
+//
+// The iLEAP Technical Specifications extend the PACT Data Exchange Protocol
+// (v2.1.0) with logistics emissions data types conforming to ISO 14083 and
+// the GLEC Framework v3.1. This integration reduces the friction between host
+// systems used by Transport Service Organizers or Transport Operators and
+// those used by Transport Service Users, enabling a holistic flow and approach
+// to the management of carbon emissions.
+//
+// A conformant iLEAP host system MUST implement:
+//   1. The authentication flow as defined in PACT v2.1.0 Section 6.3.
+//   2. The exchange of ShipmentFootprint, TOC, and HOC as PACT
+//      DataModelExtensions in ProductFootprints (see iLEAP Section 6).
+//   3. The endpoint for the exchange of Transport Activity Data
+//      (see iLEAP Section 5.1).
+//
+// Conformance levels:
+//   - iLEAP Emissions Data Conformance: All PACT Required Test Cases + TC001
+//     (ShipmentFootprint) + TC002 (TOC) + TC003 (HOC).
+//   - iLEAP Activity Data Conformance: TC004 (list TAD) + TC005 (filtered
+//     TAD) + TC006 (limited TAD) + TC007 (invalid token) + TC008 (expired
+//     token).
+//
+// Authentication (PACT Action Authenticate, POST /auth/token) is handled at
+// the transport layer via interceptors/middleware and is not modeled as an RPC.
+//
+// Note: PACT Action Events (POST /2/events) is intentionally excluded from
+// this service definition. Action Events is OPTIONAL per PACT v2.1.0 Section
+// 6.8 and enables CloudEvent-based notifications (PF Update, PF Request, PF
+// Response, PF Response Error events). It will be added in a future iteration.
+//
+// References:
+//   - iLEAP Technical Specifications: https://sine-fdn.github.io/ileap-extension/
+//   - PACT Data Exchange Protocol v2.1.0: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/
+//   - GLEC Framework v3.1: https://www.smartfreightcentre.org/en/our-programs/global-logistics-emissions-council/glec-framework/
+//   - ISO 14083:2023: Greenhouse gases — Quantification and reporting of greenhouse gas emissions arising from transport chain operations
+service ILeapService {
+  // ListFootprints lists ProductFootprints with pagination and optional
+  // filtering.
+  //
+  // This RPC corresponds to PACT Action ListFootprints (GET /2/footprints).
+  //
+  // Host systems SHOULD implement an access management system and only return
+  // the ProductFootprints for which the data owner granted access to the
+  // requesting data recipient.
+  //
+  // The host system MUST return the latest version of each footprint and MAY
+  // return previous versions. Among the footprints with identical id values,
+  // the one with the maximum version value is the latest version.
+  //
+  // For iLEAP, ProductFootprints contain DataModelExtensions with
+  // ShipmentFootprint (DT#1), TOC (DT#2), or HOC (DT#2) data.
+  //
+  // Error responses:
+  //   - AccessDenied (gRPC PERMISSION_DENIED): Invalid or missing token.
+  //   - TokenExpired (gRPC UNAUTHENTICATED): Expired access token.
+  //   - BadRequest (gRPC INVALID_ARGUMENT): Malformed request.
+  //   - NotImplemented (gRPC UNIMPLEMENTED): Unsupported filter.
+  //
+  // See PACT v2.1.0 Section 6.6 "Action ListFootprints".
+  // Reference: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/#api-action-list
+  rpc ListFootprints(ListFootprintsRequest) returns (ListFootprintsResponse);
+
+  // GetFootprint retrieves a single ProductFootprint by its identifier.
+  //
+  // This RPC corresponds to PACT Action GetFootprint
+  // (GET /2/footprints/{id}).
+  //
+  // Host systems SHOULD implement an access management system and only return
+  // the ProductFootprint for which the data owner granted access to the
+  // requesting data recipient.
+  //
+  // If there were changes to the requested ProductFootprint, the host system
+  // SHOULD return the latest version (the one with the maximum value of the
+  // version property).
+  //
+  // Error responses:
+  //   - AccessDenied (gRPC PERMISSION_DENIED): Invalid or missing token.
+  //   - TokenExpired (gRPC UNAUTHENTICATED): Expired access token.
+  //   - NoSuchFootprint (gRPC NOT_FOUND): Footprint ID not found.
+  //   - BadRequest (gRPC INVALID_ARGUMENT): Malformed request.
+  //
+  // See PACT v2.1.0 Section 6.7 "Action GetFootprint".
+  // Reference: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/#api-action-get
+  rpc GetFootprint(GetFootprintRequest) returns (GetFootprintResponse);
+
+  // ListTransportActivityData lists the data owner's Transport Activity Data
+  // with pagination and optional filtering.
+  //
+  // This RPC corresponds to iLEAP Action TransportActivityData
+  // (GET /2/ileap/tad).
+  //
+  // Host systems SHOULD implement an access management system to return only
+  // the Transport Activity Data intended for the requesting data recipient.
+  //
+  // Filtering CAN be requested by a data recipient by supplying filter
+  // parameters. If a host system does not implement filtering, it MUST
+  // process the request as if no filter was provided. If a host system
+  // implements filtering, it CAN process the filter on a best-effort basis:
+  // it CAN ignore the filter or parts of it, return an error with code
+  // NotImplemented for unsupported filters, or treat concatenated filters
+  // disjunctively (returning the union of individual filter results).
+  //
+  // Transport Activity Data (TAD) is designed for entities (Transport
+  // Operators or Transport Service Organizers) that lack the capabilities to
+  // perform carbon emission calculations or are contractually obliged to
+  // exchange activity data with another party (Data Transaction DT#3).
+  //
+  // Error responses:
+  //   - AccessDenied (gRPC PERMISSION_DENIED): Invalid or missing token.
+  //   - TokenExpired (gRPC UNAUTHENTICATED): Expired access token.
+  //   - BadRequest (gRPC INVALID_ARGUMENT): Malformed request.
+  //   - NotImplemented (gRPC UNIMPLEMENTED): Unsupported filter.
+  //
+  // See iLEAP Technical Specifications Section 5.1 "Action TransportActivityData".
+  // Reference: https://sine-fdn.github.io/ileap-extension/#action-tad
+  rpc ListTransportActivityData(ListTransportActivityDataRequest) returns (ListTransportActivityDataResponse);
+}
+
+// ListFootprintsRequest is the request message for ListFootprints.
+//
+// Corresponds to the HTTP request:
+//   GET /2/footprints?$filter={filter}&limit={limit}
+//
+// See PACT v2.1.0 Section 6.6.3 "Request Syntax".
+message ListFootprintsRequest {
+  // OData v4 $filter expression for filtering ProductFootprints.
+  //
+  // The $filter statement MUST only include the following operators and
+  // properties:
+  //   - Logical operators eq, lt, le, gt, ge on properties: created,
+  //     updated, productCategoryCpc, pcf/geographyCountry,
+  //     pcf/referencePeriodStart, pcf/referencePeriodEnd.
+  //   - Logical operator "and".
+  //   - Lambda operator "any" on collection-valued properties: companyIds,
+  //     productIds. The expression argument of the operator MUST only
+  //     include the "eq" operator.
+  //
+  // Examples:
+  //   - Filter by CPC code: "productCategoryCpc eq '83117'"
+  //   - Filter by country: "pcf/geographyCountry eq 'DE'"
+  //   - Filter by period: "(pcf/referencePeriodStart ge '2023-01-01T00:00:00.000Z') and (pcf/referencePeriodEnd lt '2024-01-01T00:00:00.000Z')"
+  //   - Filter by product: "productIds/any(productId:(productId eq 'urn:...'))"
+  //
+  // Support for filtering by a host system is OPTIONAL. If a host system
+  // does not implement filtering, it MUST process the request as if no
+  // filter was provided. If it implements filtering, it CAN refuse to
+  // process the filter and return an error with code NotImplemented.
+  //
+  // See PACT v2.1.0 Section 6.6.1 "Filtering".
+  string filter = 1 [json_name = "$filter"];
+
+  // Maximum number of ProductFootprints to return. The host system MAY
+  // return fewer ProductFootprints than requested. If there are additional
+  // ProductFootprints, the response will include a next_page_token.
+  //
+  // The value MUST be a positive integer if defined.
+  //
+  // See PACT v2.1.0 Section 6.6.2 "Pagination".
+  int32 limit = 2 [(buf.validate.field).int32.gte = 0];
+
+  // Pagination token from a previous ListFootprintsResponse. When provided,
+  // the server returns the next page of results.
+  //
+  // In the HTTP API, pagination is achieved through Link headers with
+  // rel="next" conforming to RFC 8288. The pagination link MUST be valid
+  // for at least 180 seconds after creation. Data recipients SHOULD retry
+  // with randomized exponential back-off on errors.
+  string page_token = 3 [json_name = "pageToken"];
+}
+
+// ListFootprintsResponse is the response message for ListFootprints.
+//
+// Corresponds to the HTTP response body:
+//   { "data": [ProductFootprint, ...] }
+//
+// The host system MUST return the latest version of each footprint and MAY
+// return previous versions.
+//
+// See PACT v2.1.0 Section 6.6.4 "Response Syntax".
+message ListFootprintsResponse {
+  // The list of ProductFootprints. If the list is empty, MUST be an empty
+  // array.
+  //
+  // If the request included a filter, the expression SHOULD be evaluated
+  // for each ProductFootprint as described in the OData v4 specification,
+  // and only ProductFootprints where the expression evaluates to true
+  // SHOULD be included. ProductFootprints not made available for the data
+  // recipient SHOULD be omitted.
+  repeated ProductFootprint data = 1;
+
+  // Pagination token for the next page. If empty, there are no more
+  // results.
+  //
+  // In the HTTP API, this corresponds to the Link header with rel="next".
+  // The target IRI of the Link header MUST be absolute and its host MUST
+  // equal the host of the original request.
+  string next_page_token = 2 [json_name = "nextPageToken"];
+}
+
+// GetFootprintRequest is the request message for GetFootprint.
+//
+// Corresponds to the HTTP request:
+//   GET /2/footprints/{id}
+//
+// See PACT v2.1.0 Section 6.7.1 "Request Syntax".
+message GetFootprintRequest {
+  // The ProductFootprint identifier (UUID) to retrieve.
+  //
+  // The value MUST be the id property of a ProductFootprint the data
+  // recipient intends to retrieve.
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+// GetFootprintResponse is the response message for GetFootprint.
+//
+// Corresponds to the HTTP response body:
+//   { "data": ProductFootprint }
+//
+// If there were changes to the requested ProductFootprint, the host system
+// SHOULD return the latest version (the one with the maximum value of the
+// version property matching the requested id).
+//
+// See PACT v2.1.0 Section 6.7.2 "Response Syntax".
+message GetFootprintResponse {
+  // The requested ProductFootprint.
+  ProductFootprint data = 1 [(buf.validate.field).required = true];
+}
+
+// ListTransportActivityDataRequest is the request message for
+// ListTransportActivityData.
+//
+// Corresponds to the HTTP request:
+//   GET /2/ileap/tad?{filter}&limit={limit}
+//
+// Filtering uses key-value query parameters where the name is the
+// case-sensitive field name and the value is case-insensitive.
+// Filter pairs CAN be concatenated with "&".
+//
+// Example: GET /2/ileap/tad?feedstock=Fossil&packagingOrTrEqType=pallet
+//
+// See iLEAP Technical Specifications Section 5.1.3 "Request Syntax".
+message ListTransportActivityDataRequest {
+  // Filter by transport mode. Case-insensitive.
+  //
+  // Valid values: "Road", "Rail", "Air", "Sea", "InlandWaterway".
+  string mode = 1;
+
+  // Filter by feedstock type. Case-insensitive.
+  //
+  // Valid values: "Fossil", "Natural gas", "Grid",
+  // "Renewable electricity", "Cooking oil".
+  string feedstock = 2;
+
+  // Filter by packaging or transport equipment type. Case-insensitive.
+  //
+  // Valid values: "Box", "Pallet", "Container-TEU", "Container-FEU",
+  // "Container".
+  string packaging_or_tr_eq_type = 3 [json_name = "packagingOrTrEqType"];
+
+  // Maximum number of TADs to return. The host system MAY return fewer
+  // TADs than requested. If there are additional TADs, the response will
+  // include a next_page_token.
+  //
+  // The value MUST be a positive integer if defined.
+  //
+  // See iLEAP Technical Specifications Section 5.1.2 "Pagination".
+  int32 limit = 4 [(buf.validate.field).int32.gte = 0];
+
+  // Pagination token from a previous ListTransportActivityDataResponse.
+  // When provided, the server returns the next page of results.
+  //
+  // In the HTTP API, pagination is achieved through Link headers with
+  // rel="next" conforming to RFC 8288. The pagination link MUST be valid
+  // for at least 180 seconds after creation. Data recipients SHOULD retry
+  // with randomized exponential back-off on errors. Previous pagination
+  // links MAY no longer work after advancing to the next page.
+  string page_token = 5 [json_name = "pageToken"];
+}
+
+// ListTransportActivityDataResponse is the response message for
+// ListTransportActivityData.
+//
+// Corresponds to the HTTP response body:
+//   { "data": [TAD, ...] }
+//
+// If the host system accepts the access token, the body MUST be a JSON
+// object with property "data" containing the list of Transport Activity
+// Data encoded as a JSON array.
+//
+// See iLEAP Technical Specifications Section 5.1.4 "Response Syntax".
+message ListTransportActivityDataResponse {
+  // The list of Transport Activity Data.
+  repeated TAD data = 1;
+
+  // Pagination token for the next page. If empty, there are no more
+  // results.
+  //
+  // In the HTTP API, this corresponds to the Link header with rel="next".
+  // The target IRI of the Link header MUST be absolute and its host MUST
+  // equal the host of the original request.
+  string next_page_token = 2 [json_name = "nextPageToken"];
+}

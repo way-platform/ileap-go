@@ -1,8 +1,6 @@
 package ileap
 
-import (
-	"github.com/way-platform/ileap-go/ileapv1pb"
-)
+import ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 
 // ListFootprintsRequest is the request for listing footprints (handler contract).
 type ListFootprintsRequest struct {
@@ -17,7 +15,7 @@ type ListFootprintsRequest struct {
 // ListFootprintsResponse is the response for listing footprints (handler contract).
 type ListFootprintsResponse struct {
 	// Data is the list of footprints.
-	Data []*ileapv1pb.ProductFootprint
+	Data []*ileapv1.ProductFootprint
 	// Total is the total number of footprints matching the filter (before pagination).
 	Total int
 }
@@ -35,7 +33,7 @@ type ListTADsRequest struct {
 // ListTADsResponse is the response for listing transport activity data (handler contract).
 type ListTADsResponse struct {
 	// Data is the list of TADs.
-	Data []*ileapv1pb.TAD
+	Data []*ileapv1.TAD
 	// Total is the total number of TADs matching the filter (before pagination).
 	Total int
 }

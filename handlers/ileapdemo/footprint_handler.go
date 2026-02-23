@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/ileapv1pb"
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 )
 
 // FootprintHandler implements ileap.FootprintHandler using embedded demo data.
 type FootprintHandler struct {
-	footprints []*ileapv1pb.ProductFootprint
+	footprints []*ileapv1.ProductFootprint
 }
 
 // NewFootprintHandler creates a new FootprintHandler with the embedded demo data.
@@ -27,7 +27,7 @@ func NewFootprintHandler() (*FootprintHandler, error) {
 func (h *FootprintHandler) GetFootprint(
 	_ context.Context,
 	id string,
-) (*ileapv1pb.ProductFootprint, error) {
+) (*ileapv1.ProductFootprint, error) {
 	for _, fp := range h.footprints {
 		if fp.GetId() == id {
 			return fp, nil
@@ -44,7 +44,7 @@ func (h *FootprintHandler) ListFootprints(
 	if err := filter.UnmarshalString(req.Filter); err != nil {
 		return nil, ileap.ErrBadRequest
 	}
-	filtered := make([]*ileapv1pb.ProductFootprint, 0, len(h.footprints))
+	filtered := make([]*ileapv1.ProductFootprint, 0, len(h.footprints))
 	for _, fp := range h.footprints {
 		if filter.MatchesFootprint(fp) {
 			filtered = append(filtered, fp)

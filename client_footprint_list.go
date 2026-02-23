@@ -9,9 +9,8 @@ import (
 	"net/url"
 	"strconv"
 
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 // ListFootprintsParams is the request parameters for the [Client.ListFootprints] method.
@@ -25,7 +24,7 @@ type ListFootprintsParams struct {
 // ListFootprintsResult is the response for the [Client.ListFootprints] method.
 type ListFootprintsResult struct {
 	// Footprints is the list of footprints in the current page.
-	Footprints []*ileapv1pb.ProductFootprint
+	Footprints []*ileapv1.ProductFootprint
 }
 
 // ListFootprints fetches a list of product carbon footprints.
@@ -68,10 +67,10 @@ func (c *Client) ListFootprints(
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response body: %w", err)
 	}
-	footprints := make([]*ileapv1pb.ProductFootprint, 0, len(response.Data))
+	footprints := make([]*ileapv1.ProductFootprint, 0, len(response.Data))
 	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
 	for _, raw := range response.Data {
-		pf := &ileapv1pb.ProductFootprint{}
+		pf := &ileapv1.ProductFootprint{}
 		if err := opts.Unmarshal(raw, pf); err != nil {
 			return nil, fmt.Errorf("unmarshal footprint: %w", err)
 		}

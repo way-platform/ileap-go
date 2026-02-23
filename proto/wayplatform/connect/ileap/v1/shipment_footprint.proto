@@ -2,13 +2,66 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
-
+import "buf/validate/validate.proto";
 import "wayplatform/connect/ileap/v1/tce.proto";
 
-// ShipmentFootprint is the iLEAP extension data for shipment-level footprints.
+// ShipmentFootprint is a collection of 1 or more Transport Chain Elements
+// (encoded as TCEs) for a single shipment, from a single entity (a Transport
+// Operator or a Transport Service Organizer).
+//
+// By collecting 1 or more TCEs for a shipment from Transport Operators and
+// Transport Service Organizers, a Transport Service User can build the
+// ShipmentFootprint. The ShipmentFootprint corresponds to the logistics
+// emissions related to a full Transport Chain (TC).
+//
+// To calculate a ShipmentFootprint, the Transport Service User MUST
+//   - first receive TCEs from Transport Operators and Transport Service
+//     Organizers, linked to the shipment id for a single shipment,
+//     OR calculate TCEs from TOCs, HOCs or TAD from Transport Operators
+//     and Transport Service Organizers.
+//   - and then add up all TCEs that compose the full Transport Chain (TC)
+//     to derive the ShipmentFootprint.
+//
+// ShipmentFootprints are exchanged as PACT DataModelExtensions in
+// ProductFootprints via the GET /2/footprints endpoint (Data Transaction
+// DT#1).
+//
+// PACT integration (see iLEAP spec "PCF Mapping for ShipmentFootprint"):
+//   - productIds: "urn:pathfinder:product:customcode:vendor-assigned:shipment:{shipmentId}"
+//   - productCategoryCpc: MUST be "83117"
+//   - pcf.declaredUnit: MUST be "ton kilometer"
+//   - pcf.unitaryProductAmount: sum(tces[].transportActivity)
+//   - pcf.pCfExcludingBiogenic: sum(tces[].co2eWTW)
+//   - pcf.packagingEmissionsIncluded: MUST be false
+//   - extensions[].dataSchema: "https://api.ileap.sine.dev/shipment-footprint.json"
+//
+// See iLEAP Technical Specifications, section "ShipmentFootprint".
+// Reference: https://sine-fdn.github.io/ileap-extension/#dt-sf
 message ShipmentFootprint {
-  string shipment_id = 1 [json_name = "shipmentId"];
-  string mass = 2;
-  repeated TCE tces = 3;
+  // The mass of the good (SI Unit kilograms) and the packaging provided
+  // for transport by the Transport Service User, excluding any additional
+  // packaging or handling equipment used by the Transport Operator or
+  // Transport Service Organizer. Required. Type: Decimal.
+  string mass = 1 [(buf.validate.field) = {
+    required: true
+    string: {
+      min_len: 1
+      pattern: "^-?\\d+(\\.\\d+)?$"
+    }
+  }];
+
+  // The volume of the freight (SI Unit cubic metre (CBM)) and any packaging
+  // provided by the Transport Service User. Optional. Type: Decimal.
+  string volume = 2 [(buf.validate.field).string.pattern = "^-?\\d+(\\.\\d+)?$"];
+
+  // The shipment id of the shipment related to this ShipmentFootprint.
+  // Required.
+  string shipment_id = 3 [
+    json_name = "shipmentId",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // The non-empty array of TCEs relating to this shipment. Required.
+  repeated TCE tces = 4 [(buf.validate.field).repeated.min_items = 1];
 }

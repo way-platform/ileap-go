@@ -2,32 +2,208 @@ edition = "2023";
 
 package wayplatform.connect.ileap.v1;
 
-option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
-
+import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 import "wayplatform/connect/ileap/v1/carbon_footprint.proto";
 import "wayplatform/connect/ileap/v1/data_model_extension.proto";
 
-// ProductFootprint is the PACT ProductFootprint data type.
+// ProductFootprint is the PACT ProductFootprint data type. It represents the
+// carbon footprint of a product under a specific scope and with values
+// calculated in accordance with the Pathfinder Framework.
+//
+// The objective of a ProductFootprint is to provide interoperability between
+// the creator (the data owner) and the consumer (the data recipient) of
+// ProductFootprints.
+//
+// Conceptually, the data type ProductFootprint is modeled as a multi-purpose
+// container for product-specific emissions factors which is supported by
+// extensibility through Data Model Extensions.
+//
+// Each ProductFootprint can and should be updated over time, for instance to
+// incorporate new or refined data from data owners.
+//
+// For iLEAP, each ProductFootprint contains exactly one DataModelExtension
+// with either a ShipmentFootprint, TOC, or HOC. A single ProductFootprint
+// MUST NOT contain more than one iLEAP data type.
+//
+// Common iLEAP rules for all ProductFootprints:
+//   - productCategoryCpc: MUST always be "83117"
+//   - pcf.packagingEmissionsIncluded: MUST be false
+//   - pcf.biogenicCarbonContent: SHOULD be "0"
+//   - extensions[].specVersion: MUST be "2.0.0"
+//
+// See PACT Technical Specifications v2.1.0, section "Data Type ProductFootprint".
+// Reference: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/#dt-pf
 message ProductFootprint {
-  string id = 1;
-  string comment = 2;
-  repeated string company_ids = 3 [json_name = "companyIds"];
-  string company_name = 4 [json_name = "companyName"];
-  string organization_name = 5 [json_name = "organizationName"];
-  google.protobuf.Timestamp created = 6;
-  repeated DataModelExtension extensions = 7;
-  CarbonFootprint pcf = 8;
-  repeated string preceding_pf_ids = 9 [json_name = "precedingPfIds"];
-  string product_category_cpc = 10 [json_name = "productCategoryCpc"];
-  string product_description = 11 [json_name = "productDescription"];
-  repeated string product_ids = 12 [json_name = "productIds"];
-  string product_name_company = 13 [json_name = "productNameCompany"];
-  string spec_version = 14 [json_name = "specVersion"];
-  string status = 15;
-  string status_comment = 16 [json_name = "statusComment"];
-  google.protobuf.Timestamp updated = 17;
-  google.protobuf.Timestamp validity_period_end = 18 [json_name = "validityPeriodEnd"];
-  google.protobuf.Timestamp validity_period_start = 19 [json_name = "validityPeriodStart"];
-  int32 version = 20;
+  // The product footprint identifier (UUID). Required.
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+
+  // The version of the ProductFootprint data specification. Required.
+  //
+  // Value MUST be "2.1.0" for PACT v2.1.0.
+  string spec_version = 2 [
+    json_name = "specVersion",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // If defined, MUST be non-empty set of preceding product footprint
+  // identifiers (UUIDs) without duplicates. Optional.
+  repeated string preceding_pf_ids = 3 [
+    json_name = "precedingPfIds",
+    (buf.validate.field).repeated = {
+      unique: true
+      items: {
+        string: {uuid: true}
+      }
+    }
+  ];
+
+  // The version of the ProductFootprint with value an integer in the
+  // inclusive range of 0..2^31-1. Required.
+  int32 version = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).int32.gte = 0
+  ];
+
+  // Timestamp of the creation of the ProductFootprint. Required.
+  google.protobuf.Timestamp created = 5 [(buf.validate.field).required = true];
+
+  // Timestamp of the ProductFootprint update. Optional.
+  //
+  // MUST NOT be included if an update has never been performed.
+  google.protobuf.Timestamp updated = 6;
+
+  // The status of the ProductFootprint. Required.
+  //
+  // Valid values:
+  //   - "Active": The default status. CAN be used by data recipients for
+  //     product footprint calculations.
+  //   - "Deprecated": SHOULD NOT be used for product footprint calculations.
+  string status = 7 [(buf.validate.field) = {
+    required: true
+    string: {
+      in: [
+        "Active",
+        "Deprecated"
+      ]
+    }
+  }];
+
+  // If defined, a message explaining the reason for the current status.
+  // Optional.
+  string status_comment = 8 [json_name = "statusComment"];
+
+  // If defined, the start of the validity period of the ProductFootprint.
+  // Optional.
+  //
+  // The validity period is the time interval during which the
+  // ProductFootprint is declared as valid for use by a data recipient.
+  //
+  // If specified, the value MUST be greater than or equal to
+  // pcf.referencePeriodEnd. validityPeriodEnd MUST also be defined.
+  google.protobuf.Timestamp validity_period_start = 9 [json_name = "validityPeriodStart"];
+
+  // The end (excluding) of the validity period of the ProductFootprint.
+  // Optional.
+  //
+  // If specified, the value MUST be strictly greater than
+  // validityPeriodStart and less than or equal to
+  // pcf.referencePeriodEnd + 3 years.
+  google.protobuf.Timestamp validity_period_end = 10 [json_name = "validityPeriodEnd"];
+
+  // The name of the company that is the ProductFootprint Data Owner, with
+  // value a non-empty string. Required.
+  string company_name = 11 [
+    json_name = "companyName",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // The non-empty set of URNs. Each value is supposed to uniquely identify
+  // the ProductFootprint Data Owner. Required.
+  repeated string company_ids = 12 [
+    json_name = "companyIds",
+    (buf.validate.field).repeated = {
+      min_items: 1
+      items: {
+        string: {
+          min_len: 1
+          pattern: "^urn:.*"
+        }
+      }
+    }
+  ];
+
+  // The free-form description of the product plus other information related
+  // to it such as production technology or packaging. Required.
+  string product_description = 13 [
+    json_name = "productDescription",
+    (buf.validate.field).required = true
+  ];
+
+  // The non-empty set of ProductIds. Each is supposed to uniquely identify
+  // the product. Required.
+  //
+  // For iLEAP, URN format:
+  //   - ShipmentFootprint: "urn:pathfinder:product:customcode:vendor-assigned:shipment:{shipmentId}"
+  //   - TOC: "urn:pathfinder:product:customcode:vendor-assigned:toc:{tocId}"
+  //   - HOC: "urn:pathfinder:product:customcode:vendor-assigned:hoc:{hocId}"
+  repeated string product_ids = 14 [
+    json_name = "productIds",
+    (buf.validate.field).repeated = {
+      min_items: 1
+      items: {
+        string: {
+          min_len: 1
+          pattern: "^urn:.*"
+        }
+      }
+    }
+  ];
+
+  // A UN Product Classification Code (CPC) that the given product belongs
+  // to. Required.
+  //
+  // For iLEAP: MUST always be "83117".
+  string product_category_cpc = 15 [
+    json_name = "productCategoryCpc",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // The non-empty trade name of the product. Required.
+  string product_name_company = 16 [
+    json_name = "productNameCompany",
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+
+  // Additional information related to the product footprint. Required.
+  //
+  // SHOULD be used for information and instructions related to the
+  // calculation of the footprint, or other information which informs the
+  // ability to interpret, to audit or to verify the Product Footprint.
+  string comment = 17 [(buf.validate.field).required = true];
+
+  // The carbon footprint of the given product conforming to the
+  // CarbonFootprint data type. Required.
+  CarbonFootprint pcf = 18 [(buf.validate.field).required = true];
+
+  // If defined, 1 or more data model extensions associated with the
+  // ProductFootprint. Optional.
+  //
+  // For iLEAP, this contains exactly one extension with a
+  // ShipmentFootprint, TOC, or HOC.
+  repeated DataModelExtension extensions = 19;
+
+  // Optional alias for companyName. Optional.
+  //
+  // PACT v2.1.0 defines organizationName as an optional alias for
+  // companyName on ProductFootprint. Include with the same value as
+  // companyName.
+  string organization_name = 20 [json_name = "organizationName"];
 }

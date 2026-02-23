@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/way-platform/ileap-go/ileapv1pb"
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"golang.org/x/oauth2"
 )
 
@@ -12,7 +12,7 @@ type unimplementedFootprintHandler struct{}
 
 func (unimplementedFootprintHandler) GetFootprint(
 	_ context.Context, _ string,
-) (*ileapv1pb.ProductFootprint, error) {
+) (*ileapv1.ProductFootprint, error) {
 	return nil, fmt.Errorf("footprints: %w", ErrNotImplemented)
 }
 

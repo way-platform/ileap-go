@@ -8,11 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/ileapv1pb"
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"golang.org/x/oauth2"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -542,7 +541,7 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 	})
 }
 
-func parseFootprintList(t *testing.T, body []byte) []*ileapv1pb.ProductFootprint {
+func parseFootprintList(t *testing.T, body []byte) []*ileapv1.ProductFootprint {
 	t.Helper()
 	var raw struct {
 		Data []json.RawMessage `json:"data"`
@@ -551,9 +550,9 @@ func parseFootprintList(t *testing.T, body []byte) []*ileapv1pb.ProductFootprint
 		t.Fatalf("decode response: %v", err)
 	}
 	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
-	result := make([]*ileapv1pb.ProductFootprint, 0, len(raw.Data))
+	result := make([]*ileapv1.ProductFootprint, 0, len(raw.Data))
 	for _, r := range raw.Data {
-		pf := &ileapv1pb.ProductFootprint{}
+		pf := &ileapv1.ProductFootprint{}
 		if err := opts.Unmarshal(r, pf); err != nil {
 			t.Fatalf("unmarshal footprint: %v", err)
 		}
@@ -562,7 +561,7 @@ func parseFootprintList(t *testing.T, body []byte) []*ileapv1pb.ProductFootprint
 	return result
 }
 
-func parseFootprint(t *testing.T, body []byte) *ileapv1pb.ProductFootprint {
+func parseFootprint(t *testing.T, body []byte) *ileapv1.ProductFootprint {
 	t.Helper()
 	var raw struct {
 		Data json.RawMessage `json:"data"`
@@ -570,14 +569,14 @@ func parseFootprint(t *testing.T, body []byte) *ileapv1pb.ProductFootprint {
 	if err := json.Unmarshal(body, &raw); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	pf := &ileapv1pb.ProductFootprint{}
+	pf := &ileapv1.ProductFootprint{}
 	if err := protojson.Unmarshal(raw.Data, pf); err != nil {
 		t.Fatalf("unmarshal footprint: %v", err)
 	}
 	return pf
 }
 
-func parseTADList(t *testing.T, body []byte) []*ileapv1pb.TAD {
+func parseTADList(t *testing.T, body []byte) []*ileapv1.TAD {
 	t.Helper()
 	var raw struct {
 		Data []json.RawMessage `json:"data"`
@@ -586,9 +585,9 @@ func parseTADList(t *testing.T, body []byte) []*ileapv1pb.TAD {
 		t.Fatalf("decode response: %v", err)
 	}
 	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
-	result := make([]*ileapv1pb.TAD, 0, len(raw.Data))
+	result := make([]*ileapv1.TAD, 0, len(raw.Data))
 	for _, r := range raw.Data {
-		tad := &ileapv1pb.TAD{}
+		tad := &ileapv1.TAD{}
 		if err := opts.Unmarshal(r, tad); err != nil {
 			t.Fatalf("unmarshal TAD: %v", err)
 		}

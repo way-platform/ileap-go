@@ -7,26 +7,25 @@ import (
 	"fmt"
 	"log/slog"
 
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 //go:embed data/footprints.json
 var footprintsJSON []byte
 
 // LoadFootprints loads example iLEAP footprints.
-func LoadFootprints() ([]*ileapv1pb.ProductFootprint, error) {
+func LoadFootprints() ([]*ileapv1.ProductFootprint, error) {
 	var data struct {
 		Footprints []json.RawMessage `json:"footprints"`
 	}
 	if err := json.Unmarshal(footprintsJSON, &data); err != nil {
 		return nil, fmt.Errorf("unmarshal footprints: %w", err)
 	}
-	result := make([]*ileapv1pb.ProductFootprint, 0, len(data.Footprints))
+	result := make([]*ileapv1.ProductFootprint, 0, len(data.Footprints))
 	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
 	for _, raw := range data.Footprints {
-		pf := &ileapv1pb.ProductFootprint{}
+		pf := &ileapv1.ProductFootprint{}
 		if err := opts.Unmarshal(raw, pf); err != nil {
 			return nil, fmt.Errorf("unmarshal footprint: %w", err)
 		}
@@ -41,17 +40,17 @@ func LoadFootprints() ([]*ileapv1pb.ProductFootprint, error) {
 var tadJSON []byte
 
 // LoadTADs loads example iLEAP TADs.
-func LoadTADs() ([]*ileapv1pb.TAD, error) {
+func LoadTADs() ([]*ileapv1.TAD, error) {
 	var data struct {
 		TADs []json.RawMessage `json:"tads"`
 	}
 	if err := json.Unmarshal(tadJSON, &data); err != nil {
 		return nil, fmt.Errorf("unmarshal tad: %w", err)
 	}
-	result := make([]*ileapv1pb.TAD, 0, len(data.TADs))
+	result := make([]*ileapv1.TAD, 0, len(data.TADs))
 	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
 	for _, raw := range data.TADs {
-		tad := &ileapv1pb.TAD{}
+		tad := &ileapv1.TAD{}
 		if err := opts.Unmarshal(raw, tad); err != nil {
 			return nil, fmt.Errorf("unmarshal tad: %w", err)
 		}

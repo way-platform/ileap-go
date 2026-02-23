@@ -16,6 +16,11 @@
       "sourceType": "github",
       "computedHash": "e8445eff7538ffd81616cbc2b22c2158320d30b557d0d75ee189bd6fd8530d66"
     },
+    "protobuf": {
+      "source": "bufbuild/claude-plugins",
+      "sourceType": "github",
+      "computedHash": "ab81fda811287aef352fe7e507f2008b76d879e3a5bc153cee0ca30bd5bbef6e"
+    },
     "skill-creator": {
       "source": "anthropics/skills",
       "sourceType": "github",
