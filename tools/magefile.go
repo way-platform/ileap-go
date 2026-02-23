@@ -140,6 +140,19 @@ func ACTLocal() error {
 	return nil
 }
 
+// ConformanceTest runs the Go conformance tests against a remote server.
+// Usage: mage conformancetest <baseURL> <username> <password>
+func ConformanceTest(baseURL, username, password string) error {
+	log.Println("running conformance tests against remote server")
+	env := map[string]string{
+		"ILEAP_SERVER_URL": baseURL,
+		"ILEAP_USERNAME":   username,
+		"ILEAP_PASSWORD":   password,
+	}
+	return cmdWith(env, root(), "go", "test", "-v", "-count=1",
+		"./ileaptest/...").Run()
+}
+
 func startLocalServer() (baseURL string, cleanup func(), err error) {
 	// Find a free port.
 	lis, err := net.Listen("tcp", ":0")
