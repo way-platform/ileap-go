@@ -6,39 +6,10 @@ metadata:
     run.googleapis.com/ingress: all
 spec:
   template:
-    metadata:
-      annotations:
-        autoscaling.knative.dev/maxScale: '100'
-        run.googleapis.com/startup-cpu-boost: 'true'
     spec:
-      containerConcurrency: 80
-      serviceAccountName: 504882905500-compute@developer.gserviceaccount.com
-      timeoutSeconds: 300
       containers:
-      - image: europe-north1-docker.pkg.dev/way-ileap-demo-prod/ghcr/way-platform/ileap-go/ileap@sha256:9276a424e707206fc2d4d199c36879a73ed5c5634a7025b9cf1aac683afcee74
-        name: demo-server-1
+      - image: europe-north1-docker.pkg.dev/way-ileap-demo-prod/ghcr/way-platform/ileap-go/ileap:latest
         args:
         - demo-server
         ports:
         - containerPort: 8080
-          name: http1
-        env:
-        - name: ILEAP_AUTH_BACKEND
-          value: clerk
-        - name: ILEAP_CLERK_FAPI_DOMAIN
-          value: clerk.way.cloud
-        - name: ILEAP_CLERK_ORGANIZATION_ID
-          value: org_2xMv7P4Pa5FTrfhHRJn8ZkggG6n
-        resources:
-          limits:
-            cpu: 1000m
-            memory: 512Mi
-        startupProbe:
-          failureThreshold: 1
-          periodSeconds: 240
-          tcpSocket:
-            port: 8080
-          timeoutSeconds: 240
-  traffic:
-  - latestRevision: true
-    percent: 100

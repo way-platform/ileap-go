@@ -75,7 +75,7 @@ func TestMyILeapServer(t *testing.T) {
 Run against a remote server:
 
 ```bash
-$ ILEAP_SERVER_URL=https://example.com ILEAP_USERNAME=u ILEAP_PASSWORD=p \
+$ ILEAP_SERVER_URL=https://demo.ileap.way.cloud ILEAP_USERNAME=hello ILEAP_PASSWORD=pathfinder \
     go test -v ./ileaptest/...
 ```
 

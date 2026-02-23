@@ -28,9 +28,9 @@ This document provides project-specific context and instructions for AI agents.
   - ACT binary panics on local URLs, but server logs show results
   - **Success**: `POST /auth/token 200`, multiple `GET /2/footprints 200`, multiple `GET /2/ileap/tad 200`, one `GET /2/ileap/tad 403`
 - `ACT`: `./tools/mage act <baseURL> <username> <password>` — tests against remote
+  - Our server: `https://demo.ileap.way.cloud` / `hello` / `pathfinder`
   - Sine Foundation: `https://api.ileap.sine.dev` / `hello` / `pathfinder`
-  - Our server: `https://ileap.wayplatform.com` / `ileap-demo@way.cloud` / `HelloPrimaryData`
-  - **Debug remote**:
+- **Debug remote**:
     ```bash
     gcloud beta run services logs read ileap-demo-server --project way-ileap-demo-prod --region europe-north1 --freshness='10m'
     ```

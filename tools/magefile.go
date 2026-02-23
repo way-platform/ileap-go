@@ -174,11 +174,9 @@ func startLocalServer() (baseURL string, cleanup func(), err error) {
 	if err := cmd(root("cmd/ileap"), "go", "build", "-o", binary, ".").Run(); err != nil {
 		return "", nil, fmt.Errorf("build ileap: %w", err)
 	}
-	// Start: ileap-tmp demo-server --port <port> --auth-backend clerk --clerk-fapi-domain clerk.way.cloud
+	// Start: ileap-tmp demo-server --port <port>
 	server := cmdWith(nil, root(), binary, "demo-server",
 		"--port", fmt.Sprintf("%d", port),
-		"--auth-backend", "clerk",
-		"--clerk-fapi-domain", "clerk.way.cloud",
 	)
 	if err := server.Start(); err != nil {
 		_ = os.Remove(binary)
@@ -225,6 +223,7 @@ func DockerBuild() error {
 }
 
 // DeployDemo deploys the ileap demo server to Cloud Run.
+// It assumes the latest image has been pushed to the registry by the CI/CD pipeline.
 func DeployDemo() error {
 	log.Println("deploying ileap demo server to Cloud Run")
 	return cmd(
