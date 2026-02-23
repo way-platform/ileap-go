@@ -121,16 +121,17 @@ func (s *Server) registerRoutes() {
 	s.serveMux.HandleFunc("GET "+s.pathPrefix+"/jwks", s.jwks)
 }
 
-// pactAuthMiddleware returns 401 Unauthorized when the token is rejected,
-// and 400 BadRequest for malformed/missing auth headers (PACT spec).
+// pactAuthMiddleware validates the bearer token using the server's TokenValidator
+// and returns PACT-spec-formatted errors on failure (400 for missing/malformed,
+// 401 for invalid). On success it calls next.
 func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("Authorization")
-		if auth == "" {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
 			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing authorization")
 			return
 		}
-		if !strings.HasPrefix(auth, "Bearer ") {
+		if !strings.HasPrefix(authHeader, "Bearer ") {
 			writeError(
 				w,
 				http.StatusBadRequest,
@@ -139,7 +140,7 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			)
 			return
 		}
-		token := strings.TrimPrefix(auth, "Bearer ")
+		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == "" {
 			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
 			return
@@ -150,33 +151,24 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 			slog.WarnContext(r.Context(), "token validation failed", "error", err)
-			writeError(
-				w,
-				http.StatusUnauthorized,
-				ErrorCodeAccessDenied,
-				"invalid access token",
-			)
+			writeError(w, http.StatusUnauthorized, ErrorCodeAccessDenied, "invalid access token")
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-// ileapAuthMiddleware returns 403 AccessDenied for invalid tokens and
-// 401 TokenExpired for expired tokens (iLEAP spec).
+// ileapAuthMiddleware validates the bearer token using the server's TokenValidator
+// and returns iLEAP-spec-formatted errors on failure (403 for invalid, 401 for
+// expired). On success it calls next.
 func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("Authorization")
-		if auth == "" {
-			writeError(
-				w,
-				http.StatusForbidden,
-				ErrorCodeAccessDenied,
-				"missing authorization",
-			)
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "missing authorization")
 			return
 		}
-		if !strings.HasPrefix(auth, "Bearer ") {
+		if !strings.HasPrefix(authHeader, "Bearer ") {
 			writeError(
 				w,
 				http.StatusForbidden,
@@ -185,7 +177,7 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 			)
 			return
 		}
-		token := strings.TrimPrefix(auth, "Bearer ")
+		token := strings.TrimPrefix(authHeader, "Bearer ")
 		if token == "" {
 			writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "missing access token")
 			return
@@ -497,6 +489,7 @@ func writeHandlerError(w http.ResponseWriter, err error) {
 	}
 }
 
+// writeOAuthError writes an OAuth 2.0 error response.
 func writeOAuthError(
 	w http.ResponseWriter,
 	status int,
@@ -513,6 +506,7 @@ func writeOAuthError(
 	}
 }
 
+// writeError writes a PACT-formatted JSON error response.
 func writeError(
 	w http.ResponseWriter,
 	status int,
