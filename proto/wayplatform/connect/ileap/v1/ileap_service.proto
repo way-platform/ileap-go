@@ -144,7 +144,7 @@ service ILeapService {
 // ListFootprintsRequest is the request message for ListFootprints.
 //
 // Corresponds to the HTTP request:
-//   GET /2/footprints?$filter={filter}&limit={limit}
+//   GET /2/footprints?$filter={filter}&limit={limit}&offset={offset}
 //
 // See PACT v2.1.0 Section 6.6.3 "Request Syntax".
 message ListFootprintsRequest {
@@ -176,21 +176,21 @@ message ListFootprintsRequest {
 
   // Maximum number of ProductFootprints to return. The host system MAY
   // return fewer ProductFootprints than requested. If there are additional
-  // ProductFootprints, the response will include a next_page_token.
+  // ProductFootprints, the response total will exceed offset + len(data).
   //
   // The value MUST be a positive integer if defined.
   //
   // See PACT v2.1.0 Section 6.6.2 "Pagination".
   int32 limit = 2 [(buf.validate.field).int32.gte = 0];
 
-  // Pagination token from a previous ListFootprintsResponse. When provided,
-  // the server returns the next page of results.
+  // Starting index for pagination. 0 means start from the beginning.
   //
   // In the HTTP API, pagination is achieved through Link headers with
-  // rel="next" conforming to RFC 8288. The pagination link MUST be valid
-  // for at least 180 seconds after creation. Data recipients SHOULD retry
-  // with randomized exponential back-off on errors.
-  string page_token = 3 [json_name = "pageToken"];
+  // rel="next" conforming to RFC 8288. The Link header URL includes
+  // offset and limit query parameters.
+  //
+  // See PACT v2.1.0 Section 6.6.2 "Pagination".
+  int32 offset = 3 [(buf.validate.field).int32.gte = 0];
 }
 
 // ListFootprintsResponse is the response message for ListFootprints.
@@ -213,13 +213,13 @@ message ListFootprintsResponse {
   // recipient SHOULD be omitted.
   repeated ProductFootprint data = 1;
 
-  // Pagination token for the next page. If empty, there are no more
-  // results.
+  // Total number of ProductFootprints matching the filter, before
+  // pagination is applied. Used to determine whether additional pages
+  // are available: if offset + len(data) < total, more pages exist.
   //
-  // In the HTTP API, this corresponds to the Link header with rel="next".
-  // The target IRI of the Link header MUST be absolute and its host MUST
-  // equal the host of the original request.
-  string next_page_token = 2 [json_name = "nextPageToken"];
+  // In the HTTP API, the server uses this to compute the Link header
+  // with rel="next" containing the next offset and limit.
+  int32 total = 2;
 }
 
 // GetFootprintRequest is the request message for GetFootprint.
@@ -286,23 +286,22 @@ message ListTransportActivityDataRequest {
   string packaging_or_tr_eq_type = 3 [json_name = "packagingOrTrEqType"];
 
   // Maximum number of TADs to return. The host system MAY return fewer
-  // TADs than requested. If there are additional TADs, the response will
-  // include a next_page_token.
+  // TADs than requested. If there are additional TADs, the response
+  // total will exceed offset + len(data).
   //
   // The value MUST be a positive integer if defined.
   //
   // See iLEAP Technical Specifications Section 5.1.2 "Pagination".
   int32 limit = 4 [(buf.validate.field).int32.gte = 0];
 
-  // Pagination token from a previous ListTransportActivityDataResponse.
-  // When provided, the server returns the next page of results.
+  // Starting index for pagination. 0 means start from the beginning.
   //
   // In the HTTP API, pagination is achieved through Link headers with
-  // rel="next" conforming to RFC 8288. The pagination link MUST be valid
-  // for at least 180 seconds after creation. Data recipients SHOULD retry
-  // with randomized exponential back-off on errors. Previous pagination
-  // links MAY no longer work after advancing to the next page.
-  string page_token = 5 [json_name = "pageToken"];
+  // rel="next" conforming to RFC 8288. The Link header URL includes
+  // offset and limit query parameters.
+  //
+  // See iLEAP Technical Specifications Section 5.1.2 "Pagination".
+  int32 offset = 5;
 }
 
 // ListTransportActivityDataResponse is the response message for
@@ -320,11 +319,11 @@ message ListTransportActivityDataResponse {
   // The list of Transport Activity Data.
   repeated TAD data = 1;
 
-  // Pagination token for the next page. If empty, there are no more
-  // results.
+  // Total number of TADs matching the filter, before pagination is
+  // applied. Used to determine whether additional pages are available:
+  // if offset + len(data) < total, more pages exist.
   //
-  // In the HTTP API, this corresponds to the Link header with rel="next".
-  // The target IRI of the Link header MUST be absolute and its host MUST
-  // equal the host of the original request.
-  string next_page_token = 2 [json_name = "nextPageToken"];
+  // In the HTTP API, the server uses this to compute the Link header
+  // with rel="next" containing the next offset and limit.
+  int32 total = 2;
 }

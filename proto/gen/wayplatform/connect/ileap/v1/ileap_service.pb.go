@@ -25,14 +25,14 @@ const (
 //
 // Corresponds to the HTTP request:
 //
-//	GET /2/footprints?$filter={filter}&limit={limit}
+//	GET /2/footprints?$filter={filter}&limit={limit}&offset={offset}
 //
 // See PACT v2.1.0 Section 6.6.3 "Request Syntax".
 type ListFootprintsRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Filter      *string                `protobuf:"bytes,1,opt,name=filter,json=$filter"`
 	xxx_hidden_Limit       int32                  `protobuf:"varint,2,opt,name=limit"`
-	xxx_hidden_PageToken   *string                `protobuf:"bytes,3,opt,name=page_token,json=pageToken"`
+	xxx_hidden_Offset      int32                  `protobuf:"varint,3,opt,name=offset"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -81,14 +81,11 @@ func (x *ListFootprintsRequest) GetLimit() int32 {
 	return 0
 }
 
-func (x *ListFootprintsRequest) GetPageToken() string {
+func (x *ListFootprintsRequest) GetOffset() int32 {
 	if x != nil {
-		if x.xxx_hidden_PageToken != nil {
-			return *x.xxx_hidden_PageToken
-		}
-		return ""
+		return x.xxx_hidden_Offset
 	}
-	return ""
+	return 0
 }
 
 func (x *ListFootprintsRequest) SetFilter(v string) {
@@ -101,8 +98,8 @@ func (x *ListFootprintsRequest) SetLimit(v int32) {
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
 }
 
-func (x *ListFootprintsRequest) SetPageToken(v string) {
-	x.xxx_hidden_PageToken = &v
+func (x *ListFootprintsRequest) SetOffset(v int32) {
+	x.xxx_hidden_Offset = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
 }
 
@@ -120,7 +117,7 @@ func (x *ListFootprintsRequest) HasLimit() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
-func (x *ListFootprintsRequest) HasPageToken() bool {
+func (x *ListFootprintsRequest) HasOffset() bool {
 	if x == nil {
 		return false
 	}
@@ -137,9 +134,9 @@ func (x *ListFootprintsRequest) ClearLimit() {
 	x.xxx_hidden_Limit = 0
 }
 
-func (x *ListFootprintsRequest) ClearPageToken() {
+func (x *ListFootprintsRequest) ClearOffset() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_PageToken = nil
+	x.xxx_hidden_Offset = 0
 }
 
 type ListFootprintsRequest_builder struct {
@@ -172,20 +169,20 @@ type ListFootprintsRequest_builder struct {
 	Filter *string
 	// Maximum number of ProductFootprints to return. The host system MAY
 	// return fewer ProductFootprints than requested. If there are additional
-	// ProductFootprints, the response will include a next_page_token.
+	// ProductFootprints, the response total will exceed offset + len(data).
 	//
 	// The value MUST be a positive integer if defined.
 	//
 	// See PACT v2.1.0 Section 6.6.2 "Pagination".
 	Limit *int32
-	// Pagination token from a previous ListFootprintsResponse. When provided,
-	// the server returns the next page of results.
+	// Starting index for pagination. 0 means start from the beginning.
 	//
 	// In the HTTP API, pagination is achieved through Link headers with
-	// rel="next" conforming to RFC 8288. The pagination link MUST be valid
-	// for at least 180 seconds after creation. Data recipients SHOULD retry
-	// with randomized exponential back-off on errors.
-	PageToken *string
+	// rel="next" conforming to RFC 8288. The Link header URL includes
+	// offset and limit query parameters.
+	//
+	// See PACT v2.1.0 Section 6.6.2 "Pagination".
+	Offset *int32
 }
 
 func (b0 ListFootprintsRequest_builder) Build() *ListFootprintsRequest {
@@ -200,9 +197,9 @@ func (b0 ListFootprintsRequest_builder) Build() *ListFootprintsRequest {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
 		x.xxx_hidden_Limit = *b.Limit
 	}
-	if b.PageToken != nil {
+	if b.Offset != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
-		x.xxx_hidden_PageToken = b.PageToken
+		x.xxx_hidden_Offset = *b.Offset
 	}
 	return m0
 }
@@ -218,13 +215,13 @@ func (b0 ListFootprintsRequest_builder) Build() *ListFootprintsRequest {
 //
 // See PACT v2.1.0 Section 6.6.4 "Response Syntax".
 type ListFootprintsResponse struct {
-	state                    protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Data          *[]*ProductFootprint   `protobuf:"bytes,1,rep,name=data"`
-	xxx_hidden_NextPageToken *string                `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken"`
-	XXX_raceDetectHookData   protoimpl.RaceDetectHookData
-	XXX_presence             [1]uint32
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Data        *[]*ProductFootprint   `protobuf:"bytes,1,rep,name=data"`
+	xxx_hidden_Total       int32                  `protobuf:"varint,2,opt,name=total"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListFootprintsResponse) Reset() {
@@ -261,35 +258,32 @@ func (x *ListFootprintsResponse) GetData() []*ProductFootprint {
 	return nil
 }
 
-func (x *ListFootprintsResponse) GetNextPageToken() string {
+func (x *ListFootprintsResponse) GetTotal() int32 {
 	if x != nil {
-		if x.xxx_hidden_NextPageToken != nil {
-			return *x.xxx_hidden_NextPageToken
-		}
-		return ""
+		return x.xxx_hidden_Total
 	}
-	return ""
+	return 0
 }
 
 func (x *ListFootprintsResponse) SetData(v []*ProductFootprint) {
 	x.xxx_hidden_Data = &v
 }
 
-func (x *ListFootprintsResponse) SetNextPageToken(v string) {
-	x.xxx_hidden_NextPageToken = &v
+func (x *ListFootprintsResponse) SetTotal(v int32) {
+	x.xxx_hidden_Total = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
-func (x *ListFootprintsResponse) HasNextPageToken() bool {
+func (x *ListFootprintsResponse) HasTotal() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
-func (x *ListFootprintsResponse) ClearNextPageToken() {
+func (x *ListFootprintsResponse) ClearTotal() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_NextPageToken = nil
+	x.xxx_hidden_Total = 0
 }
 
 type ListFootprintsResponse_builder struct {
@@ -304,13 +298,13 @@ type ListFootprintsResponse_builder struct {
 	// SHOULD be included. ProductFootprints not made available for the data
 	// recipient SHOULD be omitted.
 	Data []*ProductFootprint
-	// Pagination token for the next page. If empty, there are no more
-	// results.
+	// Total number of ProductFootprints matching the filter, before
+	// pagination is applied. Used to determine whether additional pages
+	// are available: if offset + len(data) < total, more pages exist.
 	//
-	// In the HTTP API, this corresponds to the Link header with rel="next".
-	// The target IRI of the Link header MUST be absolute and its host MUST
-	// equal the host of the original request.
-	NextPageToken *string
+	// In the HTTP API, the server uses this to compute the Link header
+	// with rel="next" containing the next offset and limit.
+	Total *int32
 }
 
 func (b0 ListFootprintsResponse_builder) Build() *ListFootprintsResponse {
@@ -318,9 +312,9 @@ func (b0 ListFootprintsResponse_builder) Build() *ListFootprintsResponse {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Data = &b.Data
-	if b.NextPageToken != nil {
+	if b.Total != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
-		x.xxx_hidden_NextPageToken = b.NextPageToken
+		x.xxx_hidden_Total = *b.Total
 	}
 	return m0
 }
@@ -514,7 +508,7 @@ type ListTransportActivityDataRequest struct {
 	xxx_hidden_Feedstock           *string                `protobuf:"bytes,2,opt,name=feedstock"`
 	xxx_hidden_PackagingOrTrEqType *string                `protobuf:"bytes,3,opt,name=packaging_or_tr_eq_type,json=packagingOrTrEqType"`
 	xxx_hidden_Limit               int32                  `protobuf:"varint,4,opt,name=limit"`
-	xxx_hidden_PageToken           *string                `protobuf:"bytes,5,opt,name=page_token,json=pageToken"`
+	xxx_hidden_Offset              int32                  `protobuf:"varint,5,opt,name=offset"`
 	XXX_raceDetectHookData         protoimpl.RaceDetectHookData
 	XXX_presence                   [1]uint32
 	unknownFields                  protoimpl.UnknownFields
@@ -583,14 +577,11 @@ func (x *ListTransportActivityDataRequest) GetLimit() int32 {
 	return 0
 }
 
-func (x *ListTransportActivityDataRequest) GetPageToken() string {
+func (x *ListTransportActivityDataRequest) GetOffset() int32 {
 	if x != nil {
-		if x.xxx_hidden_PageToken != nil {
-			return *x.xxx_hidden_PageToken
-		}
-		return ""
+		return x.xxx_hidden_Offset
 	}
-	return ""
+	return 0
 }
 
 func (x *ListTransportActivityDataRequest) SetMode(v string) {
@@ -613,8 +604,8 @@ func (x *ListTransportActivityDataRequest) SetLimit(v int32) {
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 5)
 }
 
-func (x *ListTransportActivityDataRequest) SetPageToken(v string) {
-	x.xxx_hidden_PageToken = &v
+func (x *ListTransportActivityDataRequest) SetOffset(v int32) {
+	x.xxx_hidden_Offset = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 5)
 }
 
@@ -646,7 +637,7 @@ func (x *ListTransportActivityDataRequest) HasLimit() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
 }
 
-func (x *ListTransportActivityDataRequest) HasPageToken() bool {
+func (x *ListTransportActivityDataRequest) HasOffset() bool {
 	if x == nil {
 		return false
 	}
@@ -673,9 +664,9 @@ func (x *ListTransportActivityDataRequest) ClearLimit() {
 	x.xxx_hidden_Limit = 0
 }
 
-func (x *ListTransportActivityDataRequest) ClearPageToken() {
+func (x *ListTransportActivityDataRequest) ClearOffset() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
-	x.xxx_hidden_PageToken = nil
+	x.xxx_hidden_Offset = 0
 }
 
 type ListTransportActivityDataRequest_builder struct {
@@ -696,22 +687,21 @@ type ListTransportActivityDataRequest_builder struct {
 	// "Container".
 	PackagingOrTrEqType *string
 	// Maximum number of TADs to return. The host system MAY return fewer
-	// TADs than requested. If there are additional TADs, the response will
-	// include a next_page_token.
+	// TADs than requested. If there are additional TADs, the response
+	// total will exceed offset + len(data).
 	//
 	// The value MUST be a positive integer if defined.
 	//
 	// See iLEAP Technical Specifications Section 5.1.2 "Pagination".
 	Limit *int32
-	// Pagination token from a previous ListTransportActivityDataResponse.
-	// When provided, the server returns the next page of results.
+	// Starting index for pagination. 0 means start from the beginning.
 	//
 	// In the HTTP API, pagination is achieved through Link headers with
-	// rel="next" conforming to RFC 8288. The pagination link MUST be valid
-	// for at least 180 seconds after creation. Data recipients SHOULD retry
-	// with randomized exponential back-off on errors. Previous pagination
-	// links MAY no longer work after advancing to the next page.
-	PageToken *string
+	// rel="next" conforming to RFC 8288. The Link header URL includes
+	// offset and limit query parameters.
+	//
+	// See iLEAP Technical Specifications Section 5.1.2 "Pagination".
+	Offset *int32
 }
 
 func (b0 ListTransportActivityDataRequest_builder) Build() *ListTransportActivityDataRequest {
@@ -734,9 +724,9 @@ func (b0 ListTransportActivityDataRequest_builder) Build() *ListTransportActivit
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 5)
 		x.xxx_hidden_Limit = *b.Limit
 	}
-	if b.PageToken != nil {
+	if b.Offset != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 5)
-		x.xxx_hidden_PageToken = b.PageToken
+		x.xxx_hidden_Offset = *b.Offset
 	}
 	return m0
 }
@@ -754,13 +744,13 @@ func (b0 ListTransportActivityDataRequest_builder) Build() *ListTransportActivit
 //
 // See iLEAP Technical Specifications Section 5.1.4 "Response Syntax".
 type ListTransportActivityDataResponse struct {
-	state                    protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Data          *[]*TAD                `protobuf:"bytes,1,rep,name=data"`
-	xxx_hidden_NextPageToken *string                `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken"`
-	XXX_raceDetectHookData   protoimpl.RaceDetectHookData
-	XXX_presence             [1]uint32
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Data        *[]*TAD                `protobuf:"bytes,1,rep,name=data"`
+	xxx_hidden_Total       int32                  `protobuf:"varint,2,opt,name=total"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListTransportActivityDataResponse) Reset() {
@@ -797,35 +787,32 @@ func (x *ListTransportActivityDataResponse) GetData() []*TAD {
 	return nil
 }
 
-func (x *ListTransportActivityDataResponse) GetNextPageToken() string {
+func (x *ListTransportActivityDataResponse) GetTotal() int32 {
 	if x != nil {
-		if x.xxx_hidden_NextPageToken != nil {
-			return *x.xxx_hidden_NextPageToken
-		}
-		return ""
+		return x.xxx_hidden_Total
 	}
-	return ""
+	return 0
 }
 
 func (x *ListTransportActivityDataResponse) SetData(v []*TAD) {
 	x.xxx_hidden_Data = &v
 }
 
-func (x *ListTransportActivityDataResponse) SetNextPageToken(v string) {
-	x.xxx_hidden_NextPageToken = &v
+func (x *ListTransportActivityDataResponse) SetTotal(v int32) {
+	x.xxx_hidden_Total = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
-func (x *ListTransportActivityDataResponse) HasNextPageToken() bool {
+func (x *ListTransportActivityDataResponse) HasTotal() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
-func (x *ListTransportActivityDataResponse) ClearNextPageToken() {
+func (x *ListTransportActivityDataResponse) ClearTotal() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_NextPageToken = nil
+	x.xxx_hidden_Total = 0
 }
 
 type ListTransportActivityDataResponse_builder struct {
@@ -833,13 +820,13 @@ type ListTransportActivityDataResponse_builder struct {
 
 	// The list of Transport Activity Data.
 	Data []*TAD
-	// Pagination token for the next page. If empty, there are no more
-	// results.
+	// Total number of TADs matching the filter, before pagination is
+	// applied. Used to determine whether additional pages are available:
+	// if offset + len(data) < total, more pages exist.
 	//
-	// In the HTTP API, this corresponds to the Link header with rel="next".
-	// The target IRI of the Link header MUST be absolute and its host MUST
-	// equal the host of the original request.
-	NextPageToken *string
+	// In the HTTP API, the server uses this to compute the Link header
+	// with rel="next" containing the next offset and limit.
+	Total *int32
 }
 
 func (b0 ListTransportActivityDataResponse_builder) Build() *ListTransportActivityDataResponse {
@@ -847,9 +834,9 @@ func (b0 ListTransportActivityDataResponse_builder) Build() *ListTransportActivi
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Data = &b.Data
-	if b.NextPageToken != nil {
+	if b.Total != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
-		x.xxx_hidden_NextPageToken = b.NextPageToken
+		x.xxx_hidden_Total = *b.Total
 	}
 	return m0
 }
@@ -858,29 +845,27 @@ var File_wayplatform_connect_ileap_v1_ileap_service_proto protoreflect.FileDescr
 
 const file_wayplatform_connect_ileap_v1_ileap_service_proto_rawDesc = "" +
 	"\n" +
-	"0wayplatform/connect/ileap/v1/ileap_service.proto\x12\x1cwayplatform.connect.ileap.v1\x1a\x1bbuf/validate/validate.proto\x1a4wayplatform/connect/ileap/v1/product_footprint.proto\x1a&wayplatform/connect/ileap/v1/tad.proto\"n\n" +
+	"0wayplatform/connect/ileap/v1/ileap_service.proto\x12\x1cwayplatform.connect.ileap.v1\x1a\x1bbuf/validate/validate.proto\x1a4wayplatform/connect/ileap/v1/product_footprint.proto\x1a&wayplatform/connect/ileap/v1/tad.proto\"p\n" +
 	"\x15ListFootprintsRequest\x12\x17\n" +
 	"\x06filter\x18\x01 \x01(\tR\a$filter\x12\x1d\n" +
-	"\x05limit\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05limit\x12\x1d\n" +
-	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"\x84\x01\n" +
+	"\x05limit\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05limit\x12\x1f\n" +
+	"\x06offset\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06offset\"r\n" +
 	"\x16ListFootprintsResponse\x12B\n" +
-	"\x04data\x18\x01 \x03(\v2..wayplatform.connect.ileap.v1.ProductFootprintR\x04data\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"2\n" +
+	"\x04data\x18\x01 \x03(\v2..wayplatform.connect.ileap.v1.ProductFootprintR\x04data\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\"2\n" +
 	"\x13GetFootprintRequest\x12\x1b\n" +
 	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"b\n" +
 	"\x14GetFootprintResponse\x12J\n" +
-	"\x04data\x18\x01 \x01(\v2..wayplatform.connect.ileap.v1.ProductFootprintB\x06\xbaH\x03\xc8\x01\x01R\x04data\"\xc8\x01\n" +
+	"\x04data\x18\x01 \x01(\v2..wayplatform.connect.ileap.v1.ProductFootprintB\x06\xbaH\x03\xc8\x01\x01R\x04data\"\xc1\x01\n" +
 	" ListTransportActivityDataRequest\x12\x12\n" +
 	"\x04mode\x18\x01 \x01(\tR\x04mode\x12\x1c\n" +
 	"\tfeedstock\x18\x02 \x01(\tR\tfeedstock\x124\n" +
 	"\x17packaging_or_tr_eq_type\x18\x03 \x01(\tR\x13packagingOrTrEqType\x12\x1d\n" +
-	"\x05limit\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05limit\x12\x1d\n" +
-	"\n" +
-	"page_token\x18\x05 \x01(\tR\tpageToken\"\x82\x01\n" +
+	"\x05limit\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x05 \x01(\x05R\x06offset\"p\n" +
 	"!ListTransportActivityDataResponse\x125\n" +
-	"\x04data\x18\x01 \x03(\v2!.wayplatform.connect.ileap.v1.TADR\x04data\x12&\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xa1\x03\n" +
+	"\x04data\x18\x01 \x03(\v2!.wayplatform.connect.ileap.v1.TADR\x04data\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total2\xa1\x03\n" +
 	"\fILeapService\x12{\n" +
 	"\x0eListFootprints\x123.wayplatform.connect.ileap.v1.ListFootprintsRequest\x1a4.wayplatform.connect.ileap.v1.ListFootprintsResponse\x12u\n" +
 	"\fGetFootprint\x121.wayplatform.connect.ileap.v1.GetFootprintRequest\x1a2.wayplatform.connect.ileap.v1.GetFootprintResponse\x12\x9c\x01\n" +
