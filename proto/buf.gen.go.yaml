@@ -1,0 +1,13 @@
+version: v2
+
+inputs:
+  - directory: .
+    paths:
+      - wayplatform
+
+plugins:
+  - local: ["go", "tool", "-modfile=../tools/go.mod", "protoc-gen-go"]
+    out: ..
+    opt:
+      - module=github.com/way-platform/ileap-go
+      - default_api_level=API_OPAQUE

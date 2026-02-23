@@ -1,0 +1,17 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+import "wayplatform/connect/ileap/v1/feedstock.proto";
+
+// EnergyCarrier represents an energy carrier with emission factors.
+message EnergyCarrier {
+  string energy_carrier = 1;
+  string energy_consumption_unit = 2;
+  string emission_factor_ttw = 3 [json_name = "emissionFactorTTW"];
+  string emission_factor_wtw = 4 [json_name = "emissionFactorWTW"];
+  string relative_share = 5;
+  repeated Feedstock feedstocks = 6;
+}

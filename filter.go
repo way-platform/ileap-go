@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv1"
+	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 // FilterV2 is a limited implementation of PACT v2 filters.
@@ -34,7 +34,7 @@ func (f *FilterV2) UnmarshalString(filter string) error {
 }
 
 // MatchesFootprint returns true if all predicates in the filter match the provided footprint.
-func (f *FilterV2) MatchesFootprint(footprint *ileapv1.ProductFootprintForILeapType) bool {
+func (f *FilterV2) MatchesFootprint(footprint *ileapv1pb.ProductFootprint) bool {
 	for _, predicate := range f.Conjuctions {
 		if !predicate.MatchesFootprint(footprint) {
 			return false
@@ -101,23 +101,25 @@ func (f *FilterPredicateV2) UnmarshalString(predicate string) error {
 }
 
 // MatchesFootprint returns true if the predicate matches the provided footprint.
-func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv1.ProductFootprintForILeapType) bool {
+func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv1pb.ProductFootprint) bool {
 	if f.Operator == "any/eq" {
 		return f.matchesAnyEq(footprint)
 	}
 	var lhsValue string
 	switch f.LHS {
 	case "pcf/geographyCountry":
-		if footprint.Pcf.GeographyCountry != nil {
-			lhsValue = *footprint.Pcf.GeographyCountry
+		if pcf := footprint.GetPcf(); pcf != nil && pcf.HasGeographyCountry() {
+			lhsValue = pcf.GetGeographyCountry()
 		}
 	case "productCategoryCpc":
-		lhsValue = footprint.ProductCategoryCpc
+		lhsValue = footprint.GetProductCategoryCpc()
 	case "created":
-		lhsValue = footprint.Created.Format(time.RFC3339)
+		if footprint.HasCreated() {
+			lhsValue = footprint.GetCreated().AsTime().Format(time.RFC3339)
+		}
 	case "updated":
-		if footprint.Updated != nil {
-			lhsValue = footprint.Updated.Format(time.RFC3339)
+		if footprint.HasUpdated() {
+			lhsValue = footprint.GetUpdated().AsTime().Format(time.RFC3339)
 		}
 	default:
 		return false
@@ -143,13 +145,13 @@ func (f *FilterPredicateV2) MatchesFootprint(footprint *ileapv1.ProductFootprint
 	}
 }
 
-func (f *FilterPredicateV2) matchesAnyEq(footprint *ileapv1.ProductFootprintForILeapType) bool {
+func (f *FilterPredicateV2) matchesAnyEq(footprint *ileapv1pb.ProductFootprint) bool {
 	var lhsValue []string
 	switch f.LHS {
 	case "productIds":
-		lhsValue = footprint.ProductIds
+		lhsValue = footprint.GetProductIds()
 	case "companyIds":
-		lhsValue = footprint.CompanyIds
+		lhsValue = footprint.GetCompanyIds()
 	default:
 		return false
 	}

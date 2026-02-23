@@ -9,7 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv1"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/way-platform/ileap-go/ileapv1pb"
 	"golang.org/x/oauth2"
 )
 
@@ -29,15 +31,15 @@ func (m *mockTokenValidator) ValidateToken(_ context.Context, _ string) (*TokenI
 }
 
 type mockFootprintHandler struct {
-	footprints []ileapv1.ProductFootprintForILeapType
+	footprints []*ileapv1pb.ProductFootprint
 }
 
 func (m *mockFootprintHandler) GetFootprint(
 	_ context.Context, id string,
-) (*ileapv1.ProductFootprintForILeapType, error) {
+) (*ileapv1pb.ProductFootprint, error) {
 	for _, fp := range m.footprints {
-		if fp.ID == id {
-			return &fp, nil
+		if fp.GetId() == id {
+			return fp, nil
 		}
 	}
 	return nil, ErrNotFound
@@ -62,7 +64,7 @@ func (m *mockFootprintHandler) ListFootprints(
 }
 
 type mockTADHandler struct {
-	tads []ileapv1.TAD
+	tads []*ileapv1pb.TAD
 }
 
 func (m *mockTADHandler) ListTADs(
@@ -135,14 +137,14 @@ func newTestServer() *Server {
 	return NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithFootprintHandler(&mockFootprintHandler{
-			footprints: []ileapv1.ProductFootprintForILeapType{
-				{ID: "fp-1"},
-				{ID: "fp-2"},
+			footprints: []*ileapv1pb.ProductFootprint{
+				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-1"); return p }(),
+				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-2"); return p }(),
 			},
 		}),
 		WithTADHandler(&mockTADHandler{
-			tads: []ileapv1.TAD{
-				{ActivityID: "tad-1"},
+			tads: []*ileapv1pb.TAD{
+				func() *ileapv1pb.TAD { t := &ileapv1pb.TAD{}; t.SetActivityId("tad-1"); return t }(),
 			},
 		}),
 		WithEventHandler(&mockEventHandler{}),
@@ -320,8 +322,10 @@ func TestWithPathPrefix(t *testing.T) {
 		srv := NewServer(
 			WithTokenValidator(&mockTokenValidator{valid: true}),
 			WithFootprintHandler(&mockFootprintHandler{
-				footprints: []ileapv1.ProductFootprintForILeapType{
-					{ID: "fp-1"}, {ID: "fp-2"}, {ID: "fp-3"},
+				footprints: []*ileapv1pb.ProductFootprint{
+					func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-1"); return p }(),
+					func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-2"); return p }(),
+					func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-3"); return p }(),
 				},
 			}),
 			WithPathPrefix("/ileap"),
@@ -428,7 +432,9 @@ func TestListFootprints(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp ileapv1.PfListingResponseInner
+		var resp struct {
+			Data []json.RawMessage `json:"data"`
+		}
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
@@ -450,8 +456,10 @@ func TestListFootprintsPagination(t *testing.T) {
 	srv := NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithFootprintHandler(&mockFootprintHandler{
-			footprints: []ileapv1.ProductFootprintForILeapType{
-				{ID: "fp-1"}, {ID: "fp-2"}, {ID: "fp-3"},
+			footprints: []*ileapv1pb.ProductFootprint{
+				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-1"); return p }(),
+				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-2"); return p }(),
+				func() *ileapv1pb.ProductFootprint { p := &ileapv1pb.ProductFootprint{}; p.SetId("fp-3"); return p }(),
 			},
 		}),
 	)
@@ -500,12 +508,18 @@ func TestGetFootprint(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp ileapv1.ProductFootprintResponse
+		var resp struct {
+			Data json.RawMessage `json:"data"`
+		}
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
-		if resp.Data.ID != "fp-1" {
-			t.Errorf("expected fp-1, got %s", resp.Data.ID)
+		pf := &ileapv1pb.ProductFootprint{}
+		if err := protojson.Unmarshal(resp.Data, pf); err != nil {
+			t.Fatalf("unmarshal footprint: %v", err)
+		}
+		if pf.GetId() != "fp-1" {
+			t.Errorf("expected fp-1, got %s", pf.GetId())
 		}
 	})
 
@@ -522,10 +536,10 @@ func TestListTads(t *testing.T) {
 	srv := NewServer(
 		WithTokenValidator(&mockTokenValidator{valid: true}),
 		WithTADHandler(&mockTADHandler{
-			tads: []ileapv1.TAD{
-				{ActivityID: "tad-1"},
-				{ActivityID: "tad-2"},
-				{ActivityID: "tad-3"},
+			tads: []*ileapv1pb.TAD{
+				func() *ileapv1pb.TAD { t := &ileapv1pb.TAD{}; t.SetActivityId("tad-1"); return t }(),
+				func() *ileapv1pb.TAD { t := &ileapv1pb.TAD{}; t.SetActivityId("tad-2"); return t }(),
+				func() *ileapv1pb.TAD { t := &ileapv1pb.TAD{}; t.SetActivityId("tad-3"); return t }(),
 			},
 		}),
 	)
@@ -538,7 +552,9 @@ func TestListTads(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp ileapv1.TadListingResponseInner
+		var resp struct {
+			Data []json.RawMessage `json:"data"`
+		}
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
@@ -555,7 +571,9 @@ func TestListTads(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		var resp ileapv1.TadListingResponseInner
+		var resp struct {
+			Data []json.RawMessage `json:"data"`
+		}
 		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 			t.Fatalf("decode: %v", err)
 		}

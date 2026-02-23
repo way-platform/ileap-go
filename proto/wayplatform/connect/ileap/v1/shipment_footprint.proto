@@ -1,0 +1,14 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+import "wayplatform/connect/ileap/v1/tce.proto";
+
+// ShipmentFootprint is the iLEAP extension data for shipment-level footprints.
+message ShipmentFootprint {
+  string shipment_id = 1 [json_name = "shipmentId"];
+  string mass = 2;
+  repeated TCE tces = 3;
+}

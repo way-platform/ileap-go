@@ -1,0 +1,76 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+import "google/protobuf/timestamp.proto";
+
+// CarbonFootprint is the PACT CarbonFootprint data type.
+message CarbonFootprint {
+  message DataQualityIndicators {
+    double completeness_dqr = 1 [json_name = "completenessDQR"];
+    double coverage_percent = 2 [json_name = "coveragePercent"];
+    double geographical_dqr = 3 [json_name = "geographicalDQR"];
+    double reliability_dqr = 4 [json_name = "reliabilityDQR"];
+    double technological_dqr = 5 [json_name = "technologicalDQR"];
+    double temporal_dqr = 6 [json_name = "temporalDQR"];
+  }
+
+  message Assurance {
+    bool assurance = 1;
+    string boundary = 2;
+    string comments = 3;
+    google.protobuf.Timestamp completed_at = 4 [json_name = "completedAt"];
+    string coverage = 5;
+    string level = 6;
+    string provider_name = 7 [json_name = "providerName"];
+    string standard_name = 8 [json_name = "standardName"];
+  }
+
+  message ProductOrSectorSpecificRule {
+    string operator = 1;
+    string other_operator_name = 2 [json_name = "otherOperatorName"];
+    repeated string rule_names = 3 [json_name = "ruleNames"];
+  }
+
+  message EmissionFactorDS {
+    string name = 1;
+    string version = 2;
+  }
+
+  string aircraft_ghg_emissions = 1 [json_name = "aircraftGhgEmissions"];
+  string allocation_rules_description = 2 [json_name = "allocationRulesDescription"];
+  Assurance assurance = 3;
+  string biogenic_accounting_methodology = 4 [json_name = "biogenicAccountingMethodology"];
+  string biogenic_carbon_content = 5 [json_name = "biogenicCarbonContent"];
+  string biogenic_carbon_withdrawal = 6 [json_name = "biogenicCarbonWithdrawal"];
+  string boundary_processes_description = 7 [json_name = "boundaryProcessesDescription"];
+  string characterization_factors = 8 [json_name = "characterizationFactors"];
+  repeated string cross_sectoral_standards_used = 9 [json_name = "crossSectoralStandardsUsed"];
+  string d_luc_ghg_emissions = 10 [json_name = "dLucGhgEmissions"];
+  string declared_unit = 11 [json_name = "declaredUnit"];
+  DataQualityIndicators dqi = 12;
+  string exempted_emissions_description = 13 [json_name = "exemptedEmissionsDescription"];
+  double exempted_emissions_percent = 14 [json_name = "exemptedEmissionsPercent"];
+  string fossil_carbon_content = 15 [json_name = "fossilCarbonContent"];
+  string fossil_ghg_emissions = 16 [json_name = "fossilGhgEmissions"];
+  string geography_country = 17 [json_name = "geographyCountry"];
+  string geography_country_subdivision = 18 [json_name = "geographyCountrySubdivision"];
+  string geography_region_or_subregion = 19 [json_name = "geographyRegionOrSubregion"];
+  string i_luc_ghg_emissions = 20 [json_name = "iLucGhgEmissions"];
+  repeated string ipcc_characterization_factors_sources = 21 [json_name = "ipccCharacterizationFactorsSources"];
+  string land_management_ghg_emissions = 22 [json_name = "landManagementGhgEmissions"];
+  string other_biogenic_ghg_emissions = 23 [json_name = "otherBiogenicGhgEmissions"];
+  string p_cf_excluding_biogenic = 24 [json_name = "pCfExcludingBiogenic"];
+  string p_cf_including_biogenic = 25 [json_name = "pCfIncludingBiogenic"];
+  bool packaging_emissions_included = 26 [json_name = "packagingEmissionsIncluded"];
+  string packaging_ghg_emissions = 27 [json_name = "packagingGhgEmissions"];
+  double primary_data_share = 28 [json_name = "primaryDataShare"];
+  repeated ProductOrSectorSpecificRule product_or_sector_specific_rules = 29 [json_name = "productOrSectorSpecificRules"];
+  google.protobuf.Timestamp reference_period_end = 30 [json_name = "referencePeriodEnd"];
+  google.protobuf.Timestamp reference_period_start = 31 [json_name = "referencePeriodStart"];
+  repeated EmissionFactorDS secondary_emission_factor_sources = 32 [json_name = "secondaryEmissionFactorSources"];
+  string uncertainty_assessment_description = 33 [json_name = "uncertaintyAssessmentDescription"];
+  string unitary_product_amount = 34 [json_name = "unitaryProductAmount"];
+}

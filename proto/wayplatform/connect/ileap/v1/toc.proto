@@ -1,0 +1,24 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+import "wayplatform/connect/ileap/v1/energy_carrier.proto";
+
+// TOC (Transport Operation Category) is the iLEAP extension for transport operation footprints.
+message TOC {
+  string toc_id = 1 [json_name = "tocId"];
+  string mode = 2;
+  string temperature_control = 3 [json_name = "temperatureControl"];
+  string co2e_intensity_ttw = 4 [json_name = "co2eIntensityTTW"];
+  string co2e_intensity_wtw = 5 [json_name = "co2eIntensityWTW"];
+  string co2e_intensity_throughput = 6 [json_name = "co2eIntensityThroughput"];
+  repeated EnergyCarrier energy_carriers = 7 [json_name = "energyCarriers"];
+  string load_factor = 8 [json_name = "loadFactor"];
+  string empty_distance_factor = 9 [json_name = "emptyDistanceFactor"];
+  string transport_activity_unit = 10 [json_name = "transportActivityUnit"];
+  string truck_loading_sequence = 11 [json_name = "truckLoadingSequence"];
+  bool is_verified = 12 [json_name = "isVerified"];
+  bool is_accredited = 13 [json_name = "isAccredited"];
+}

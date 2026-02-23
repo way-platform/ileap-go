@@ -24,6 +24,7 @@ func Build() {
 	mg.SerialDeps(
 		Download,
 		Lint,
+		Proto,
 		Generate,
 		Test,
 		Tidy,
@@ -55,6 +56,12 @@ func Lint() error {
 			"mage",
 		).Run()
 	})
+}
+
+// Proto generates Go code from protobuf schemas.
+func Proto() error {
+	log.Println("generating proto code")
+	return tool(root("proto"), "buf", "generate", "--template", "buf.gen.go.yaml").Run()
 }
 
 // Generate runs all code generators.

@@ -1,0 +1,12 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+// Feedstock represents feedstock information for energy carriers.
+message Feedstock {
+  string feedstock = 1;
+  string feedstock_percentage = 2 [json_name = "feedstockPercentage"];
+  string region_provenance = 3 [json_name = "regionProvenance"];
+}

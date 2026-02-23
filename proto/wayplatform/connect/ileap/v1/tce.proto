@@ -1,0 +1,21 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+import "wayplatform/connect/ileap/v1/glec_distance.proto";
+
+// TCE (Transport Chain Element) represents a single leg in a shipment.
+message TCE {
+  string tce_id = 1 [json_name = "tceId"];
+  string toc_id = 2 [json_name = "tocId"];
+  string hoc_id = 3 [json_name = "hocId"];
+  string shipment_id = 4 [json_name = "shipmentId"];
+  string co2e_ttw = 5 [json_name = "co2eTTW"];
+  string co2e_wtw = 6 [json_name = "co2eWTW"];
+  string mass = 7;
+  string transport_activity = 8;
+  GlecDistance distance = 9;
+  repeated string prev_tce_ids = 10 [json_name = "prevTceIds"];
+}

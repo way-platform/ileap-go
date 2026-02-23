@@ -1,0 +1,33 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+import "google/protobuf/timestamp.proto";
+import "wayplatform/connect/ileap/v1/carbon_footprint.proto";
+import "wayplatform/connect/ileap/v1/data_model_extension.proto";
+
+// ProductFootprint is the PACT ProductFootprint data type.
+message ProductFootprint {
+  string id = 1;
+  string comment = 2;
+  repeated string company_ids = 3 [json_name = "companyIds"];
+  string company_name = 4 [json_name = "companyName"];
+  string organization_name = 5 [json_name = "organizationName"];
+  google.protobuf.Timestamp created = 6;
+  repeated DataModelExtension extensions = 7;
+  CarbonFootprint pcf = 8;
+  repeated string preceding_pf_ids = 9 [json_name = "precedingPfIds"];
+  string product_category_cpc = 10 [json_name = "productCategoryCpc"];
+  string product_description = 11 [json_name = "productDescription"];
+  repeated string product_ids = 12 [json_name = "productIds"];
+  string product_name_company = 13 [json_name = "productNameCompany"];
+  string spec_version = 14 [json_name = "specVersion"];
+  string status = 15;
+  string status_comment = 16 [json_name = "statusComment"];
+  google.protobuf.Timestamp updated = 17;
+  google.protobuf.Timestamp validity_period_end = 18 [json_name = "validityPeriodEnd"];
+  google.protobuf.Timestamp validity_period_start = 19 [json_name = "validityPeriodStart"];
+  int32 version = 20;
+}
