@@ -55,6 +55,30 @@ The `handlers/` directory provides pre-built implementations that can be plugged
 * **`ileapdemo`**: Provides demo implementations of `FootprintHandler`, `TADHandler`, `TokenIssuer`, `TokenValidator`, and `OIDCProvider` loaded with sample data and static credentials. Ideal for testing and local development.
 * **`ileapclerk`**: Provides `TokenIssuer`, `TokenValidator`, and `OIDCProvider` implementations that delegate authentication to [Clerk](https://clerk.com/) via the Clerk Frontend API.
 
+### Conformance Testing
+
+The `ileaptest` package exports a reusable conformance test suite that any iLEAP server implementer can run:
+
+```go
+import "github.com/way-platform/ileap-go/ileaptest"
+
+func TestMyILeapServer(t *testing.T) {
+    srv := startMyServer(t)
+    ileaptest.RunConformanceTests(t, ileaptest.ConformanceTestConfig{
+        ServerURL: srv.URL,
+        Username:  "admin",
+        Password:  "secret",
+    })
+}
+```
+
+Run against a remote server:
+
+```bash
+$ ILEAP_SERVER_URL=https://example.com ILEAP_USERNAME=u ILEAP_PASSWORD=p \
+    go test -v ./ileaptest/...
+```
+
 ### Developing
 
 #### Build project
