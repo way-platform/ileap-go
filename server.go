@@ -155,7 +155,8 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusUnauthorized, ErrorCodeAccessDenied, "invalid access token")
 			return
 		}
-		next.ServeHTTP(w, r)
+		ctx := WithAuthToken(r.Context(), token)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -197,7 +198,8 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "invalid access token")
 			return
 		}
-		next.ServeHTTP(w, r)
+		ctx := WithAuthToken(r.Context(), token)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
