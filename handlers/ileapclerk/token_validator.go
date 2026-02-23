@@ -70,7 +70,7 @@ func (v *TokenValidator) ValidateToken(
 	}
 	if exp, ok := claims["exp"].(float64); ok {
 		if time.Now().Unix() > int64(exp) {
-			return nil, fmt.Errorf("JWT expired")
+			return nil, fmt.Errorf("%w", ileap.ErrTokenExpired)
 		}
 	}
 	sub, _ := claims["sub"].(string)
