@@ -3,15 +3,14 @@ package ileapdemo
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/way-platform/ileap-go"
 	"golang.org/x/oauth2"
 )
 
-// AuthProvider implements ileap.TokenIssuer, ileap.OIDCProvider,
-// and ileap.TokenValidator using demo credentials and a local RSA keypair.
+// AuthProvider implements ileap.AuthHandler using demo credentials and a local RSA keypair.
 type AuthProvider struct {
 	keypair *KeyPair
 }
@@ -37,7 +36,10 @@ func (a *AuthProvider) IssueToken(
 		}
 	}
 	if !authorized {
-		return nil, ileap.ErrInvalidCredentials
+		return nil, connect.NewError(
+			connect.CodePermissionDenied,
+			errors.New("invalid credentials"),
+		)
 	}
 	accessToken, err := a.keypair.CreateJWT(JWTClaims{
 		Username: clientID,
@@ -59,9 +61,6 @@ func (a *AuthProvider) ValidateToken(
 ) (*ileap.TokenInfo, error) {
 	claims, err := a.keypair.ValidateJWT(token)
 	if err != nil {
-		if errors.Is(err, ileap.ErrTokenExpired) {
-			return nil, fmt.Errorf("validate token: %w", err)
-		}
 		return nil, err
 	}
 	return &ileap.TokenInfo{Subject: claims.Username}, nil

@@ -14,25 +14,17 @@ import (
 
 func newDemoServer(t *testing.T) *ileap.Server {
 	t.Helper()
-	authProvider, err := NewAuthProvider()
+	handler, err := NewHandler()
+	if err != nil {
+		t.Fatalf("create handler: %v", err)
+	}
+	auth, err := NewAuthProvider()
 	if err != nil {
 		t.Fatalf("create auth provider: %v", err)
 	}
-	footprintHandler, err := NewFootprintHandler()
-	if err != nil {
-		t.Fatalf("create footprint handler: %v", err)
-	}
-	tadHandler, err := NewTADHandler()
-	if err != nil {
-		t.Fatalf("create TAD handler: %v", err)
-	}
 	return ileap.NewServer(
-		ileap.WithFootprintHandler(footprintHandler),
-		ileap.WithTADHandler(tadHandler),
-		ileap.WithEventHandler(&EventHandler{}),
-		ileap.WithTokenValidator(authProvider),
-		ileap.WithTokenIssuer(authProvider),
-		ileap.WithOIDCProvider(authProvider),
+		ileap.WithServiceHandler(handler),
+		ileap.WithAuthHandler(auth),
 	)
 }
 

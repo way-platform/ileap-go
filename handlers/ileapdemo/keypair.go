@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/way-platform/ileap-go"
 )
 
@@ -125,8 +126,8 @@ func (k *KeyPair) ValidateJWT(token string) (*JWTClaims, error) {
 		return nil, fmt.Errorf("unmarshal payload: %w", err)
 	}
 	if claims.Expiration != 0 && time.Unix(claims.Expiration, 0).Before(time.Now()) {
-		return nil, fmt.Errorf("token expired at %v: %w",
-			time.Unix(claims.Expiration, 0), ileap.ErrTokenExpired)
+		return nil, connect.NewError(connect.CodeUnauthenticated,
+			fmt.Errorf("token expired at %v", time.Unix(claims.Expiration, 0)))
 	}
 	return &claims, nil
 }

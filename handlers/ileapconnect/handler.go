@@ -1,15 +1,12 @@
-// Package ileapconnect implements ileap.FootprintHandler and ileap.TADHandler
-// by forwarding requests to a Connect RPC backend implementing ILeapService.
+// Package ileapconnect creates a Connect RPC client that can be used directly
+// as an ILeapServiceHandler with the ileap.Server.
 //
-// This enables the ileap.Server to act as a protocol translator: it handles
-// all iLEAP/PACT HTTP protocol specifics (JSON envelope, Link header
-// pagination, OData filtering, OAuth2 error formats) while delegating data
-// retrieval to an internal Connect service.
+// The generated ILeapServiceClient and ILeapServiceHandler interfaces have
+// identical method signatures, so the client satisfies the handler interface
+// directly. Auth forwarding is handled by the ileap.AuthForwardInterceptor.
 package ileapconnect
 
 import (
-	"context"
-	"errors"
 	"net/http"
 
 	"connectrpc.com/connect"
@@ -17,18 +14,7 @@ import (
 	"github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1/ileapv1connect"
 )
 
-var (
-	_ ileap.FootprintHandler = (*Handler)(nil)
-	_ ileap.TADHandler       = (*Handler)(nil)
-)
-
-// Handler implements ileap.FootprintHandler and ileap.TADHandler by forwarding
-// to a Connect RPC backend.
-type Handler struct {
-	client ileapv1connect.ILeapServiceClient
-}
-
-// Option configures the Handler.
+// Option configures the client created by NewClient.
 type Option func(*options)
 
 type options struct {
@@ -47,10 +33,13 @@ func WithClientOptions(opts ...connect.ClientOption) Option {
 	return func(o *options) { o.clientOpts = append(o.clientOpts, opts...) }
 }
 
-// New creates a Handler that forwards to the Connect backend at backendURL.
-// The incoming Authorization header is automatically forwarded on all
-// outgoing Connect calls.
-func New(backendURL string, opts ...Option) *Handler {
+// NewClient creates an ILeapServiceClient that forwards to the Connect backend
+// at backendURL. The incoming Authorization header is automatically forwarded
+// on all outgoing Connect calls via ileap.AuthForwardInterceptor.
+//
+// The returned client satisfies ileapv1connect.ILeapServiceHandler and can be
+// passed directly to ileap.WithServiceHandler.
+func NewClient(backendURL string, opts ...Option) ileapv1connect.ILeapServiceClient {
 	o := options{
 		httpClient: http.DefaultClient,
 	}
@@ -58,45 +47,7 @@ func New(backendURL string, opts ...Option) *Handler {
 		opt(&o)
 	}
 	clientOpts := append([]connect.ClientOption{
-		connect.WithInterceptors(authForwardInterceptor()),
+		connect.WithInterceptors(ileap.AuthForwardInterceptor()),
 	}, o.clientOpts...)
-	return &Handler{
-		client: ileapv1connect.NewILeapServiceClient(o.httpClient, backendURL, clientOpts...),
-	}
-}
-
-// authForwardInterceptor reads the bearer token from the request context
-// (set by ileap.Server's auth middleware) and attaches it to outgoing
-// Connect requests.
-func authForwardInterceptor() connect.UnaryInterceptorFunc {
-	return func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			if token, ok := ileap.AuthTokenFromContext(ctx); ok {
-				req.Header().Set("Authorization", "Bearer "+token)
-			}
-			return next(ctx, req)
-		}
-	}
-}
-
-// mapConnectError translates Connect error codes to ileap sentinel errors.
-func mapConnectError(err error) error {
-	var connectErr *connect.Error
-	if !errors.As(err, &connectErr) {
-		return err
-	}
-	switch connectErr.Code() {
-	case connect.CodeNotFound:
-		return ileap.ErrNotFound
-	case connect.CodeInvalidArgument:
-		return ileap.ErrBadRequest
-	case connect.CodeUnauthenticated:
-		return ileap.ErrTokenExpired
-	case connect.CodePermissionDenied:
-		return ileap.ErrInvalidCredentials
-	case connect.CodeUnimplemented:
-		return ileap.ErrNotImplemented
-	default:
-		return err
-	}
+	return ileapv1connect.NewILeapServiceClient(o.httpClient, backendURL, clientOpts...)
 }

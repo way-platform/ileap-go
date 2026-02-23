@@ -3,6 +3,7 @@ edition = "2023";
 package wayplatform.connect.ileap.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
 import "wayplatform/connect/ileap/v1/product_footprint.proto";
 import "wayplatform/connect/ileap/v1/tad.proto";
 
@@ -23,6 +24,7 @@ import "wayplatform/connect/ileap/v1/tad.proto";
 //   - ListFootprints:            PACT Action ListFootprints (GET /2/footprints)
 //   - GetFootprint:              PACT Action GetFootprint (GET /2/footprints/{id})
 //   - ListTransportActivityData: iLEAP Action TransportActivityData (GET /2/ileap/tad)
+//   - HandleEvent:               PACT Action Events (POST /2/events)
 //
 // The iLEAP Technical Specifications extend the PACT Data Exchange Protocol
 // (v2.1.0) with logistics emissions data types conforming to ISO 14083 and
@@ -47,11 +49,6 @@ import "wayplatform/connect/ileap/v1/tad.proto";
 //
 // Authentication (PACT Action Authenticate, POST /auth/token) is handled at
 // the transport layer via interceptors/middleware and is not modeled as an RPC.
-//
-// Note: PACT Action Events (POST /2/events) is intentionally excluded from
-// this service definition. Action Events is OPTIONAL per PACT v2.1.0 Section
-// 6.8 and enables CloudEvent-based notifications (PF Update, PF Request, PF
-// Response, PF Response Error events). It will be added in a future iteration.
 //
 // References:
 //   - iLEAP Technical Specifications: https://sine-fdn.github.io/ileap-extension/
@@ -139,6 +136,26 @@ service ILeapService {
   // See iLEAP Technical Specifications Section 5.1 "Action TransportActivityData".
   // Reference: https://sine-fdn.github.io/ileap-extension/#action-tad
   rpc ListTransportActivityData(ListTransportActivityDataRequest) returns (ListTransportActivityDataResponse);
+
+  // HandleEvent processes an incoming PACT CloudEvent notification.
+  //
+  // This RPC corresponds to PACT Action Events (POST /2/events).
+  //
+  // Action Events is OPTIONAL per PACT v2.1.0 Section 6.8 and enables
+  // CloudEvent-based notifications for product footprint lifecycle events.
+  //
+  // Known event types:
+  //   - org.wbcsd.pact.ProductFootprint.RequestCreatedEvent.3
+  //   - org.wbcsd.pact.ProductFootprint.RequestFulfilledEvent.3
+  //   - org.wbcsd.pact.ProductFootprint.RequestRejectedEvent.3
+  //   - org.wbcsd.pact.ProductFootprint.PublishedEvent.3
+  //
+  // Error responses:
+  //   - BadRequest (gRPC INVALID_ARGUMENT): Malformed event or unknown type.
+  //
+  // See PACT v2.1.0 Section 6.8 "Action Events".
+  // Reference: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/#api-action-events
+  rpc HandleEvent(HandleEventRequest) returns (HandleEventResponse);
 }
 
 // ListFootprintsRequest is the request message for ListFootprints.
@@ -327,3 +344,51 @@ message ListTransportActivityDataResponse {
   // with rel="next" containing the next offset and limit.
   int32 total = 2;
 }
+
+// Event is a PACT CloudEvent notification.
+//
+// CloudEvents are used for asynchronous notifications about product footprint
+// lifecycle events (creation, update, request, response).
+//
+// The event is encoded as a structured-mode CloudEvent conforming to the
+// CloudEvents HTTP Protocol Binding v1.0.2.
+//
+// See: https://docs.carbon-transparency.org/tr/data-exchange-protocol/latest/#action-events
+// See: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/bindings/http-protocol-binding.md#32-structured-content-mode
+message Event {
+  // The CloudEvents event type (e.g. "org.wbcsd.pact.ProductFootprint.PublishedEvent.3").
+  string type = 1 [(buf.validate.field).required = true];
+
+  // The CloudEvents specification version. Must be "1.0".
+  string specversion = 2 [(buf.validate.field).required = true];
+
+  // A unique identifier for the event.
+  string id = 3 [(buf.validate.field).required = true];
+
+  // The source of the event.
+  string source = 4 [(buf.validate.field).required = true];
+
+  // The time the event occurred.
+  google.protobuf.Timestamp time = 5;
+
+  // The event payload as raw bytes (JSON-encoded).
+  bytes data = 6 [(buf.validate.field).required = true];
+}
+
+// HandleEventRequest is the request message for HandleEvent.
+//
+// Corresponds to the HTTP request:
+//   POST /2/events
+//   Content-Type: application/cloudevents+json
+//
+// See PACT v2.1.0 Section 6.8 "Action Events".
+message HandleEventRequest {
+  // The CloudEvent to process.
+  Event event = 1 [(buf.validate.field).required = true];
+}
+
+// HandleEventResponse is the response message for HandleEvent.
+//
+// An empty response indicates successful processing. The HTTP server
+// returns 200 OK with no body.
+message HandleEventResponse {}

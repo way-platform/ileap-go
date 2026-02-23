@@ -3,111 +3,121 @@ package ileap
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect"
 	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
+	"github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1/ileapv1connect"
 	"golang.org/x/oauth2"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-type mockTokenValidator struct {
-	valid   bool
-	expired bool
+// mockServiceHandler embeds the generated unimplemented handler and
+// allows tests to set data for footprints, TADs, and events.
+type mockServiceHandler struct {
+	ileapv1connect.UnimplementedILeapServiceHandler
+	footprints []*ileapv1.ProductFootprint
+	tads       []*ileapv1.TAD
+	lastEvent  *ileapv1.Event
 }
 
-func (m *mockTokenValidator) ValidateToken(_ context.Context, _ string) (*TokenInfo, error) {
-	if m.expired {
-		return nil, fmt.Errorf("token expired: %w", ErrTokenExpired)
+func (m *mockServiceHandler) GetFootprint(
+	_ context.Context, req *ileapv1.GetFootprintRequest,
+) (*ileapv1.GetFootprintResponse, error) {
+	for _, fp := range m.footprints {
+		if fp.GetId() == req.GetId() {
+			resp := new(ileapv1.GetFootprintResponse)
+			resp.SetData(fp)
+			return resp, nil
+		}
 	}
-	if !m.valid {
-		return nil, fmt.Errorf("invalid token")
+	return nil, connect.NewError(connect.CodeNotFound, nil)
+}
+
+func (m *mockServiceHandler) ListFootprints(
+	_ context.Context, req *ileapv1.ListFootprintsRequest,
+) (*ileapv1.ListFootprintsResponse, error) {
+	result := m.footprints
+	total := len(result)
+	offset := int(req.GetOffset())
+	limit := int(req.GetLimit())
+	if offset > 0 {
+		if offset >= len(result) {
+			result = nil
+		} else {
+			result = result[offset:]
+		}
+	}
+	if limit > 0 && len(result) > limit {
+		result = result[:limit]
+	}
+	resp := new(ileapv1.ListFootprintsResponse)
+	resp.SetData(result)
+	resp.SetTotal(int32(total))
+	return resp, nil
+}
+
+func (m *mockServiceHandler) ListTransportActivityData(
+	_ context.Context,
+	req *ileapv1.ListTransportActivityDataRequest,
+) (*ileapv1.ListTransportActivityDataResponse, error) {
+	result := m.tads
+	total := len(result)
+	offset := int(req.GetOffset())
+	limit := int(req.GetLimit())
+	if offset > 0 {
+		if offset >= len(result) {
+			result = nil
+		} else {
+			result = result[offset:]
+		}
+	}
+	if limit > 0 && len(result) > limit {
+		result = result[:limit]
+	}
+	resp := new(ileapv1.ListTransportActivityDataResponse)
+	resp.SetData(result)
+	resp.SetTotal(int32(total))
+	return resp, nil
+}
+
+func (m *mockServiceHandler) HandleEvent(
+	_ context.Context, req *ileapv1.HandleEventRequest,
+) (*ileapv1.HandleEventResponse, error) {
+	m.lastEvent = req.GetEvent()
+	return &ileapv1.HandleEventResponse{}, nil
+}
+
+// mockAuthHandler implements AuthHandler for tests.
+type mockAuthHandler struct {
+	validToken   bool
+	expiredToken bool
+}
+
+func (m *mockAuthHandler) ValidateToken(_ context.Context, _ string) (*TokenInfo, error) {
+	if m.expiredToken {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("token expired"))
+	}
+	if !m.validToken {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid token"))
 	}
 	return &TokenInfo{Subject: "test-user"}, nil
 }
 
-type mockFootprintHandler struct {
-	footprints []*ileapv1.ProductFootprint
-}
-
-func (m *mockFootprintHandler) GetFootprint(
-	_ context.Context, id string,
-) (*ileapv1.ProductFootprint, error) {
-	for _, fp := range m.footprints {
-		if fp.GetId() == id {
-			return fp, nil
-		}
-	}
-	return nil, ErrNotFound
-}
-
-func (m *mockFootprintHandler) ListFootprints(
-	_ context.Context, req ListFootprintsRequest,
-) (*ListFootprintsResponse, error) {
-	result := m.footprints
-	total := len(result)
-	if req.Offset > 0 {
-		if req.Offset >= len(result) {
-			result = nil
-		} else {
-			result = result[req.Offset:]
-		}
-	}
-	if req.Limit > 0 && len(result) > req.Limit {
-		result = result[:req.Limit]
-	}
-	return &ListFootprintsResponse{Data: result, Total: total}, nil
-}
-
-type mockTADHandler struct {
-	tads []*ileapv1.TAD
-}
-
-func (m *mockTADHandler) ListTADs(
-	_ context.Context,
-	req ListTADsRequest,
-) (*ListTADsResponse, error) {
-	result := m.tads
-	total := len(result)
-	if req.Offset > 0 {
-		if req.Offset >= len(result) {
-			result = nil
-		} else {
-			result = result[req.Offset:]
-		}
-	}
-	if req.Limit > 0 && len(result) > req.Limit {
-		result = result[:req.Limit]
-	}
-	return &ListTADsResponse{Data: result, Total: total}, nil
-}
-
-type mockEventHandler struct {
-	lastEvent *Event
-}
-
-func (m *mockEventHandler) HandleEvent(_ context.Context, event Event) error {
-	m.lastEvent = &event
-	return nil
-}
-
-type mockTokenIssuer struct{}
-
-func (m *mockTokenIssuer) IssueToken(
+func (m *mockAuthHandler) IssueToken(
 	_ context.Context, clientID, clientSecret string,
 ) (*oauth2.Token, error) {
 	if clientID == "hello" && clientSecret == "pathfinder" {
 		return &oauth2.Token{AccessToken: "mock-token", TokenType: "bearer"}, nil
 	}
-	return nil, ErrInvalidCredentials
+	return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid credentials"))
 }
 
-type mockOIDCProvider struct{}
-
-func (m *mockOIDCProvider) OpenIDConfiguration(baseURL string) *OpenIDConfiguration {
+func (m *mockAuthHandler) OpenIDConfiguration(baseURL string) *OpenIDConfiguration {
 	return &OpenIDConfiguration{
 		IssuerURL:              baseURL,
 		AuthURL:                baseURL + "/auth/token",
@@ -119,7 +129,7 @@ func (m *mockOIDCProvider) OpenIDConfiguration(baseURL string) *OpenIDConfigurat
 	}
 }
 
-func (m *mockOIDCProvider) JWKS() *JWKSet {
+func (m *mockAuthHandler) JWKS() *JWKSet {
 	return &JWKSet{
 		Keys: []JWK{{
 			KeyType:   "RSA",
@@ -134,26 +144,22 @@ func (m *mockOIDCProvider) JWKS() *JWKSet {
 
 func newTestServer() *Server {
 	return NewServer(
-		WithTokenValidator(&mockTokenValidator{valid: true}),
-		WithFootprintHandler(&mockFootprintHandler{
+		WithAuthHandler(&mockAuthHandler{validToken: true}),
+		WithServiceHandler(&mockServiceHandler{
 			footprints: []*ileapv1.ProductFootprint{
 				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-1"); return p }(),
 				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-2"); return p }(),
 			},
-		}),
-		WithTADHandler(&mockTADHandler{
 			tads: []*ileapv1.TAD{
 				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-1"); return t }(),
 			},
 		}),
-		WithEventHandler(&mockEventHandler{}),
 	)
 }
 
 func authTestServer(opts ...ServerOption) *Server {
 	base := []ServerOption{
-		WithTokenIssuer(&mockTokenIssuer{}),
-		WithOIDCProvider(&mockOIDCProvider{}),
+		WithAuthHandler(&mockAuthHandler{validToken: true}),
 	}
 	return NewServer(append(base, opts...)...)
 }
@@ -319,8 +325,8 @@ func TestWithPathPrefix(t *testing.T) {
 
 	t.Run("pagination Link uses prefix", func(t *testing.T) {
 		srv := NewServer(
-			WithTokenValidator(&mockTokenValidator{valid: true}),
-			WithFootprintHandler(&mockFootprintHandler{
+			WithAuthHandler(&mockAuthHandler{validToken: true}),
+			WithServiceHandler(&mockServiceHandler{
 				footprints: []*ileapv1.ProductFootprint{
 					func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-1"); return p }(),
 					func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-2"); return p }(),
@@ -374,8 +380,7 @@ func TestPACTAuthMiddleware(t *testing.T) {
 
 	t.Run("invalid token returns 401", func(t *testing.T) {
 		srv := NewServer(
-			WithTokenValidator(&mockTokenValidator{valid: false}),
-			WithFootprintHandler(&mockFootprintHandler{}),
+			WithAuthHandler(&mockAuthHandler{validToken: false}),
 		)
 		req := httptest.NewRequest("GET", "/2/footprints", nil)
 		req.Header.Set("Authorization", "Bearer bad-token")
@@ -397,8 +402,7 @@ func TestILeapAuthMiddleware(t *testing.T) {
 
 	t.Run("invalid token returns 403", func(t *testing.T) {
 		srv := NewServer(
-			WithTokenValidator(&mockTokenValidator{valid: false}),
-			WithTADHandler(&mockTADHandler{}),
+			WithAuthHandler(&mockAuthHandler{validToken: false}),
 		)
 		req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
 		req.Header.Set("Authorization", "Bearer bad-token")
@@ -409,8 +413,7 @@ func TestILeapAuthMiddleware(t *testing.T) {
 
 	t.Run("expired token returns 401", func(t *testing.T) {
 		srv := NewServer(
-			WithTokenValidator(&mockTokenValidator{expired: true}),
-			WithTADHandler(&mockTADHandler{}),
+			WithAuthHandler(&mockAuthHandler{expiredToken: true}),
 		)
 		req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
 		req.Header.Set("Authorization", "Bearer expired-token")
@@ -453,8 +456,8 @@ func TestListFootprints(t *testing.T) {
 
 func TestListFootprintsPagination(t *testing.T) {
 	srv := NewServer(
-		WithTokenValidator(&mockTokenValidator{valid: true}),
-		WithFootprintHandler(&mockFootprintHandler{
+		WithAuthHandler(&mockAuthHandler{validToken: true}),
+		WithServiceHandler(&mockServiceHandler{
 			footprints: []*ileapv1.ProductFootprint{
 				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-1"); return p }(),
 				func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-2"); return p }(),
@@ -533,8 +536,8 @@ func TestGetFootprint(t *testing.T) {
 
 func TestListTads(t *testing.T) {
 	srv := NewServer(
-		WithTokenValidator(&mockTokenValidator{valid: true}),
-		WithTADHandler(&mockTADHandler{
+		WithAuthHandler(&mockAuthHandler{validToken: true}),
+		WithServiceHandler(&mockServiceHandler{
 			tads: []*ileapv1.TAD{
 				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-1"); return t }(),
 				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-2"); return t }(),
@@ -617,14 +620,14 @@ func TestListTads(t *testing.T) {
 }
 
 func TestEvents(t *testing.T) {
-	eh := &mockEventHandler{}
+	svc := &mockServiceHandler{}
 	srv := NewServer(
-		WithTokenValidator(&mockTokenValidator{valid: true}),
-		WithEventHandler(eh),
+		WithAuthHandler(&mockAuthHandler{validToken: true}),
+		WithServiceHandler(svc),
 	)
 
 	t.Run("cloudevents content type", func(t *testing.T) {
-		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-1","source":"test","data":{"pfIds":[]}}`
+		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-1","source":"test","data":"eyJwZklkcyI6W119"}`
 		req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
 		req.Header.Set("Authorization", "Bearer valid")
 		req.Header.Set("Content-Type", "application/cloudevents+json")
@@ -633,16 +636,16 @@ func TestEvents(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
-		if eh.lastEvent == nil {
+		if svc.lastEvent == nil {
 			t.Fatal("expected event to be handled")
 		}
-		if eh.lastEvent.ID != "evt-1" {
-			t.Errorf("expected event ID evt-1, got %s", eh.lastEvent.ID)
+		if svc.lastEvent.GetId() != "evt-1" {
+			t.Errorf("expected event ID evt-1, got %s", svc.lastEvent.GetId())
 		}
 	})
 
 	t.Run("application/json content type", func(t *testing.T) {
-		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-2","source":"test","data":{"pfIds":[]}}`
+		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-2","source":"test","data":"eyJwZklkcyI6W119"}`
 		req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
 		req.Header.Set("Authorization", "Bearer valid")
 		req.Header.Set("Content-Type", "application/json")
@@ -679,27 +682,23 @@ func TestEventsValidationMissingFields(t *testing.T) {
 	}{
 		{
 			"missing specversion",
-			`{"id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
+			`{"id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":"ewo="}`,
 		},
 		{
 			"missing id",
-			`{"specversion":"1.0","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
+			`{"specversion":"1.0","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":"ewo="}`,
 		},
 		{
 			"missing source",
-			`{"specversion":"1.0","id":"1","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
+			`{"specversion":"1.0","id":"1","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":"ewo="}`,
 		},
 		{
 			"missing data",
 			`{"specversion":"1.0","id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1"}`,
 		},
 		{
-			"null data",
-			`{"specversion":"1.0","id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":null}`,
-		},
-		{
 			"wrong specversion",
-			`{"specversion":"0.3","id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":{"pfIds":[]}}`,
+			`{"specversion":"0.3","id":"1","source":"x","type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","data":"ewo="}`,
 		},
 	}
 	for _, tc := range cases {
@@ -717,7 +716,7 @@ func TestEventsValidationMissingFields(t *testing.T) {
 func TestNotImplemented(t *testing.T) {
 	t.Run("data handlers with auth configured", func(t *testing.T) {
 		srv := NewServer(
-			WithTokenValidator(&mockTokenValidator{valid: true}),
+			WithAuthHandler(&mockAuthHandler{validToken: true}),
 		)
 
 		t.Run("footprints", func(t *testing.T) {
@@ -737,7 +736,7 @@ func TestNotImplemented(t *testing.T) {
 		})
 
 		t.Run("events", func(t *testing.T) {
-			body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-1","source":"test","data":{"pfIds":[]}}`
+			body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-1","source":"test","data":"eyJwZklkcyI6W119"}`
 			req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
 			req.Header.Set("Authorization", "Bearer valid")
 			req.Header.Set("Content-Type", "application/cloudevents+json")

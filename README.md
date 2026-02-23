@@ -4,14 +4,19 @@
 [![GoReportCard](https://goreportcard.com/badge/github.com/way-platform/ileap-go)](https://goreportcard.com/report/github.com/way-platform/ileap-go)
 [![CI](https://github.com/way-platform/ileap-go/actions/workflows/release.yaml/badge.svg)](https://github.com/way-platform/ileap-go/actions/workflows/release.yaml)
 
-A Go SDK and server implementation for logistics emissions data compatible with the [iLEAP Technical Specifications](https://sine-fdn.github.io/ileap-extension/).
+Deploy a fully iLEAP-conformant server in minutes. Implement a standard [Connect RPC](https://connectrpc.com/) handler — the SDK handles the rest.
+
+A Go SDK and server for logistics emissions data compatible with the [iLEAP Technical Specifications](https://sine-fdn.github.io/ileap-extension/). The server translates the iLEAP HTTP protocol (JSON envelopes, OData filtering, Link header pagination, OAuth2 error formats) into standard Connect RPC calls, so you only need to implement a typed service interface.
 
 ## SDK
 
 ### Features
 
+* Two interfaces, two options: implement `ILeapServiceHandler` for data, `AuthHandler` for auth — done.
+* `ILeapServiceHandler` is the generated Connect RPC interface. Any Connect handler implementation works out of the box.
 * Go Client and Server for [PACT Product Footprints](https://wbcsd.github.io/tr/2024/data-exchange-protocol-20241024/#dt-pf) with [iLEAP extensions](https://sine-fdn.github.io/ileap-extension/#pcf-mapping).
 * Go Client and Server for [iLEAP Transport Activity Data](https://sine-fdn.github.io/ileap-extension/#dt-tad).
+* Uses `connect.Error` codes throughout for a single, consistent error model.
 
 ### Installing
 
@@ -38,22 +43,26 @@ fmt.Println(footprint)
 
 ### Using the Server
 
+Two interfaces, two options:
+
 ```go
-server := ileap.NewServer(
-    ileap.WithFootprintHandler(myFootprintHandler),
-    ileap.WithTADHandler(myTADHandler),
-    ileap.WithTokenValidator(myTokenValidator),
+srv := ileap.NewServer(
+    ileap.WithServiceHandler(myHandler),  // ILeapServiceHandler (generated Connect interface)
+    ileap.WithAuthHandler(myAuth),        // AuthHandler
 )
 
-log.Fatal(http.ListenAndServe(":8080", server))
+log.Fatal(http.ListenAndServe(":8080", srv))
 ```
+
+`ILeapServiceHandler` is the generated Connect RPC interface with four methods: `ListFootprints`, `GetFootprint`, `ListTransportActivityData`, and `HandleEvent`. `AuthHandler` covers token issuance, validation, and OIDC discovery.
 
 #### Pre-built Handlers
 
 The `handlers/` directory provides pre-built implementations that can be plugged directly into the server:
 
-* **`ileapdemo`**: Provides demo implementations of `FootprintHandler`, `TADHandler`, `TokenIssuer`, `TokenValidator`, and `OIDCProvider` loaded with sample data and static credentials. Ideal for testing and local development.
-* **`ileapclerk`**: Provides `TokenIssuer`, `TokenValidator`, and `OIDCProvider` implementations that delegate authentication to [Clerk](https://clerk.com/) via the Clerk Frontend API.
+* **`ileapdemo`**: Demo `ILeapServiceHandler` and `AuthHandler` loaded with sample data and static credentials. Ideal for testing and local development.
+* **`ileapclerk`**: `AuthHandler` implementation that delegates authentication to [Clerk](https://clerk.com/) via the Clerk Frontend API.
+* **`ileapconnect`**: Connect RPC client that forwards requests to an existing Connect backend. The client satisfies `ILeapServiceHandler` directly — point your iLEAP server at a Connect service and get conformance for free.
 
 ### Conformance Testing
 

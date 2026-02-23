@@ -42,6 +42,9 @@ const (
 	// ILeapServiceListTransportActivityDataProcedure is the fully-qualified name of the ILeapService's
 	// ListTransportActivityData RPC.
 	ILeapServiceListTransportActivityDataProcedure = "/wayplatform.connect.ileap.v1.ILeapService/ListTransportActivityData"
+	// ILeapServiceHandleEventProcedure is the fully-qualified name of the ILeapService's HandleEvent
+	// RPC.
+	ILeapServiceHandleEventProcedure = "/wayplatform.connect.ileap.v1.ILeapService/HandleEvent"
 )
 
 // ILeapServiceClient is a client for the wayplatform.connect.ileap.v1.ILeapService service.
@@ -124,6 +127,25 @@ type ILeapServiceClient interface {
 	// See iLEAP Technical Specifications Section 5.1 "Action TransportActivityData".
 	// Reference: https://sine-fdn.github.io/ileap-extension/#action-tad
 	ListTransportActivityData(context.Context, *v1.ListTransportActivityDataRequest) (*v1.ListTransportActivityDataResponse, error)
+	// HandleEvent processes an incoming PACT CloudEvent notification.
+	//
+	// This RPC corresponds to PACT Action Events (POST /2/events).
+	//
+	// Action Events is OPTIONAL per PACT v2.1.0 Section 6.8 and enables
+	// CloudEvent-based notifications for product footprint lifecycle events.
+	//
+	// Known event types:
+	//   - org.wbcsd.pact.ProductFootprint.RequestCreatedEvent.3
+	//   - org.wbcsd.pact.ProductFootprint.RequestFulfilledEvent.3
+	//   - org.wbcsd.pact.ProductFootprint.RequestRejectedEvent.3
+	//   - org.wbcsd.pact.ProductFootprint.PublishedEvent.3
+	//
+	// Error responses:
+	//   - BadRequest (gRPC INVALID_ARGUMENT): Malformed event or unknown type.
+	//
+	// See PACT v2.1.0 Section 6.8 "Action Events".
+	// Reference: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/#api-action-events
+	HandleEvent(context.Context, *v1.HandleEventRequest) (*v1.HandleEventResponse, error)
 }
 
 // NewILeapServiceClient constructs a client for the wayplatform.connect.ileap.v1.ILeapService
@@ -155,6 +177,12 @@ func NewILeapServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(iLeapServiceMethods.ByName("ListTransportActivityData")),
 			connect.WithClientOptions(opts...),
 		),
+		handleEvent: connect.NewClient[v1.HandleEventRequest, v1.HandleEventResponse](
+			httpClient,
+			baseURL+ILeapServiceHandleEventProcedure,
+			connect.WithSchema(iLeapServiceMethods.ByName("HandleEvent")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -163,6 +191,7 @@ type iLeapServiceClient struct {
 	listFootprints            *connect.Client[v1.ListFootprintsRequest, v1.ListFootprintsResponse]
 	getFootprint              *connect.Client[v1.GetFootprintRequest, v1.GetFootprintResponse]
 	listTransportActivityData *connect.Client[v1.ListTransportActivityDataRequest, v1.ListTransportActivityDataResponse]
+	handleEvent               *connect.Client[v1.HandleEventRequest, v1.HandleEventResponse]
 }
 
 // ListFootprints calls wayplatform.connect.ileap.v1.ILeapService.ListFootprints.
@@ -187,6 +216,15 @@ func (c *iLeapServiceClient) GetFootprint(ctx context.Context, req *v1.GetFootpr
 // wayplatform.connect.ileap.v1.ILeapService.ListTransportActivityData.
 func (c *iLeapServiceClient) ListTransportActivityData(ctx context.Context, req *v1.ListTransportActivityDataRequest) (*v1.ListTransportActivityDataResponse, error) {
 	response, err := c.listTransportActivityData.CallUnary(ctx, connect.NewRequest(req))
+	if response != nil {
+		return response.Msg, err
+	}
+	return nil, err
+}
+
+// HandleEvent calls wayplatform.connect.ileap.v1.ILeapService.HandleEvent.
+func (c *iLeapServiceClient) HandleEvent(ctx context.Context, req *v1.HandleEventRequest) (*v1.HandleEventResponse, error) {
+	response, err := c.handleEvent.CallUnary(ctx, connect.NewRequest(req))
 	if response != nil {
 		return response.Msg, err
 	}
@@ -274,6 +312,25 @@ type ILeapServiceHandler interface {
 	// See iLEAP Technical Specifications Section 5.1 "Action TransportActivityData".
 	// Reference: https://sine-fdn.github.io/ileap-extension/#action-tad
 	ListTransportActivityData(context.Context, *v1.ListTransportActivityDataRequest) (*v1.ListTransportActivityDataResponse, error)
+	// HandleEvent processes an incoming PACT CloudEvent notification.
+	//
+	// This RPC corresponds to PACT Action Events (POST /2/events).
+	//
+	// Action Events is OPTIONAL per PACT v2.1.0 Section 6.8 and enables
+	// CloudEvent-based notifications for product footprint lifecycle events.
+	//
+	// Known event types:
+	//   - org.wbcsd.pact.ProductFootprint.RequestCreatedEvent.3
+	//   - org.wbcsd.pact.ProductFootprint.RequestFulfilledEvent.3
+	//   - org.wbcsd.pact.ProductFootprint.RequestRejectedEvent.3
+	//   - org.wbcsd.pact.ProductFootprint.PublishedEvent.3
+	//
+	// Error responses:
+	//   - BadRequest (gRPC INVALID_ARGUMENT): Malformed event or unknown type.
+	//
+	// See PACT v2.1.0 Section 6.8 "Action Events".
+	// Reference: https://wbcsd.github.io/tr/2023/data-exchange-protocol-20231207/#api-action-events
+	HandleEvent(context.Context, *v1.HandleEventRequest) (*v1.HandleEventResponse, error)
 }
 
 // NewILeapServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -301,6 +358,12 @@ func NewILeapServiceHandler(svc ILeapServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(iLeapServiceMethods.ByName("ListTransportActivityData")),
 		connect.WithHandlerOptions(opts...),
 	)
+	iLeapServiceHandleEventHandler := connect.NewUnaryHandlerSimple(
+		ILeapServiceHandleEventProcedure,
+		svc.HandleEvent,
+		connect.WithSchema(iLeapServiceMethods.ByName("HandleEvent")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wayplatform.connect.ileap.v1.ILeapService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ILeapServiceListFootprintsProcedure:
@@ -309,6 +372,8 @@ func NewILeapServiceHandler(svc ILeapServiceHandler, opts ...connect.HandlerOpti
 			iLeapServiceGetFootprintHandler.ServeHTTP(w, r)
 		case ILeapServiceListTransportActivityDataProcedure:
 			iLeapServiceListTransportActivityDataHandler.ServeHTTP(w, r)
+		case ILeapServiceHandleEventProcedure:
+			iLeapServiceHandleEventHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -328,4 +393,8 @@ func (UnimplementedILeapServiceHandler) GetFootprint(context.Context, *v1.GetFoo
 
 func (UnimplementedILeapServiceHandler) ListTransportActivityData(context.Context, *v1.ListTransportActivityDataRequest) (*v1.ListTransportActivityDataResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wayplatform.connect.ileap.v1.ILeapService.ListTransportActivityData is not implemented"))
+}
+
+func (UnimplementedILeapServiceHandler) HandleEvent(context.Context, *v1.HandleEventRequest) (*v1.HandleEventResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wayplatform.connect.ileap.v1.ILeapService.HandleEvent is not implemented"))
 }
