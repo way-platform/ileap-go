@@ -9,7 +9,9 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv1"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 // ListTADsParams is the request parameters for the [Client.ListTADs] method.
@@ -21,7 +23,7 @@ type ListTADsParams struct {
 // ListTADsResult is the response for the [Client.ListTADs] method.
 type ListTADsResult struct {
 	// TADs is the list of transport activity data in the current page.
-	TADs []ileapv1.TAD `json:"tads"`
+	TADs []*ileapv1pb.TAD
 }
 
 // ListTADs lists transport activity data.
@@ -55,12 +57,22 @@ func (c *Client) ListTADs(
 	if err != nil {
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
-	// TODO: Parse next page link.
-	var response ileapv1.TadListingResponseInner
+	var response struct {
+		Data []json.RawMessage `json:"data"`
+	}
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, fmt.Errorf("unmarshal response body: %w", err)
 	}
+	tads := make([]*ileapv1pb.TAD, 0, len(response.Data))
+	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	for _, raw := range response.Data {
+		tad := &ileapv1pb.TAD{}
+		if err := opts.Unmarshal(raw, tad); err != nil {
+			return nil, fmt.Errorf("unmarshal TAD: %w", err)
+		}
+		tads = append(tads, tad)
+	}
 	return &ListTADsResult{
-		TADs: response.Data,
+		TADs: tads,
 	}, nil
 }

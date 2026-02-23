@@ -1,0 +1,31 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+import "google/protobuf/timestamp.proto";
+import "wayplatform/connect/ileap/v1/glec_distance.proto";
+import "wayplatform/connect/ileap/v1/location.proto";
+import "wayplatform/connect/ileap/v1/feedstock.proto";
+import "wayplatform/connect/ileap/v1/energy_carrier.proto";
+
+// TAD (Transport Activity Data) is the iLEAP transport activity data type.
+message TAD {
+  string activity_id = 1 [json_name = "activityId"];
+  google.protobuf.Timestamp arrival_at = 2 [json_name = "arrivalAt"];
+  repeated string consignment_ids = 3 [json_name = "consignmentIds"];
+  google.protobuf.Timestamp departure_at = 4 [json_name = "departureAt"];
+  Location destination = 5;
+  GlecDistance distance = 6;
+  string empty_distance_factor = 7 [json_name = "emptyDistanceFactor"];
+  repeated EnergyCarrier energy_carriers = 8 [json_name = "energyCarriers"];
+  string load_factor = 9 [json_name = "loadFactor"];
+  string mass = 10;
+  string mode = 11;
+  Location origin = 12;
+  uint32 packaging_or_tr_eq_amount = 13 [json_name = "packagingOrTrEqAmount"];
+  string packaging_or_tr_eq_type = 14 [json_name = "packagingOrTrEqType"];
+  string temperature_control = 15 [json_name = "temperatureControl"];
+  repeated Feedstock feedstocks = 16;
+}

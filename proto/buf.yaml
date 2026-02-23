@@ -1,0 +1,18 @@
+version: v2
+
+lint:
+  use:
+    - STANDARD
+  except:
+    - ENUM_VALUE_PREFIX
+    - FIELD_LOWER_SNAKE_CASE
+  ignore:
+    - wayplatform/connect
+
+modules:
+  - path: .
+    name: buf.build/way-platform/ileap-go
+
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/bufbuild/protovalidate

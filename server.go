@@ -11,7 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv1"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 // Server is an iLEAP data server HTTP handler.
@@ -337,7 +339,7 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 		linkURL := fmt.Sprintf("%s/2/footprints?limit=%d&offset=%d", base, linkLimit, next)
 		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"next\"", linkURL))
 	}
-	writeJSON(w, ileapv1.PfListingResponseInner{Data: resp.Data})
+	writeListFootprintsResponse(w, resp.Data)
 }
 
 func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
@@ -347,7 +349,7 @@ func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
 		writeHandlerError(w, err)
 		return
 	}
-	writeJSON(w, ileapv1.ProductFootprintResponse{Data: *fp})
+	writeGetFootprintResponse(w, fp)
 }
 
 func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
@@ -388,7 +390,7 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 		linkURL := fmt.Sprintf("%s/2/ileap/tad?offset=%d&limit=%d", base, next, linkLimit)
 		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"next\"", linkURL))
 	}
-	writeJSON(w, ileapv1.TadListingResponseInner{Data: resp.Data})
+	writeListTADsResponse(w, resp.Data)
 }
 
 func (s *Server) events(w http.ResponseWriter, r *http.Request) {
@@ -529,4 +531,53 @@ func writeJSON(w http.ResponseWriter, v any) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		slog.Error("failed to encode response", "error", err)
 	}
+}
+
+func writeGetFootprintResponse(w http.ResponseWriter, fp *ileapv1pb.ProductFootprint) {
+	w.Header().Set("Content-Type", "application/json")
+	data, err := protojson.Marshal(fp)
+	if err != nil {
+		slog.Error("failed to marshal footprint", "error", err)
+		writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
+		return
+	}
+	w.Write([]byte(`{"data":`))
+	w.Write(data)
+	w.Write([]byte(`}`))
+}
+
+func writeListFootprintsResponse(w http.ResponseWriter, fps []*ileapv1pb.ProductFootprint) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"data":[`))
+	for i, fp := range fps {
+		if i > 0 {
+			w.Write([]byte(","))
+		}
+		data, err := protojson.Marshal(fp)
+		if err != nil {
+			slog.Error("failed to marshal footprint", "error", err)
+			writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
+			return
+		}
+		w.Write(data)
+	}
+	w.Write([]byte(`]}`))
+}
+
+func writeListTADsResponse(w http.ResponseWriter, tads []*ileapv1pb.TAD) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"data":[`))
+	for i, tad := range tads {
+		if i > 0 {
+			w.Write([]byte(","))
+		}
+		data, err := protojson.Marshal(tad)
+		if err != nil {
+			slog.Error("failed to marshal TAD", "error", err)
+			writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
+			return
+		}
+		w.Write(data)
+	}
+	w.Write([]byte(`]}`))
 }

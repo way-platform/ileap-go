@@ -8,8 +8,6 @@ tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 	github.com/google/ko
 	github.com/magefile/mage
-	github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
-	github.com/speakeasy-api/openapi-overlay
 	google.golang.org/protobuf/cmd/protoc-gen-go
 )
 

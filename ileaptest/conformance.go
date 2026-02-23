@@ -3,12 +3,15 @@ package ileaptest
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/way-platform/ileap-go"
-	"github.com/way-platform/ileap-go/openapi/ileapv1"
+	"github.com/way-platform/ileap-go/ileapv1pb"
 	"golang.org/x/oauth2"
 )
 
@@ -33,31 +36,29 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 
 	t.Run("TC001_ShipmentFootprint", func(t *testing.T) {
 		body := getJSON(t, cfg.ServerURL, "/2/footprints", token)
-		var resp ileapv1.PfListingResponseInner
-		if err := json.Unmarshal(body, &resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		for _, fp := range resp.Data {
-			for _, ext := range fp.Extensions {
-				if ext.DataSchema != schemaShipmentFootprint {
+		fps := parseFootprintList(t, body)
+		for _, fp := range fps {
+			for _, ext := range fp.GetExtensions() {
+				if ext.GetDataSchema() != schemaShipmentFootprint {
 					continue
 				}
-				if ext.SpecVersion != "2.0.0" {
-					t.Errorf("extension specVersion: got %q, want 2.0.0", ext.SpecVersion)
+				if ext.GetSpecVersion() != "2.0.0" {
+					t.Errorf("extension specVersion: got %q, want 2.0.0", ext.GetSpecVersion())
 				}
-				if fp.ProductCategoryCpc != "83117" {
-					t.Errorf("productCategoryCpc: got %q, want 83117", fp.ProductCategoryCpc)
+				if fp.GetProductCategoryCpc() != "83117" {
+					t.Errorf("productCategoryCpc: got %q, want 83117", fp.GetProductCategoryCpc())
 				}
-				if fp.Pcf.PackagingEmissionsIncluded {
+				if pcf := fp.GetPcf(); pcf != nil && pcf.GetPackagingEmissionsIncluded() {
 					t.Error("packagingEmissionsIncluded: got true, want false")
 				}
-				if len(fp.Extensions) != 1 {
-					t.Errorf("extensions count: got %d, want exactly 1", len(fp.Extensions))
+				if len(fp.GetExtensions()) != 1 {
+					t.Errorf("extensions count: got %d, want exactly 1", len(fp.GetExtensions()))
 				}
-				var sf map[string]any
-				if err := json.Unmarshal(ext.Data, &sf); err != nil {
-					t.Fatalf("unmarshal SF data: %v", err)
+				data := ext.GetData()
+				if data == nil {
+					t.Fatal("extension data is nil")
 				}
+				sf := data.AsMap()
 				if _, ok := sf["mass"]; !ok {
 					t.Error("ShipmentFootprint missing required field: mass")
 				}
@@ -88,31 +89,29 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 
 	t.Run("TC002_TOC", func(t *testing.T) {
 		body := getJSON(t, cfg.ServerURL, "/2/footprints", token)
-		var resp ileapv1.PfListingResponseInner
-		if err := json.Unmarshal(body, &resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		for _, fp := range resp.Data {
-			for _, ext := range fp.Extensions {
-				if ext.DataSchema != schemaTOC {
+		fps := parseFootprintList(t, body)
+		for _, fp := range fps {
+			for _, ext := range fp.GetExtensions() {
+				if ext.GetDataSchema() != schemaTOC {
 					continue
 				}
-				if ext.SpecVersion != "2.0.0" {
-					t.Errorf("extension specVersion: got %q, want 2.0.0", ext.SpecVersion)
+				if ext.GetSpecVersion() != "2.0.0" {
+					t.Errorf("extension specVersion: got %q, want 2.0.0", ext.GetSpecVersion())
 				}
-				if fp.ProductCategoryCpc != "83117" {
-					t.Errorf("productCategoryCpc: got %q, want 83117", fp.ProductCategoryCpc)
+				if fp.GetProductCategoryCpc() != "83117" {
+					t.Errorf("productCategoryCpc: got %q, want 83117", fp.GetProductCategoryCpc())
 				}
-				if fp.Pcf.PackagingEmissionsIncluded {
+				if pcf := fp.GetPcf(); pcf != nil && pcf.GetPackagingEmissionsIncluded() {
 					t.Error("packagingEmissionsIncluded: got true, want false")
 				}
-				if len(fp.Extensions) != 1 {
-					t.Errorf("extensions count: got %d, want exactly 1", len(fp.Extensions))
+				if len(fp.GetExtensions()) != 1 {
+					t.Errorf("extensions count: got %d, want exactly 1", len(fp.GetExtensions()))
 				}
-				var toc map[string]any
-				if err := json.Unmarshal(ext.Data, &toc); err != nil {
-					t.Fatalf("unmarshal TOC data: %v", err)
+				data := ext.GetData()
+				if data == nil {
+					t.Fatal("extension data is nil")
 				}
+				toc := data.AsMap()
 				for _, key := range []string{"tocId", "mode", "co2eIntensityWTW", "co2eIntensityTTW", "transportActivityUnit"} {
 					if _, ok := toc[key]; !ok {
 						t.Errorf("TOC missing required field: %s", key)
@@ -131,31 +130,29 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 
 	t.Run("TC003_HOC", func(t *testing.T) {
 		body := getJSON(t, cfg.ServerURL, "/2/footprints", token)
-		var resp ileapv1.PfListingResponseInner
-		if err := json.Unmarshal(body, &resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		for _, fp := range resp.Data {
-			for _, ext := range fp.Extensions {
-				if ext.DataSchema != schemaHOC {
+		fps := parseFootprintList(t, body)
+		for _, fp := range fps {
+			for _, ext := range fp.GetExtensions() {
+				if ext.GetDataSchema() != schemaHOC {
 					continue
 				}
-				if ext.SpecVersion != "2.0.0" {
-					t.Errorf("extension specVersion: got %q, want 2.0.0", ext.SpecVersion)
+				if ext.GetSpecVersion() != "2.0.0" {
+					t.Errorf("extension specVersion: got %q, want 2.0.0", ext.GetSpecVersion())
 				}
-				if fp.ProductCategoryCpc != "83117" {
-					t.Errorf("productCategoryCpc: got %q, want 83117", fp.ProductCategoryCpc)
+				if fp.GetProductCategoryCpc() != "83117" {
+					t.Errorf("productCategoryCpc: got %q, want 83117", fp.GetProductCategoryCpc())
 				}
-				if fp.Pcf.PackagingEmissionsIncluded {
+				if pcf := fp.GetPcf(); pcf != nil && pcf.GetPackagingEmissionsIncluded() {
 					t.Error("packagingEmissionsIncluded: got true, want false")
 				}
-				if len(fp.Extensions) != 1 {
-					t.Errorf("extensions count: got %d, want exactly 1", len(fp.Extensions))
+				if len(fp.GetExtensions()) != 1 {
+					t.Errorf("extensions count: got %d, want exactly 1", len(fp.GetExtensions()))
 				}
-				var hoc map[string]any
-				if err := json.Unmarshal(ext.Data, &hoc); err != nil {
-					t.Fatalf("unmarshal HOC data: %v", err)
+				data := ext.GetData()
+				if data == nil {
+					t.Fatal("extension data is nil")
 				}
+				hoc := data.AsMap()
 				for _, key := range []string{"hocId", "hubType", "co2eIntensityWTW", "co2eIntensityTTW", "hubActivityUnit"} {
 					if _, ok := hoc[key]; !ok {
 						t.Errorf("HOC missing required field: %s", key)
@@ -174,33 +171,30 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 
 	t.Run("TC004_ListAllTAD", func(t *testing.T) {
 		body := getJSON(t, cfg.ServerURL, "/2/ileap/tad", token)
-		var resp ileapv1.TadListingResponseInner
-		if err := json.Unmarshal(body, &resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		if len(resp.Data) == 0 {
+		tads := parseTADList(t, body)
+		if len(tads) == 0 {
 			t.Fatal("TAD list is empty")
 		}
-		for i, tad := range resp.Data {
-			if tad.ActivityID == "" {
+		for i, tad := range tads {
+			if tad.GetActivityId() == "" {
 				t.Errorf("TAD[%d]: missing activityId", i)
 			}
-			if len(tad.ConsignmentIds) == 0 {
+			if len(tad.GetConsignmentIds()) == 0 {
 				t.Errorf("TAD[%d]: consignmentIds must be non-empty", i)
 			}
-			if tad.Origin.Country == "" {
+			if o := tad.GetOrigin(); o == nil || o.GetCountry() == "" {
 				t.Errorf("TAD[%d]: origin.country missing", i)
 			}
-			if tad.Destination.Country == "" {
+			if d := tad.GetDestination(); d == nil || d.GetCountry() == "" {
 				t.Errorf("TAD[%d]: destination.country missing", i)
 			}
-			if tad.Mode == "" {
+			if tad.GetMode() == "" {
 				t.Errorf("TAD[%d]: mode missing", i)
 			}
-			if tad.DepartureAt.IsZero() {
+			if !tad.HasDepartureAt() || tad.GetDepartureAt().AsTime().IsZero() {
 				t.Errorf("TAD[%d]: departureAt missing", i)
 			}
-			if tad.ArrivalAt.IsZero() {
+			if !tad.HasArrivalAt() || tad.GetArrivalAt().AsTime().IsZero() {
 				t.Errorf("TAD[%d]: arrivalAt missing", i)
 			}
 		}
@@ -208,25 +202,19 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 
 	t.Run("TC005_FilteredTAD", func(t *testing.T) {
 		body := getJSON(t, cfg.ServerURL, "/2/ileap/tad?mode=Road", token)
-		var resp ileapv1.TadListingResponseInner
-		if err := json.Unmarshal(body, &resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		for i, tad := range resp.Data {
-			if tad.Mode != "Road" {
-				t.Errorf("TAD[%d]: mode = %q, want Road", i, tad.Mode)
+		tads := parseTADList(t, body)
+		for i, tad := range tads {
+			if tad.GetMode() != "Road" {
+				t.Errorf("TAD[%d]: mode = %q, want Road", i, tad.GetMode())
 			}
 		}
 	})
 
 	t.Run("TC006_LimitedTAD", func(t *testing.T) {
 		body := getJSON(t, cfg.ServerURL, "/2/ileap/tad?limit=1", token)
-		var resp ileapv1.TadListingResponseInner
-		if err := json.Unmarshal(body, &resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		if len(resp.Data) > 1 {
-			t.Errorf("limit=1: got %d results, want at most 1", len(resp.Data))
+		tads := parseTADList(t, body)
+		if len(tads) > 1 {
+			t.Errorf("limit=1: got %d results, want at most 1", len(tads))
 		}
 	})
 
@@ -281,53 +269,44 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 
 	t.Run("PACT_TC03_GetFootprint", func(t *testing.T) {
 		listBody := getJSON(t, cfg.ServerURL, "/2/footprints", token)
-		var listResp ileapv1.PfListingResponseInner
-		if err := json.Unmarshal(listBody, &listResp); err != nil {
-			t.Fatalf("decode list response: %v", err)
-		}
-		if len(listResp.Data) == 0 {
+		listFps := parseFootprintList(t, listBody)
+		if len(listFps) == 0 {
 			t.Fatal("footprint list is empty")
 		}
-		fpID := listResp.Data[0].ID
+		fpID := listFps[0].GetId()
 		getBody := getJSON(t, cfg.ServerURL, "/2/footprints/"+fpID, token)
-		var getResp ileapv1.ProductFootprintResponse
-		if err := json.Unmarshal(getBody, &getResp); err != nil {
-			t.Fatalf("decode get response: %v", err)
-		}
-		if getResp.Data.ID != fpID {
-			t.Errorf("footprint ID: got %q, want %q", getResp.Data.ID, fpID)
+		getFp := parseFootprint(t, getBody)
+		if getFp.GetId() != fpID {
+			t.Errorf("footprint ID: got %q, want %q", getFp.GetId(), fpID)
 		}
 	})
 
 	t.Run("PACT_TC04_ListFootprints", func(t *testing.T) {
 		body := getJSON(t, cfg.ServerURL, "/2/footprints", token)
-		var resp ileapv1.PfListingResponseInner
-		if err := json.Unmarshal(body, &resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		if len(resp.Data) == 0 {
+		fps := parseFootprintList(t, body)
+		if len(fps) == 0 {
 			t.Fatal("footprint list is empty")
 		}
-		for i, fp := range resp.Data {
-			if fp.ID == "" {
+		for i, fp := range fps {
+			if fp.GetId() == "" {
 				t.Errorf("footprint[%d]: missing id", i)
 			}
-			if fp.SpecVersion == "" {
+			if fp.GetSpecVersion() == "" {
 				t.Errorf("footprint[%d]: missing specVersion", i)
 			}
-			if fp.Created.IsZero() {
+			if !fp.HasCreated() || fp.GetCreated().AsTime().IsZero() {
 				t.Errorf("footprint[%d]: missing created", i)
 			}
-			if fp.Status == "" {
+			if fp.GetStatus() == "" {
 				t.Errorf("footprint[%d]: missing status", i)
 			}
-			if fp.CompanyName == "" {
+			if fp.GetCompanyName() == "" {
 				t.Errorf("footprint[%d]: missing companyName", i)
 			}
-			if len(fp.CompanyIds) == 0 {
+			if len(fp.GetCompanyIds()) == 0 {
 				t.Errorf("footprint[%d]: companyIds must be non-empty", i)
 			}
-			if len(fp.ProductIds) == 0 {
+			if len(fp.GetProductIds()) == 0 {
 				t.Errorf("footprint[%d]: productIds must be non-empty", i)
 			}
 		}
@@ -348,12 +327,13 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("status: got %d, want 200", resp.StatusCode)
 		}
-		var listResp ileapv1.PfListingResponseInner
-		if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
-			t.Fatalf("decode response: %v", err)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("read response: %v", err)
 		}
-		if len(listResp.Data) > 1 {
-			t.Errorf("limit=1: got %d results, want at most 1", len(listResp.Data))
+		listFps := parseFootprintList(t, body)
+		if len(listFps) > 1 {
+			t.Errorf("limit=1: got %d results, want at most 1", len(listFps))
 		}
 
 		linkHeader := resp.Header.Get("Link")
@@ -549,20 +529,72 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 			"/2/footprints?$filter=productCategoryCpc+eq+'83117'",
 			token,
 		)
-		var resp ileapv1.PfListingResponseInner
-		if err := json.Unmarshal(body, &resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		for i, fp := range resp.Data {
-			if fp.ProductCategoryCpc != "83117" {
+		fps := parseFootprintList(t, body)
+		for i, fp := range fps {
+			if fp.GetProductCategoryCpc() != "83117" {
 				t.Errorf(
 					"footprint[%d]: productCategoryCpc = %q, want 83117",
 					i,
-					fp.ProductCategoryCpc,
+					fp.GetProductCategoryCpc(),
 				)
 			}
 		}
 	})
+}
+
+func parseFootprintList(t *testing.T, body []byte) []*ileapv1pb.ProductFootprint {
+	t.Helper()
+	var raw struct {
+		Data []json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	result := make([]*ileapv1pb.ProductFootprint, 0, len(raw.Data))
+	for _, r := range raw.Data {
+		pf := &ileapv1pb.ProductFootprint{}
+		if err := opts.Unmarshal(r, pf); err != nil {
+			t.Fatalf("unmarshal footprint: %v", err)
+		}
+		result = append(result, pf)
+	}
+	return result
+}
+
+func parseFootprint(t *testing.T, body []byte) *ileapv1pb.ProductFootprint {
+	t.Helper()
+	var raw struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	pf := &ileapv1pb.ProductFootprint{}
+	if err := protojson.Unmarshal(raw.Data, pf); err != nil {
+		t.Fatalf("unmarshal footprint: %v", err)
+	}
+	return pf
+}
+
+func parseTADList(t *testing.T, body []byte) []*ileapv1pb.TAD {
+	t.Helper()
+	var raw struct {
+		Data []json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	opts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	result := make([]*ileapv1pb.TAD, 0, len(raw.Data))
+	for _, r := range raw.Data {
+		tad := &ileapv1pb.TAD{}
+		if err := opts.Unmarshal(r, tad); err != nil {
+			t.Fatalf("unmarshal TAD: %v", err)
+		}
+		result = append(result, tad)
+	}
+	return result
 }
 
 func authenticate(t *testing.T, serverURL, username, password string) string {

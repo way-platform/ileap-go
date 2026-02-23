@@ -1,0 +1,12 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+// GlecDistance represents distance values per GLEC Framework.
+message GlecDistance {
+  string actual = 1;
+  string glec = 2 [json_name = "gcd"];
+  string sfd = 3;
+}

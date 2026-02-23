@@ -1,0 +1,18 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+// Location represents a geographic location.
+message Location {
+  string city = 1;
+  string country = 2;
+  string locode = 3;
+  string iata = 4;
+  string uic = 5;
+  string lat = 6;
+  string lng = 7;
+  string street = 8;
+  string zip = 9;
+}

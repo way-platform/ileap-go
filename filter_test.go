@@ -5,7 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/way-platform/ileap-go/openapi/ileapv1"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/way-platform/ileap-go/ileapv1pb"
 )
 
 func TestFilterV2_UnmarshalString(t *testing.T) {
@@ -179,24 +181,26 @@ func TestFilterV2_UnmarshalString(t *testing.T) {
 func TestFilterV2_MatchesFootprint(t *testing.T) {
 	testCases := []struct {
 		name      string
-		footprint *ileapv1.ProductFootprintForILeapType
+		footprint *ileapv1pb.ProductFootprint
 		filter    FilterV2
 		want      bool
 	}{
 		{
 			name:      "empty",
-			footprint: &ileapv1.ProductFootprintForILeapType{},
+			footprint: &ileapv1pb.ProductFootprint{},
 			filter:    FilterV2{},
 			want:      true,
 		},
 
 		{
 			name: "single predicate",
-			footprint: &ileapv1.ProductFootprintForILeapType{
-				Pcf: ileapv1.CarbonFootprint{
-					GeographyCountry: ptr("US"),
-				},
-			},
+			footprint: func() *ileapv1pb.ProductFootprint {
+				pf := &ileapv1pb.ProductFootprint{}
+				pcf := &ileapv1pb.CarbonFootprint{}
+				pcf.SetGeographyCountry("US")
+				pf.SetPcf(pcf)
+				return pf
+			}(),
 			filter: FilterV2{
 				Conjuctions: []FilterPredicateV2{
 					{
@@ -211,11 +215,13 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "single predicate, no match",
-			footprint: &ileapv1.ProductFootprintForILeapType{
-				Pcf: ileapv1.CarbonFootprint{
-					GeographyCountry: ptr("FR"),
-				},
-			},
+			footprint: func() *ileapv1pb.ProductFootprint {
+				pf := &ileapv1pb.ProductFootprint{}
+				pcf := &ileapv1pb.CarbonFootprint{}
+				pcf.SetGeographyCountry("FR")
+				pf.SetPcf(pcf)
+				return pf
+			}(),
 			filter: FilterV2{
 				Conjuctions: []FilterPredicateV2{
 					{
@@ -230,9 +236,11 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "created gt",
-			footprint: &ileapv1.ProductFootprintForILeapType{
-				Created: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
+			footprint: func() *ileapv1pb.ProductFootprint {
+				pf := &ileapv1pb.ProductFootprint{}
+				pf.SetCreated(timestamppb.New(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)))
+				return pf
+			}(),
 			filter: FilterV2{
 				Conjuctions: []FilterPredicateV2{
 					{
@@ -247,9 +255,11 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "created gt, no match",
-			footprint: &ileapv1.ProductFootprintForILeapType{
-				Created: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
-			},
+			footprint: func() *ileapv1pb.ProductFootprint {
+				pf := &ileapv1pb.ProductFootprint{}
+				pf.SetCreated(timestamppb.New(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)))
+				return pf
+			}(),
 			filter: FilterV2{
 				Conjuctions: []FilterPredicateV2{
 					{
@@ -264,12 +274,14 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "multiple predicates",
-			footprint: &ileapv1.ProductFootprintForILeapType{
-				ProductCategoryCpc: "6398",
-				Pcf: ileapv1.CarbonFootprint{
-					GeographyCountry: ptr("US"),
-				},
-			},
+			footprint: func() *ileapv1pb.ProductFootprint {
+				pf := &ileapv1pb.ProductFootprint{}
+				pf.SetProductCategoryCpc("6398")
+				pcf := &ileapv1pb.CarbonFootprint{}
+				pcf.SetGeographyCountry("US")
+				pf.SetPcf(pcf)
+				return pf
+			}(),
 			filter: FilterV2{
 				Conjuctions: []FilterPredicateV2{
 					{
@@ -289,9 +301,11 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "productIds, any eq",
-			footprint: &ileapv1.ProductFootprintForILeapType{
-				ProductIds: []string{"urn:gtin:1234"},
-			},
+			footprint: func() *ileapv1pb.ProductFootprint {
+				pf := &ileapv1pb.ProductFootprint{}
+				pf.SetProductIds([]string{"urn:gtin:1234"})
+				return pf
+			}(),
 			filter: FilterV2{
 				Conjuctions: []FilterPredicateV2{
 					{
@@ -306,9 +320,11 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 
 		{
 			name: "productIds, any eq, no match",
-			footprint: &ileapv1.ProductFootprintForILeapType{
-				ProductIds: []string{"urn:gtin:1234"},
-			},
+			footprint: func() *ileapv1pb.ProductFootprint {
+				pf := &ileapv1pb.ProductFootprint{}
+				pf.SetProductIds([]string{"urn:gtin:1234"})
+				return pf
+			}(),
 			filter: FilterV2{
 				Conjuctions: []FilterPredicateV2{
 					{
@@ -331,6 +347,3 @@ func TestFilterV2_MatchesFootprint(t *testing.T) {
 	}
 }
 
-func ptr[T any](t T) *T {
-	return &t
-}

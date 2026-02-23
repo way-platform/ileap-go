@@ -1,0 +1,23 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+option go_package = "github.com/way-platform/ileap-go/ileapv1pb";
+
+import "wayplatform/connect/ileap/v1/energy_carrier.proto";
+
+// HOC (Hub Operation Category) is the iLEAP extension for hub operation footprints.
+message HOC {
+  string hoc_id = 1 [json_name = "hocId"];
+  string hub_type = 2 [json_name = "hubType"];
+  string hub_activity_unit = 3 [json_name = "hubActivityUnit"];
+  string inbound_transport_mode = 4 [json_name = "inboundTransportMode"];
+  string outbound_transport_mode = 5 [json_name = "outboundTransportMode"];
+  string temperature_control = 6 [json_name = "temperatureControl"];
+  string co2e_intensity_ttw = 7 [json_name = "co2eIntensityTTW"];
+  string co2e_intensity_wtw = 8 [json_name = "co2eIntensityWTW"];
+  string co2e_intensity_throughput = 9 [json_name = "co2eIntensityThroughput"];
+  repeated EnergyCarrier energy_carriers = 10 [json_name = "energyCarriers"];
+  bool is_verified = 11 [json_name = "isVerified"];
+  bool is_accredited = 12 [json_name = "isAccredited"];
+}
