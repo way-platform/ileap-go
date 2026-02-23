@@ -2,8 +2,8 @@ package ileap
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"mime"
 	"net/http"
@@ -11,53 +11,35 @@ import (
 	"strconv"
 	"strings"
 
+	"connectrpc.com/connect"
 	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
+	"github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1/ileapv1connect"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // Server is an iLEAP data server HTTP handler.
+//
+// It translates the iLEAP HTTP protocol (JSON envelopes, OData filtering,
+// Link header pagination, OAuth2 error formats) into calls on a standard
+// Connect RPC service handler.
 type Server struct {
-	footprintHandler FootprintHandler
-	tadHandler       TADHandler
-	eventHandler     EventHandler
-	tokenValidator   TokenValidator
-	issuer           TokenIssuer
-	oidc             OIDCProvider
-	pathPrefix       string
-	serveMux         *http.ServeMux
+	service    ileapv1connect.ILeapServiceHandler
+	auth       AuthHandler
+	pathPrefix string
+	serveMux   *http.ServeMux
 }
 
 // ServerOption configures the server.
 type ServerOption func(*Server)
 
-// WithFootprintHandler sets the footprint handler.
-func WithFootprintHandler(h FootprintHandler) ServerOption {
-	return func(s *Server) { s.footprintHandler = h }
+// WithServiceHandler sets the ILeapService handler for footprints, TAD, and events.
+func WithServiceHandler(h ileapv1connect.ILeapServiceHandler) ServerOption {
+	return func(s *Server) { s.service = h }
 }
 
-// WithTADHandler sets the TAD handler.
-func WithTADHandler(h TADHandler) ServerOption {
-	return func(s *Server) { s.tadHandler = h }
-}
-
-// WithEventHandler sets the event handler.
-func WithEventHandler(h EventHandler) ServerOption {
-	return func(s *Server) { s.eventHandler = h }
-}
-
-// WithTokenValidator sets the token validator.
-func WithTokenValidator(v TokenValidator) ServerOption {
-	return func(s *Server) { s.tokenValidator = v }
-}
-
-// WithTokenIssuer sets the token issuer for OAuth2 client credentials.
-func WithTokenIssuer(issuer TokenIssuer) ServerOption {
-	return func(s *Server) { s.issuer = issuer }
-}
-
-// WithOIDCProvider sets the OIDC provider for discovery and JWKS.
-func WithOIDCProvider(oidc OIDCProvider) ServerOption {
-	return func(s *Server) { s.oidc = oidc }
+// WithAuthHandler sets the auth handler for token issuance, validation, and OIDC discovery.
+func WithAuthHandler(a AuthHandler) ServerOption {
+	return func(s *Server) { s.auth = a }
 }
 
 // WithPathPrefix sets the path prefix for the service (e.g. "/ileap").
@@ -146,8 +128,8 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
 			return
 		}
-		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
-			if errors.Is(err, ErrNotImplemented) {
+		if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
+			if connect.CodeOf(err) == connect.CodeUnimplemented {
 				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 				return
 			}
@@ -160,7 +142,7 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// ileapAuthMiddleware validates the bearer token using the server's TokenValidator
+// ileapAuthMiddleware validates the bearer token using the server's AuthHandler
 // and returns iLEAP-spec-formatted errors on failure (403 for invalid, 401 for
 // expired). On success it calls next.
 func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
@@ -184,18 +166,17 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "missing access token")
 			return
 		}
-		if _, err := s.tokenValidator.ValidateToken(r.Context(), token); err != nil {
-			if errors.Is(err, ErrNotImplemented) {
+		if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
+			switch connect.CodeOf(err) {
+			case connect.CodeUnimplemented:
 				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
-				return
-			}
-			if errors.Is(err, ErrTokenExpired) {
+			case connect.CodeUnauthenticated:
 				slog.WarnContext(r.Context(), "token expired", "error", err)
 				writeError(w, http.StatusUnauthorized, ErrorCodeTokenExpired, "token expired")
-				return
+			default:
+				slog.WarnContext(r.Context(), "token validation failed", "error", err)
+				writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "invalid access token")
 			}
-			slog.WarnContext(r.Context(), "token validation failed", "error", err)
-			writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "invalid access token")
 			return
 		}
 		ctx := WithAuthToken(r.Context(), token)
@@ -263,13 +244,12 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		clientSecret = password
 	}
 
-	creds, err := s.issuer.IssueToken(r.Context(), clientID, clientSecret)
+	creds, err := s.auth.IssueToken(r.Context(), clientID, clientSecret)
 	if err != nil {
-		if errors.Is(err, ErrNotImplemented) {
+		switch connect.CodeOf(err) {
+		case connect.CodeUnimplemented:
 			writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
-			return
-		}
-		if errors.Is(err, ErrInvalidCredentials) {
+		case connect.CodePermissionDenied:
 			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
 			writeOAuthError(
 				w,
@@ -277,22 +257,22 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 				OAuthErrorCodeInvalidRequest,
 				"invalid HTTP basic auth",
 			)
-			return
+		default:
+			slog.ErrorContext(r.Context(), "failed to issue token", "error", err)
+			writeOAuthError(
+				w,
+				http.StatusInternalServerError,
+				OAuthErrorCodeServerError,
+				"failed to issue token",
+			)
 		}
-		slog.ErrorContext(r.Context(), "failed to issue token", "error", err)
-		writeOAuthError(
-			w,
-			http.StatusInternalServerError,
-			OAuthErrorCodeServerError,
-			"failed to issue token",
-		)
 		return
 	}
 	writeJSON(w, creds)
 }
 
 func (s *Server) openIDConfig(w http.ResponseWriter, r *http.Request) {
-	cfg := s.oidc.OpenIDConfiguration(s.resolveBaseURL(r))
+	cfg := s.auth.OpenIDConfiguration(s.resolveBaseURL(r))
 	if cfg == nil {
 		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 		return
@@ -301,7 +281,7 @@ func (s *Server) openIDConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) jwks(w http.ResponseWriter, _ *http.Request) {
-	jwks := s.oidc.JWKS()
+	jwks := s.auth.JWKS()
 	if jwks == nil {
 		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 		return
@@ -320,37 +300,39 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid offset: %v", err)
 		return
 	}
-	req := ListFootprintsRequest{
-		Limit:  limit,
-		Offset: offset,
-		Filter: r.URL.Query().Get("$filter"),
-	}
-	resp, err := s.footprintHandler.ListFootprints(r.Context(), req)
+	req := new(ileapv1.ListFootprintsRequest)
+	req.SetLimit(int32(limit))
+	req.SetOffset(int32(offset))
+	req.SetFilter(r.URL.Query().Get("$filter"))
+	resp, err := s.service.ListFootprints(r.Context(), req)
 	if err != nil {
 		writeHandlerError(w, err)
 		return
 	}
-	next := offset + len(resp.Data)
-	if next < resp.Total {
+	data := resp.GetData()
+	total := int(resp.GetTotal())
+	next := offset + len(data)
+	if next < total {
 		linkLimit := limit
 		if linkLimit == 0 {
-			linkLimit = len(resp.Data)
+			linkLimit = len(data)
 		}
 		base := s.resolveBaseURL(r)
 		linkURL := fmt.Sprintf("%s/2/footprints?limit=%d&offset=%d", base, linkLimit, next)
 		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"next\"", linkURL))
 	}
-	writeListFootprintsResponse(w, resp.Data)
+	writeListFootprintsResponse(w, data)
 }
 
 func (s *Server) getFootprint(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	fp, err := s.footprintHandler.GetFootprint(r.Context(), id)
+	req := new(ileapv1.GetFootprintRequest)
+	req.SetId(r.PathValue("id"))
+	resp, err := s.service.GetFootprint(r.Context(), req)
 	if err != nil {
 		writeHandlerError(w, err)
 		return
 	}
-	writeGetFootprintResponse(w, fp)
+	writeGetFootprintResponse(w, resp.GetData())
 }
 
 func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
@@ -364,34 +346,37 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid offset: %v", err)
 		return
 	}
-	filters := make(map[string][]string)
-	for key, values := range r.URL.Query() {
-		if key == "limit" || key == "offset" {
-			continue
-		}
-		filters[key] = values
+	req := new(ileapv1.ListTransportActivityDataRequest)
+	req.SetLimit(int32(limit))
+	req.SetOffset(int32(offset))
+	q := r.URL.Query()
+	if v := q.Get("mode"); v != "" {
+		req.SetMode(v)
 	}
-	req := ListTADsRequest{
-		Limit:  limit,
-		Offset: offset,
-		Filter: filters,
+	if v := q.Get("feedstock"); v != "" {
+		req.SetFeedstock(v)
 	}
-	resp, err := s.tadHandler.ListTADs(r.Context(), req)
+	if v := q.Get("packagingOrTrEqType"); v != "" {
+		req.SetPackagingOrTrEqType(v)
+	}
+	resp, err := s.service.ListTransportActivityData(r.Context(), req)
 	if err != nil {
 		writeHandlerError(w, err)
 		return
 	}
-	next := offset + len(resp.Data)
-	if next < resp.Total {
+	data := resp.GetData()
+	total := int(resp.GetTotal())
+	next := offset + len(data)
+	if next < total {
 		linkLimit := limit
 		if linkLimit == 0 {
-			linkLimit = len(resp.Data)
+			linkLimit = len(data)
 		}
 		base := s.resolveBaseURL(r)
 		linkURL := fmt.Sprintf("%s/2/ileap/tad?offset=%d&limit=%d", base, next, linkLimit)
 		w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"next\"", linkURL))
 	}
-	writeListTADsResponse(w, resp.Data)
+	writeListTADsResponse(w, data)
 }
 
 func (s *Server) events(w http.ResponseWriter, r *http.Request) {
@@ -414,12 +399,17 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	var event Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "failed to read request body")
+		return
+	}
+	event := new(ileapv1.Event)
+	if err := protojson.Unmarshal(body, event); err != nil {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid request body")
 		return
 	}
-	if event.Specversion != "1.0" || event.ID == "" || event.Source == "" {
+	if event.GetSpecversion() != "1.0" || event.GetId() == "" || event.GetSource() == "" {
 		writeError(
 			w,
 			http.StatusBadRequest,
@@ -428,7 +418,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	if len(event.Data) == 0 || string(event.Data) == "null" {
+	if len(event.GetData()) == 0 {
 		writeError(
 			w,
 			http.StatusBadRequest,
@@ -437,7 +427,9 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	if err := s.eventHandler.HandleEvent(r.Context(), event); err != nil {
+	req := new(ileapv1.HandleEventRequest)
+	req.SetEvent(event)
+	if _, err := s.service.HandleEvent(r.Context(), req); err != nil {
 		writeHandlerError(w, err)
 		return
 	}
@@ -474,12 +466,12 @@ func parseOffset(r *http.Request) (int, error) {
 }
 
 func writeHandlerError(w http.ResponseWriter, err error) {
-	switch {
-	case errors.Is(err, ErrNotImplemented):
+	switch connect.CodeOf(err) {
+	case connect.CodeUnimplemented:
 		writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
-	case errors.Is(err, ErrNotFound):
+	case connect.CodeNotFound:
 		writeError(w, http.StatusNotFound, ErrorCodeNoSuchFootprint, "%s", err)
-	case errors.Is(err, ErrBadRequest):
+	case connect.CodeInvalidArgument:
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "%s", err)
 	default:
 		slog.Error("handler error", "error", err)

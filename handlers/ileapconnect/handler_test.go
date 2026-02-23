@@ -57,6 +57,13 @@ func (f *fakeBackend) GetFootprint(
 	return nil, connect.NewError(connect.CodeNotFound, nil)
 }
 
+func (f *fakeBackend) HandleEvent(
+	_ context.Context,
+	_ *ileapv1.HandleEventRequest,
+) (*ileapv1.HandleEventResponse, error) {
+	return &ileapv1.HandleEventResponse{}, nil
+}
+
 func (f *fakeBackend) ListTransportActivityData(
 	_ context.Context,
 	req *ileapv1.ListTransportActivityDataRequest,
@@ -97,7 +104,7 @@ func (h *headerCapture) lastAuthHeader() string {
 	return h.last
 }
 
-func newTestFixtures(t *testing.T) (*Handler, *headerCapture) {
+func newTestFixtures(t *testing.T) (ileapv1connect.ILeapServiceClient, *headerCapture) {
 	t.Helper()
 	fp1 := new(ileapv1.ProductFootprint)
 	fp1.SetId("fp-1")
@@ -119,124 +126,131 @@ func newTestFixtures(t *testing.T) (*Handler, *headerCapture) {
 	capture := &headerCapture{handler: mux}
 	server := httptest.NewServer(capture)
 	t.Cleanup(server.Close)
-	h := New(server.URL)
-	return h, capture
+	client := NewClient(server.URL)
+	return client, capture
 }
 
 func TestGetFootprint(t *testing.T) {
-	h, _ := newTestFixtures(t)
+	client, _ := newTestFixtures(t)
 
 	t.Run("found", func(t *testing.T) {
-		fp, err := h.GetFootprint(context.Background(), "fp-1")
+		req := new(ileapv1.GetFootprintRequest)
+		req.SetId("fp-1")
+		resp, err := client.GetFootprint(context.Background(), req)
 		if err != nil {
 			t.Fatalf("GetFootprint() error: %v", err)
 		}
-		if fp.GetId() != "fp-1" {
-			t.Errorf("GetFootprint() id = %q, want %q", fp.GetId(), "fp-1")
+		if resp.GetData().GetId() != "fp-1" {
+			t.Errorf("GetFootprint() id = %q, want %q", resp.GetData().GetId(), "fp-1")
 		}
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, err := h.GetFootprint(context.Background(), "nonexistent")
+		req := new(ileapv1.GetFootprintRequest)
+		req.SetId("nonexistent")
+		_, err := client.GetFootprint(context.Background(), req)
 		if err == nil {
 			t.Fatal("GetFootprint() expected error for nonexistent ID")
 		}
-		if err != ileap.ErrNotFound {
-			t.Errorf("GetFootprint() error = %v, want ErrNotFound", err)
+		if connect.CodeOf(err) != connect.CodeNotFound {
+			t.Errorf("GetFootprint() error code = %v, want CodeNotFound", connect.CodeOf(err))
 		}
 	})
 }
 
 func TestListFootprints(t *testing.T) {
-	h, _ := newTestFixtures(t)
+	client, _ := newTestFixtures(t)
 
 	t.Run("all", func(t *testing.T) {
-		resp, err := h.ListFootprints(context.Background(), ileap.ListFootprintsRequest{})
+		resp, err := client.ListFootprints(context.Background(), new(ileapv1.ListFootprintsRequest))
 		if err != nil {
 			t.Fatalf("ListFootprints() error: %v", err)
 		}
-		if resp.Total != 2 {
-			t.Errorf("ListFootprints() total = %d, want 2", resp.Total)
+		if resp.GetTotal() != 2 {
+			t.Errorf("ListFootprints() total = %d, want 2", resp.GetTotal())
 		}
-		if len(resp.Data) != 2 {
-			t.Errorf("ListFootprints() len(data) = %d, want 2", len(resp.Data))
+		if len(resp.GetData()) != 2 {
+			t.Errorf("ListFootprints() len(data) = %d, want 2", len(resp.GetData()))
 		}
 	})
 
 	t.Run("with limit", func(t *testing.T) {
-		resp, err := h.ListFootprints(context.Background(), ileap.ListFootprintsRequest{
-			Limit: 1,
-		})
+		req := new(ileapv1.ListFootprintsRequest)
+		req.SetLimit(1)
+		resp, err := client.ListFootprints(context.Background(), req)
 		if err != nil {
 			t.Fatalf("ListFootprints() error: %v", err)
 		}
-		if resp.Total != 2 {
-			t.Errorf("ListFootprints() total = %d, want 2", resp.Total)
+		if resp.GetTotal() != 2 {
+			t.Errorf("ListFootprints() total = %d, want 2", resp.GetTotal())
 		}
-		if len(resp.Data) != 1 {
-			t.Errorf("ListFootprints() len(data) = %d, want 1", len(resp.Data))
+		if len(resp.GetData()) != 1 {
+			t.Errorf("ListFootprints() len(data) = %d, want 1", len(resp.GetData()))
 		}
-		if resp.Data[0].GetId() != "fp-1" {
-			t.Errorf("ListFootprints() data[0].id = %q, want %q", resp.Data[0].GetId(), "fp-1")
+		if resp.GetData()[0].GetId() != "fp-1" {
+			t.Errorf("ListFootprints() data[0].id = %q, want %q", resp.GetData()[0].GetId(), "fp-1")
 		}
 	})
 
 	t.Run("with offset", func(t *testing.T) {
-		resp, err := h.ListFootprints(context.Background(), ileap.ListFootprintsRequest{
-			Offset: 1,
-		})
+		req := new(ileapv1.ListFootprintsRequest)
+		req.SetOffset(1)
+		resp, err := client.ListFootprints(context.Background(), req)
 		if err != nil {
 			t.Fatalf("ListFootprints() error: %v", err)
 		}
-		if resp.Total != 2 {
-			t.Errorf("ListFootprints() total = %d, want 2", resp.Total)
+		if resp.GetTotal() != 2 {
+			t.Errorf("ListFootprints() total = %d, want 2", resp.GetTotal())
 		}
-		if len(resp.Data) != 1 {
-			t.Errorf("ListFootprints() len(data) = %d, want 1", len(resp.Data))
+		if len(resp.GetData()) != 1 {
+			t.Errorf("ListFootprints() len(data) = %d, want 1", len(resp.GetData()))
 		}
-		if resp.Data[0].GetId() != "fp-2" {
-			t.Errorf("ListFootprints() data[0].id = %q, want %q", resp.Data[0].GetId(), "fp-2")
+		if resp.GetData()[0].GetId() != "fp-2" {
+			t.Errorf("ListFootprints() data[0].id = %q, want %q", resp.GetData()[0].GetId(), "fp-2")
 		}
 	})
 }
 
-func TestListTADs(t *testing.T) {
-	h, _ := newTestFixtures(t)
+func TestListTransportActivityData(t *testing.T) {
+	client, _ := newTestFixtures(t)
 
 	t.Run("all", func(t *testing.T) {
-		resp, err := h.ListTADs(context.Background(), ileap.ListTADsRequest{})
+		resp, err := client.ListTransportActivityData(
+			context.Background(),
+			new(ileapv1.ListTransportActivityDataRequest),
+		)
 		if err != nil {
-			t.Fatalf("ListTADs() error: %v", err)
+			t.Fatalf("ListTransportActivityData() error: %v", err)
 		}
-		if resp.Total != 2 {
-			t.Errorf("ListTADs() total = %d, want 2", resp.Total)
+		if resp.GetTotal() != 2 {
+			t.Errorf("ListTransportActivityData() total = %d, want 2", resp.GetTotal())
 		}
-		if len(resp.Data) != 2 {
-			t.Errorf("ListTADs() len(data) = %d, want 2", len(resp.Data))
+		if len(resp.GetData()) != 2 {
+			t.Errorf("ListTransportActivityData() len(data) = %d, want 2", len(resp.GetData()))
 		}
 	})
 
 	t.Run("with limit and offset", func(t *testing.T) {
-		resp, err := h.ListTADs(context.Background(), ileap.ListTADsRequest{
-			Limit:  1,
-			Offset: 1,
-		})
+		req := new(ileapv1.ListTransportActivityDataRequest)
+		req.SetLimit(1)
+		req.SetOffset(1)
+		resp, err := client.ListTransportActivityData(context.Background(), req)
 		if err != nil {
-			t.Fatalf("ListTADs() error: %v", err)
+			t.Fatalf("ListTransportActivityData() error: %v", err)
 		}
-		if resp.Total != 2 {
-			t.Errorf("ListTADs() total = %d, want 2", resp.Total)
+		if resp.GetTotal() != 2 {
+			t.Errorf("ListTransportActivityData() total = %d, want 2", resp.GetTotal())
 		}
-		if len(resp.Data) != 1 {
-			t.Errorf("ListTADs() len(data) = %d, want 1", len(resp.Data))
+		if len(resp.GetData()) != 1 {
+			t.Errorf("ListTransportActivityData() len(data) = %d, want 1", len(resp.GetData()))
 		}
 	})
 }
 
 func TestAuthForwarding(t *testing.T) {
-	h, capture := newTestFixtures(t)
+	client, capture := newTestFixtures(t)
 	ctx := ileap.WithAuthToken(context.Background(), "test-token-123")
-	_, err := h.ListFootprints(ctx, ileap.ListFootprintsRequest{})
+	_, err := client.ListFootprints(ctx, new(ileapv1.ListFootprintsRequest))
 	if err != nil {
 		t.Fatalf("ListFootprints() error: %v", err)
 	}
@@ -246,46 +260,34 @@ func TestAuthForwarding(t *testing.T) {
 	}
 }
 
-func TestErrorMapping(t *testing.T) {
-	tests := []struct {
-		name    string
-		code    connect.Code
-		wantErr error
-	}{
-		{name: "NotFound", code: connect.CodeNotFound, wantErr: ileap.ErrNotFound},
-		{name: "InvalidArgument", code: connect.CodeInvalidArgument, wantErr: ileap.ErrBadRequest},
-		{
-			name:    "Unauthenticated",
-			code:    connect.CodeUnauthenticated,
-			wantErr: ileap.ErrTokenExpired,
-		},
-		{
-			name:    "PermissionDenied",
-			code:    connect.CodePermissionDenied,
-			wantErr: ileap.ErrInvalidCredentials,
-		},
-		{name: "Unimplemented", code: connect.CodeUnimplemented, wantErr: ileap.ErrNotImplemented},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := mapConnectError(connect.NewError(tt.code, nil))
-			if got != tt.wantErr {
-				t.Errorf("mapConnectError(Code%s) = %v, want %v", tt.name, got, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestGetFootprintResponse(t *testing.T) {
-	h, _ := newTestFixtures(t)
-	fp, err := h.GetFootprint(context.Background(), "fp-1")
+	client, _ := newTestFixtures(t)
+	req := new(ileapv1.GetFootprintRequest)
+	req.SetId("fp-1")
+	resp, err := client.GetFootprint(context.Background(), req)
 	if err != nil {
 		t.Fatalf("GetFootprint() error: %v", err)
 	}
 	want := new(ileapv1.ProductFootprint)
 	want.SetId("fp-1")
 	want.SetVersion(1)
-	if diff := cmp.Diff(want, fp, protocmp.Transform()); diff != "" {
+	if diff := cmp.Diff(want, resp.GetData(), protocmp.Transform()); diff != "" {
 		t.Errorf("GetFootprint() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestHandleEvent(t *testing.T) {
+	client, _ := newTestFixtures(t)
+	event := new(ileapv1.Event)
+	event.SetType("org.wbcsd.pathfinder.ProductFootprint.Published.v1")
+	event.SetSpecversion("1.0")
+	event.SetId("evt-1")
+	event.SetSource("test")
+	event.SetData([]byte(`{}`))
+	req := new(ileapv1.HandleEventRequest)
+	req.SetEvent(event)
+	_, err := client.HandleEvent(context.Background(), req)
+	if err != nil {
+		t.Fatalf("HandleEvent() error: %v", err)
 	}
 }

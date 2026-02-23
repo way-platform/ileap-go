@@ -106,67 +106,44 @@ func logRequests(next http.Handler) http.Handler {
 func buildHandler(v *viper.Viper) (http.Handler, error) {
 	authBackend := v.GetString("auth-backend")
 	slog.Info("starting demo server", "auth-backend", authBackend)
+	handler, err := ileapdemo.NewHandler()
+	if err != nil {
+		return nil, err
+	}
 	switch authBackend {
 	case "demo":
-		authProvider, err := ileapdemo.NewAuthProvider()
-		if err != nil {
-			return nil, err
-		}
-		footprintHandler, err := ileapdemo.NewFootprintHandler()
-		if err != nil {
-			return nil, err
-		}
-		tadHandler, err := ileapdemo.NewTADHandler()
+		auth, err := ileapdemo.NewAuthProvider()
 		if err != nil {
 			return nil, err
 		}
 		return ileap.NewServer(
-			ileap.WithFootprintHandler(footprintHandler),
-			ileap.WithTADHandler(tadHandler),
-			ileap.WithEventHandler(&ileapdemo.EventHandler{}),
-			ileap.WithTokenValidator(authProvider),
-			ileap.WithTokenIssuer(authProvider),
-			ileap.WithOIDCProvider(authProvider),
+			ileap.WithServiceHandler(handler),
+			ileap.WithAuthHandler(auth),
 		), nil
 	case "clerk":
-		return buildClerkHandler(v)
+		auth, err := buildClerkAuth(v)
+		if err != nil {
+			return nil, err
+		}
+		return ileap.NewServer(
+			ileap.WithServiceHandler(handler),
+			ileap.WithAuthHandler(auth),
+		), nil
 	default:
 		return nil, fmt.Errorf("unknown auth-backend: %s", authBackend)
 	}
 }
 
-func buildClerkHandler(v *viper.Viper) (http.Handler, error) {
+func buildClerkAuth(v *viper.Viper) (*ileapclerk.AuthHandler, error) {
 	fapiDomain := v.GetString("clerk-fapi-domain")
 	if fapiDomain == "" {
 		return nil, fmt.Errorf("--clerk-fapi-domain required when --auth-backend=clerk")
 	}
 	slog.Info("using clerk auth backend", "fapi-domain", fapiDomain)
-
 	activeOrgID := v.GetString("clerk-organization-id")
-
-	footprintHandler, err := ileapdemo.NewFootprintHandler()
-	if err != nil {
-		return nil, fmt.Errorf("create footprint handler: %w", err)
-	}
-	tadHandler, err := ileapdemo.NewTADHandler()
-	if err != nil {
-		return nil, fmt.Errorf("create TAD handler: %w", err)
-	}
-
 	clerkClient := ileapclerk.NewClient(fapiDomain)
-	tokenIssuer := ileapclerk.NewTokenIssuer(
+	return ileapclerk.NewAuthHandler(
 		clerkClient,
 		ileapclerk.WithActiveOrganization(activeOrgID),
-	)
-	oidcProvider := ileapclerk.NewOIDCProvider(clerkClient)
-	tokenValidator := ileapclerk.NewTokenValidator(clerkClient)
-	srv := ileap.NewServer(
-		ileap.WithFootprintHandler(footprintHandler),
-		ileap.WithTADHandler(tadHandler),
-		ileap.WithEventHandler(&ileapdemo.EventHandler{}),
-		ileap.WithTokenValidator(tokenValidator),
-		ileap.WithTokenIssuer(tokenIssuer),
-		ileap.WithOIDCProvider(oidcProvider),
-	)
-	return srv, nil
+	), nil
 }

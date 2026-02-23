@@ -68,21 +68,21 @@ func Proto() error {
 func Generate() error {
 	log.Println("generating code")
 	return forEachGoMod(func(dir string) error {
-		return cmd(dir, "go", "generate", "-v", "./...").Run()
+		return cmd(dir, "go", "generate", "./...").Run()
 	})
 }
 
 // Test runs the Go tests.
 func Test() error {
 	log.Println("running tests")
-	return cmd(root(), "go", "test", "-v", "-cover", "./...").Run()
+	return cmd(root(), "go", "test", "-cover", "./...").Run()
 }
 
 // Tidy tidies the Go mod files.
 func Tidy() error {
 	log.Println("tidying Go mod files")
 	return forEachGoMod(func(dir string) error {
-		return cmd(dir, "go", "mod", "tidy", "-v").Run()
+		return cmd(dir, "go", "mod", "tidy").Run()
 	})
 }
 
@@ -156,8 +156,7 @@ func ConformanceTest(baseURL, username, password string) error {
 		"ILEAP_USERNAME":   username,
 		"ILEAP_PASSWORD":   password,
 	}
-	return cmdWith(env, root(), "go", "test", "-v", "-count=1",
-		"./ileaptest/...").Run()
+	return cmdWith(env, root(), "go", "test", "-count=1", "./ileaptest/...").Run()
 }
 
 func startLocalServer() (baseURL string, cleanup func(), err error) {

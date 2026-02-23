@@ -1,43 +1,5 @@
 package ileap
 
-import ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
-
-// ListFootprintsRequest is the request for listing footprints (handler contract).
-type ListFootprintsRequest struct {
-	// Limit is the maximum number of footprints to return. 0 means no limit.
-	Limit int
-	// Offset is the starting index for pagination.
-	Offset int
-	// Filter is the raw OData $filter query string.
-	Filter string
-}
-
-// ListFootprintsResponse is the response for listing footprints (handler contract).
-type ListFootprintsResponse struct {
-	// Data is the list of footprints.
-	Data []*ileapv1.ProductFootprint
-	// Total is the total number of footprints matching the filter (before pagination).
-	Total int
-}
-
-// ListTADsRequest is the request for listing transport activity data (handler contract).
-type ListTADsRequest struct {
-	// Limit is the maximum number of TADs to return. 0 means no limit.
-	Limit int
-	// Offset is the starting index for pagination.
-	Offset int
-	// Filter contains query parameter filters (key → values, case-insensitive match).
-	Filter map[string][]string
-}
-
-// ListTADsResponse is the response for listing transport activity data (handler contract).
-type ListTADsResponse struct {
-	// Data is the list of TADs.
-	Data []*ileapv1.TAD
-	// Total is the total number of TADs matching the filter (before pagination).
-	Total int
-}
-
 // TokenInfo contains information extracted from a validated token.
 type TokenInfo struct {
 	// Subject is the subject (user) of the token.
