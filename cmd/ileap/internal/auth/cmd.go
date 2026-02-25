@@ -44,15 +44,15 @@ func ReadCredentials() (*Credentials, error) {
 }
 
 // NewClient creates a new iLEAP client using the CLI credentials.
-func NewClient() (*ileap.Client, error) {
+func NewClient(opts ...ileap.ClientOption) (*ileap.Client, error) {
 	auth, err := ReadCredentials()
 	if err != nil {
 		return nil, err
 	}
-	return ileap.NewClient(
+	return ileap.NewClient(append([]ileap.ClientOption{
 		ileap.WithBaseURL(auth.BaseURL),
 		ileap.WithReuseTokenAuth(auth.Token),
-	), nil
+	}, opts...)...), nil
 }
 
 func writeCredentials(credentials *Credentials) error {

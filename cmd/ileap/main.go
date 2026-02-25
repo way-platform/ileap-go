@@ -48,6 +48,7 @@ func newRootCommand() *cobra.Command {
 		Use:   "ileap",
 		Short: "iLEAP CLI",
 	}
+	cmd.PersistentFlags().Bool("debug", false, "enable debug logging")
 	cmd.AddGroup(&cobra.Group{
 		ID:    "pcf",
 		Title: "Product Carbon Footprints",
@@ -82,6 +83,14 @@ func newRootCommand() *cobra.Command {
 	return cmd
 }
 
+func newClient(cmd *cobra.Command) (*ileap.Client, error) {
+	debug, err := cmd.Root().PersistentFlags().GetBool("debug")
+	if err != nil {
+		return nil, err
+	}
+	return auth.NewClient(ileap.WithDebug(debug))
+}
+
 func newGetFootprintCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "footprint",
@@ -90,7 +99,7 @@ func newGetFootprintCommand() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		client, err := auth.NewClient()
+		client, err := newClient(cmd)
 		if err != nil {
 			return err
 		}
@@ -114,7 +123,7 @@ func newListFootprintsCommand() *cobra.Command {
 	limit := cmd.Flags().Int("limit", 100, "max footprints queried")
 	filter := cmd.Flags().String("filter", "", "filter footprints by OData filter")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
-		client, err := auth.NewClient()
+		client, err := newClient(cmd)
 		if err != nil {
 			return err
 		}
@@ -138,7 +147,7 @@ func newListTADsCommand() *cobra.Command {
 	}
 	limit := cmd.Flags().Int("limit", 100, "max TADs queried")
 	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
-		client, err := auth.NewClient()
+		client, err := newClient(cmd)
 		if err != nil {
 			return err
 		}
