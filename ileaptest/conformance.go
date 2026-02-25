@@ -371,8 +371,9 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 		if err := json.Unmarshal([]byte(body), &errResp); err != nil {
 			t.Fatalf("decode error response: %v", err)
 		}
-		if errResp.Code != ileap.ErrorCodeAccessDenied {
-			t.Errorf("error code: got %q, want AccessDenied", errResp.Code)
+		// PACT conformance recommendations prefer BadRequest for invalid tokens.
+		if errResp.Code != ileap.ErrorCodeBadRequest {
+			t.Errorf("error code: got %q, want BadRequest", errResp.Code)
 		}
 	})
 
@@ -386,8 +387,9 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 		if err := json.Unmarshal([]byte(body), &errResp); err != nil {
 			t.Fatalf("decode error response: %v", err)
 		}
-		if errResp.Code != ileap.ErrorCodeAccessDenied {
-			t.Errorf("error code: got %q, want AccessDenied", errResp.Code)
+		// PACT conformance recommendations prefer BadRequest for invalid tokens.
+		if errResp.Code != ileap.ErrorCodeBadRequest {
+			t.Errorf("error code: got %q, want BadRequest", errResp.Code)
 		}
 	})
 
@@ -488,6 +490,7 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 		if err := json.Unmarshal([]byte(body), &errResp); err != nil {
 			t.Fatalf("decode error response: %v", err)
 		}
+		// PACT conformance source-of-truth (TC16) requires BadRequest code.
 		if errResp.Code != ileap.ErrorCodeBadRequest {
 			t.Errorf("error code: got %q, want BadRequest", errResp.Code)
 		}

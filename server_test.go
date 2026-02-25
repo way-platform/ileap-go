@@ -425,7 +425,8 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer bad-token")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
-		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeAccessDenied)
+		// PACT conformance recommendations prefer BadRequest for invalid tokens.
+		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeBadRequest)
 	})
 
 	t.Run("events invalid token returns 400 bad request", func(t *testing.T) {
@@ -438,6 +439,7 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		req.Header.Set("Content-Type", "application/cloudevents+json")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
+		// PACT conformance source-of-truth (TC16) expects BadRequest code.
 		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 }

@@ -163,7 +163,8 @@ func TestDemoServer(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer invalid.token.here")
 			w := httptest.NewRecorder()
 			server.ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeAccessDenied)
+			// PACT conformance recommendations prefer BadRequest for invalid tokens.
+			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeBadRequest)
 		})
 
 		t.Run("missing bearer prefix", func(t *testing.T) {

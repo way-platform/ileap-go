@@ -117,7 +117,8 @@ func (s *Server) registerRoutes() {
 
 // pactAuthMiddleware validates the bearer token using the server's TokenValidator
 // and returns PACT-spec-formatted errors on failure (400 for missing/malformed,
-// 401 for invalid). On success it calls next.
+// 401 for invalid). For invalid tokens it returns BadRequest code to match PACT
+// conformance recommendations for TC6/TC7.
 func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -135,19 +136,20 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
-		if token == "" {
-			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
-			return
-		}
-		if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
-			if connect.CodeOf(err) == connect.CodeUnimplemented {
-				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+			if token == "" {
+				writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
 				return
 			}
-			slog.WarnContext(r.Context(), "token validation failed", "error", err)
-			writeError(w, http.StatusUnauthorized, ErrorCodeAccessDenied, "invalid access token")
-			return
-		}
+			if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
+				if connect.CodeOf(err) == connect.CodeUnimplemented {
+					writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+					return
+				}
+				slog.WarnContext(r.Context(), "token validation failed", "error", err)
+				// PACT conformance recommendations prefer BadRequest for invalid tokens.
+				writeError(w, http.StatusUnauthorized, ErrorCodeBadRequest, "invalid access token")
+				return
+			}
 		ctx := WithAuthToken(r.Context(), token)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -177,15 +179,16 @@ func (s *Server) pactEventsAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
 			return
 		}
-		if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
-			if connect.CodeOf(err) == connect.CodeUnimplemented {
-				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+			if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
+				if connect.CodeOf(err) == connect.CodeUnimplemented {
+					writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+					return
+				}
+				slog.WarnContext(r.Context(), "token validation failed", "error", err)
+				// PACT conformance source-of-truth (TC16) expects BadRequest here.
+				writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid access token")
 				return
 			}
-			slog.WarnContext(r.Context(), "token validation failed", "error", err)
-			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid access token")
-			return
-		}
 		ctx := WithAuthToken(r.Context(), token)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
