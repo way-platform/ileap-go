@@ -64,7 +64,7 @@ func (c *Client) newRequest(
 }
 
 func getUserAgent() string {
-	userAgent := "wayplatform.com"
+	userAgent := "WayPlatformiLeapGo"
 	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" {
 		userAgent += "/" + info.Main.Version
 	}
