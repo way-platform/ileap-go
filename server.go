@@ -1,6 +1,8 @@
 package ileap
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +10,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -30,7 +33,11 @@ type Server struct {
 	serveMux   *http.ServeMux
 }
 
-const ileapGoVersionHeader = "X-iLEAP-Go-Version"
+const ileapGoVersionHeader = "Way-ILeap-Go-Version"
+
+var uuidRegexp = regexp.MustCompile(
+	`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`,
+)
 
 // ServerOption configures the server.
 type ServerOption func(*Server)
@@ -94,7 +101,7 @@ func (s *Server) registerRoutes() {
 	)
 	s.serveMux.Handle(
 		"POST "+s.pathPrefix+"/2/events",
-		s.pactAuthMiddleware(http.HandlerFunc(s.events)),
+		s.pactEventsAuthMiddleware(http.HandlerFunc(s.events)),
 	)
 	s.serveMux.HandleFunc("POST "+s.pathPrefix+"/auth/token", s.authToken)
 	// Workaround for ACT bug: PACT TC18/19 (OpenID Connect flow) mistakenly POSTs
@@ -139,6 +146,44 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			}
 			slog.WarnContext(r.Context(), "token validation failed", "error", err)
 			writeError(w, http.StatusUnauthorized, ErrorCodeAccessDenied, "invalid access token")
+			return
+		}
+		ctx := WithAuthToken(r.Context(), token)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// pactEventsAuthMiddleware validates bearer token for /2/events.
+// For invalid tokens this follows ACT/source-of-truth behavior and returns
+// BadRequest instead of AccessDenied.
+func (s *Server) pactEventsAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing authorization")
+			return
+		}
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			writeError(
+				w,
+				http.StatusBadRequest,
+				ErrorCodeBadRequest,
+				"unsupported authentication scheme",
+			)
+			return
+		}
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if token == "" {
+			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
+			return
+		}
+		if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
+			if connect.CodeOf(err) == connect.CodeUnimplemented {
+				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+				return
+			}
+			slog.WarnContext(r.Context(), "token validation failed", "error", err)
+			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid access token")
 			return
 		}
 		ctx := WithAuthToken(r.Context(), token)
@@ -408,8 +453,8 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "failed to read request body")
 		return
 	}
-	event := new(ileapv1.Event)
-	if err := protojson.Unmarshal(body, event); err != nil {
+	event, err := decodeCloudEvent(body)
+	if err != nil {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid request body")
 		return
 	}
@@ -431,12 +476,92 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
+	if err := validateEventData(event); err != nil {
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid request body")
+		return
+	}
 	req := new(ileapv1.HandleEventRequest)
 	req.SetEvent(event)
 	if _, err := s.service.HandleEvent(r.Context(), req); err != nil {
 		writeHandlerError(w, err)
 		return
 	}
+}
+
+type cloudEventEnvelope struct {
+	Type        string          `json:"type"`
+	Specversion string          `json:"specversion"`
+	ID          string          `json:"id"`
+	Source      string          `json:"source"`
+	Data        json.RawMessage `json:"data"`
+}
+
+func decodeCloudEvent(body []byte) (*ileapv1.Event, error) {
+	var envelope cloudEventEnvelope
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return nil, err
+	}
+	data, err := normalizeCloudEventData(envelope.Data)
+	if err != nil {
+		return nil, err
+	}
+	event := new(ileapv1.Event)
+	event.SetType(envelope.Type)
+	event.SetSpecversion(envelope.Specversion)
+	event.SetId(envelope.ID)
+	event.SetSource(envelope.Source)
+	event.SetData(data)
+	return event, nil
+}
+
+func normalizeCloudEventData(raw json.RawMessage) ([]byte, error) {
+	raw = bytes.TrimSpace(raw)
+	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
+		return nil, nil
+	}
+	if raw[0] == '"' {
+		var s string
+		if err := json.Unmarshal(raw, &s); err != nil {
+			return nil, err
+		}
+		if s == "" {
+			return nil, nil
+		}
+		for _, decode := range []func(string) ([]byte, error){
+			base64.StdEncoding.DecodeString,
+			base64.RawStdEncoding.DecodeString,
+			base64.URLEncoding.DecodeString,
+			base64.RawURLEncoding.DecodeString,
+		} {
+			if decoded, err := decode(s); err == nil {
+				return decoded, nil
+			}
+		}
+		return []byte(s), nil
+	}
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, raw); err != nil {
+		return nil, err
+	}
+	return compact.Bytes(), nil
+}
+
+func validateEventData(event *ileapv1.Event) error {
+	if EventType(event.GetType()) != EventTypePublishedV1 {
+		return nil
+	}
+	var payload struct {
+		PFIDs []string `json:"pfIds"`
+	}
+	if err := json.Unmarshal(event.GetData(), &payload); err != nil {
+		return err
+	}
+	for _, id := range payload.PFIDs {
+		if !uuidRegexp.MatchString(id) {
+			return fmt.Errorf("invalid pfId format")
+		}
+	}
+	return nil
 }
 
 func parseLimit(r *http.Request) (int, error) {

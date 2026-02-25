@@ -254,13 +254,13 @@ func TestVersionHeaderSuccess(t *testing.T) {
 
 	values, ok := w.Header()[http.CanonicalHeaderKey(ileapGoVersionHeader)]
 	if !ok {
-		t.Fatal("expected X-iLEAP-Go-Version header")
+		t.Fatal("expected Way-ILeap-Go-Version header")
 	}
 	if len(values) != 1 {
 		t.Fatalf("expected 1 header value, got %d", len(values))
 	}
 	if got, want := values[0], buildVersionHeaderValue(); got != want {
-		t.Errorf("X-iLEAP-Go-Version = %q, want %q", got, want)
+		t.Errorf("Way-ILeap-Go-Version = %q, want %q", got, want)
 	}
 }
 
@@ -273,13 +273,13 @@ func TestVersionHeaderError(t *testing.T) {
 
 	values, ok := w.Header()[http.CanonicalHeaderKey(ileapGoVersionHeader)]
 	if !ok {
-		t.Fatal("expected X-iLEAP-Go-Version header")
+		t.Fatal("expected Way-ILeap-Go-Version header")
 	}
 	if len(values) != 1 {
 		t.Fatalf("expected 1 header value, got %d", len(values))
 	}
 	if got, want := values[0], buildVersionHeaderValue(); got != want {
-		t.Errorf("X-iLEAP-Go-Version = %q, want %q", got, want)
+		t.Errorf("Way-ILeap-Go-Version = %q, want %q", got, want)
 	}
 }
 
@@ -426,6 +426,19 @@ func TestPACTAuthMiddleware(t *testing.T) {
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeAccessDenied)
+	})
+
+	t.Run("events invalid token returns 400 bad request", func(t *testing.T) {
+		srv := NewServer(
+			WithAuthHandler(&mockAuthHandler{validToken: false}),
+		)
+		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-auth","source":"test","data":{"pfIds":["3a6c14a7-4deb-498a-b5ea-16ce2535b576"]}}`
+		req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer bad-token")
+		req.Header.Set("Content-Type", "application/cloudevents+json")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 }
 
@@ -693,6 +706,28 @@ func TestEvents(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
+	})
+
+	t.Run("structured cloudevents payload", func(t *testing.T) {
+		body := `{"type":"org.wbcsd.pathfinder.ProductFootprintRequest.Created.v1","specversion":"1.0","id":"evt-3","source":"https://webhook.example.com","data":{"pf":{"productIds":["urn:pathfinder:product:customcode:vendor-assigned:shipment:shipment-simple-1"]},"comment":"Please send PCF data for this year."}}`
+		req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer valid")
+		req.Header.Set("Content-Type", "application/cloudevents+json; charset=UTF-8")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("published event with malformed pfIds", func(t *testing.T) {
+		body := `{"type":"org.wbcsd.pathfinder.ProductFootprint.Published.v1","specversion":"1.0","id":"evt-4","source":"https://webhook.example.com","data":{"pfIds":["urn:gtin:4712345060507"]}}`
+		req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer valid")
+		req.Header.Set("Content-Type", "application/cloudevents+json; charset=UTF-8")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
 	})
 
 	t.Run("missing content type", func(t *testing.T) {

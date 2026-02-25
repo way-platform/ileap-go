@@ -406,6 +406,50 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 		}
 	})
 
+	// Keep event payloads in sync with pact-conformance-service:
+	// src/test-cases/v2-test-cases.ts (TC12/14.A/15/16).
+	t.Run("PACT_TC12_ReceiveAsynchronousPCFRequest", func(t *testing.T) {
+		event := `{
+		"specversion": "1.0",
+		"id": "test-event-012",
+		"source": "//test.example.com",
+		"time": "2024-01-15T10:00:00Z",
+		"type": "org.wbcsd.pathfinder.ProductFootprintRequest.Created.v1",
+		"data": {
+			"pf": {
+				"productIds": ["urn:pathfinder:product:customcode:vendor-assigned:shipment:shipment-simple-1"]
+			},
+			"comment": "Please send PCF data for this year."
+		}
+	}`
+		resp := postEvent(t, cfg.ServerURL, token, event)
+		if resp.StatusCode != http.StatusOK {
+			body := readBody(resp)
+			t.Errorf("status: got %d, want 200: %s", resp.StatusCode, body)
+		}
+	})
+
+	t.Run("PACT_TC14A_SendAsynchronousRequestToBeRejected", func(t *testing.T) {
+		event := `{
+		"specversion": "1.0",
+		"id": "test-event-014a",
+		"source": "//test.example.com",
+		"time": "2024-01-15T10:00:00Z",
+		"type": "org.wbcsd.pathfinder.ProductFootprintRequest.Created.v1",
+		"data": {
+			"pf": {
+				"productIds": ["urn:pact:null"]
+			},
+			"comment": "Please send PCF data for this year."
+		}
+	}`
+		resp := postEvent(t, cfg.ServerURL, token, event)
+		if resp.StatusCode != http.StatusOK {
+			body := readBody(resp)
+			t.Errorf("status: got %d, want 200: %s", resp.StatusCode, body)
+		}
+	})
+
 	t.Run("PACT_TC15_ReceivePublishedEvent", func(t *testing.T) {
 		event := `{
 		"type": "org.wbcsd.pathfinder.ProductFootprint.Published.v1",
@@ -414,7 +458,7 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 		"source": "//test.example.com",
 		"time": "2024-01-15T10:00:00Z",
 		"data": {
-			"pfIds": ["91715e5e-fd0b-4d1c-8fab-76290c46e6ed"]
+			"pfIds": ["3a6c14a7-4deb-498a-b5ea-16ce2535b576"]
 		}
 	}`
 		resp := postEvent(t, cfg.ServerURL, token, event)
@@ -432,12 +476,20 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 		"source": "//test.example.com",
 		"time": "2024-01-15T10:00:00Z",
 		"data": {
-			"pfIds": ["91715e5e-fd0b-4d1c-8fab-76290c46e6ed"]
+			"pfIds": ["3a6c14a7-4deb-498a-b5ea-16ce2535b576"]
 		}
 	}`
 		resp := postEvent(t, cfg.ServerURL, "invalid-token", event)
-		if resp.StatusCode != http.StatusUnauthorized {
-			t.Errorf("status: got %d, want 401", resp.StatusCode)
+		if resp.StatusCode != http.StatusBadRequest && resp.StatusCode != http.StatusUnauthorized {
+			t.Errorf("status: got %d, want 400 or 401", resp.StatusCode)
+		}
+		body := readBody(resp)
+		var errResp ileap.Error
+		if err := json.Unmarshal([]byte(body), &errResp); err != nil {
+			t.Fatalf("decode error response: %v", err)
+		}
+		if errResp.Code != ileap.ErrorCodeBadRequest {
+			t.Errorf("error code: got %q, want BadRequest", errResp.Code)
 		}
 	})
 
