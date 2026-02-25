@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"image/color"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"github.com/way-platform/ileap-go"
 	"github.com/way-platform/ileap-go/cmd/ileap/internal/auth"
 	"github.com/way-platform/ileap-go/cmd/ileap/internal/demoserver"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 func main() {
@@ -109,7 +110,7 @@ func newGetFootprintCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return printJSON(cmd, footprint)
+		return printJSON(footprint)
 	}
 	return cmd
 }
@@ -134,7 +135,7 @@ func newListFootprintsCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return printJSON(cmd, response)
+		return printJSON(response)
 	}
 	return cmd
 }
@@ -157,13 +158,13 @@ func newListTADsCommand() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return printJSON(cmd, response)
+		return printJSON(response)
 	}
 	return cmd
 }
 
-func printJSON(cmd *cobra.Command, msg any) error {
-	data, err := json.MarshalIndent(msg, "", "  ")
+func printJSON(msg proto.Message) error {
+	data, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(msg)
 	if err != nil {
 		return err
 	}

@@ -21,17 +21,11 @@ type ListFootprintsParams struct {
 	Filter string `json:"$filter,omitempty"`
 }
 
-// ListFootprintsResult is the response for the [Client.ListFootprints] method.
-type ListFootprintsResult struct {
-	// Footprints is the list of footprints in the current page.
-	Footprints []*ileapv1.ProductFootprint
-}
-
 // ListFootprints fetches a list of product carbon footprints.
 func (c *Client) ListFootprints(
 	ctx context.Context,
 	request *ListFootprintsParams,
-) (_ *ListFootprintsResult, err error) {
+) (_ *ileapv1.ListFootprintsResponse, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("get iLEAP footprint: %w", err)
@@ -76,7 +70,7 @@ func (c *Client) ListFootprints(
 		}
 		footprints = append(footprints, pf)
 	}
-	return &ListFootprintsResult{
-		Footprints: footprints,
-	}, nil
+	resp := &ileapv1.ListFootprintsResponse{}
+	resp.SetData(footprints)
+	return resp, nil
 }

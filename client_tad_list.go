@@ -19,17 +19,11 @@ type ListTADsParams struct {
 	Limit int `json:"limit,omitempty"`
 }
 
-// ListTADsResult is the response for the [Client.ListTADs] method.
-type ListTADsResult struct {
-	// TADs is the list of transport activity data in the current page.
-	TADs []*ileapv1.TAD
-}
-
 // ListTADs lists transport activity data.
 func (c *Client) ListTADs(
 	ctx context.Context,
 	request *ListTADsParams,
-) (_ *ListTADsResult, err error) {
+) (_ *ileapv1.ListTransportActivityDataResponse, err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("list iLEAP TADs: %w", err)
@@ -71,7 +65,7 @@ func (c *Client) ListTADs(
 		}
 		tads = append(tads, tad)
 	}
-	return &ListTADsResult{
-		TADs: tads,
-	}, nil
+	resp := &ileapv1.ListTransportActivityDataResponse{}
+	resp.SetData(tads)
+	return resp, nil
 }
