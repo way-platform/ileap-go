@@ -252,7 +252,7 @@ func TestVersionHeaderSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
-	values, ok := w.Header()[ileapGoVersionHeader]
+	values, ok := w.Header()[http.CanonicalHeaderKey(ileapGoVersionHeader)]
 	if !ok {
 		t.Fatal("expected X-iLEAP-Go-Version header")
 	}
@@ -271,7 +271,7 @@ func TestVersionHeaderError(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.ServeHTTP(w, req)
 
-	values, ok := w.Header()[ileapGoVersionHeader]
+	values, ok := w.Header()[http.CanonicalHeaderKey(ileapGoVersionHeader)]
 	if !ok {
 		t.Fatal("expected X-iLEAP-Go-Version header")
 	}
