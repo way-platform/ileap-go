@@ -8,6 +8,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -28,6 +29,8 @@ type Server struct {
 	pathPrefix string
 	serveMux   *http.ServeMux
 }
+
+const ileapGoVersionHeader = "X-iLEAP-Go-Version"
 
 // ServerOption configures the server.
 type ServerOption func(*Server)
@@ -72,6 +75,7 @@ func NewServer(opts ...ServerOption) *Server {
 
 // ServeHTTP implements http.Handler.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set(ileapGoVersionHeader, buildVersionHeaderValue())
 	s.serveMux.ServeHTTP(w, r)
 }
 
@@ -516,6 +520,31 @@ func writeError(
 		Message: fmt.Sprintf(format, args...),
 	}); err != nil {
 		slog.Error("failed to encode error response", "error", err)
+	}
+}
+
+func buildVersionHeaderValue() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	version := strings.TrimSpace(info.Main.Version)
+	revision := ""
+	for _, setting := range info.Settings {
+		if setting.Key == "vcs.revision" {
+			revision = setting.Value
+			break
+		}
+	}
+	switch {
+	case version != "" && revision != "":
+		return fmt.Sprintf("%s (%s)", version, revision)
+	case version != "":
+		return version
+	case revision != "":
+		return revision
+	default:
+		return ""
 	}
 }
 

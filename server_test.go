@@ -244,6 +244,45 @@ func TestAuthToken(t *testing.T) {
 	})
 }
 
+func TestVersionHeaderSuccess(t *testing.T) {
+	srv := newTestServer()
+
+	req := httptest.NewRequest("GET", "/2/footprints", nil)
+	req.Header.Set("Authorization", "Bearer valid")
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	values, ok := w.Header()[ileapGoVersionHeader]
+	if !ok {
+		t.Fatal("expected X-iLEAP-Go-Version header")
+	}
+	if len(values) != 1 {
+		t.Fatalf("expected 1 header value, got %d", len(values))
+	}
+	if got, want := values[0], buildVersionHeaderValue(); got != want {
+		t.Errorf("X-iLEAP-Go-Version = %q, want %q", got, want)
+	}
+}
+
+func TestVersionHeaderError(t *testing.T) {
+	srv := newTestServer()
+
+	req := httptest.NewRequest("GET", "/2/footprints", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	values, ok := w.Header()[ileapGoVersionHeader]
+	if !ok {
+		t.Fatal("expected X-iLEAP-Go-Version header")
+	}
+	if len(values) != 1 {
+		t.Fatalf("expected 1 header value, got %d", len(values))
+	}
+	if got, want := values[0], buildVersionHeaderValue(); got != want {
+		t.Errorf("X-iLEAP-Go-Version = %q, want %q", got, want)
+	}
+}
+
 func TestOpenIDConfig(t *testing.T) {
 	srv := authTestServer()
 	req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
