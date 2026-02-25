@@ -4,3 +4,4 @@ build/
 dist/
 tools/build/
 cmd/ileap/ileap
+logs/
