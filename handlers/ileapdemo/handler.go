@@ -2,7 +2,6 @@ package ileapdemo
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -108,25 +107,6 @@ func (h *Handler) ListTransportActivityData(
 	resp.SetData(filtered)
 	resp.SetTotal(int32(total))
 	return resp, nil
-}
-
-// HandleEvent processes an incoming PACT event.
-func (h *Handler) HandleEvent(
-	_ context.Context, req *ileapv1.HandleEventRequest,
-) (*ileapv1.HandleEventResponse, error) {
-	event := req.GetEvent()
-	switch ileap.EventType(event.GetType()) {
-	case ileap.EventTypeRequestCreatedV1:
-	case ileap.EventTypeRequestFulfilledV1:
-	case ileap.EventTypeRequestRejectedV1:
-	case ileap.EventTypePublishedV1:
-	default:
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			fmt.Errorf("invalid event type: %s", event.GetType()),
-		)
-	}
-	return &ileapv1.HandleEventResponse{}, nil
 }
 
 func hasFilter(req *ileapv1.ListTransportActivityDataRequest) bool {

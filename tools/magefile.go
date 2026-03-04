@@ -101,8 +101,18 @@ func VHS() error {
 
 // Diff checks for git diffs.
 func Diff() error {
-	log.Println("checking for git diffs")
+	log.Println("checking for diffs")
+	if !inGitWorkTree() {
+		log.Println("skipping diff check (not a git repo)")
+		return nil
+	}
 	return cmd(root(), "git", "diff", "--exit-code").Run()
+}
+
+func inGitWorkTree() bool {
+	check := cmd(root(), "git", "rev-parse", "--is-inside-work-tree")
+	check.Stdout, check.Stderr = nil, nil
+	return check.Run() == nil
 }
 
 // ACT runs the ACT conformance test suite against a remote server.

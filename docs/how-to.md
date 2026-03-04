@@ -28,14 +28,13 @@ srv := ileap.NewServer(
 Implement `ILeapServiceHandler` against your existing data store and mount the iLEAP server into
 your existing HTTP mux (`net/http`, Gin, Echo, Chi, etc.).
 
-The interface has four methods:
+The interface has three methods:
 
 ```go
 // ileapv1connect.ILeapServiceHandler
 ListFootprints(context.Context, *ileapv1.ListFootprintsRequest) (*ileapv1.ListFootprintsResponse, error)
 GetFootprint(context.Context, *ileapv1.GetFootprintRequest) (*ileapv1.GetFootprintResponse, error)
 ListTransportActivityData(context.Context, *ileapv1.ListTransportActivityDataRequest) (*ileapv1.ListTransportActivityDataResponse, error)
-HandleEvent(context.Context, *ileapv1.HandleEventRequest) (*ileapv1.HandleEventResponse, error)
 ```
 
 A minimal database-backed implementation:
@@ -67,7 +66,7 @@ func (h *myHandler) ListFootprints(
     return &ileapv1.ListFootprintsResponse{Data: footprints}, nil
 }
 
-// GetFootprint, ListTransportActivityData, HandleEvent follow the same pattern.
+// GetFootprint and ListTransportActivityData follow the same pattern.
 ```
 
 Mount into your existing mux:
