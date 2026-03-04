@@ -25,6 +25,9 @@ type ConformanceTestConfig struct {
 	ServerURL string
 	Username  string
 	Password  string
+	// ExpiredToken is an optional pre-generated expired bearer token.
+	// If empty, TC008 is skipped.
+	ExpiredToken string
 }
 
 // RunConformanceTests runs the full iLEAP/PACT conformance test suite
@@ -229,6 +232,24 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 		}
 		if errResp.Code != ileap.ErrorCodeAccessDenied {
 			t.Errorf("error code: got %q, want AccessDenied", errResp.Code)
+		}
+	})
+
+	t.Run("TC008_TADExpiredToken", func(t *testing.T) {
+		if cfg.ExpiredToken == "" {
+			t.Skip("no expired token configured")
+		}
+		resp := getResponse(t, cfg.ServerURL, "/2/ileap/tad", cfg.ExpiredToken)
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Errorf("status: got %d, want 401", resp.StatusCode)
+		}
+		body := readBody(resp)
+		var errResp ileap.Error
+		if err := json.Unmarshal([]byte(body), &errResp); err != nil {
+			t.Fatalf("decode error response: %v", err)
+		}
+		if errResp.Code != ileap.ErrorCodeTokenExpired {
+			t.Errorf("error code: got %q, want TokenExpired", errResp.Code)
 		}
 	})
 
