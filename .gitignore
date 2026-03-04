@@ -5,3 +5,4 @@ dist/
 tools/build/
 cmd/ileap/ileap
 logs/
+artifacts/act/

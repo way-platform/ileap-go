@@ -11,6 +11,8 @@ type AuthHandler interface {
 	// IssueToken validates credentials and returns an access token.
 	IssueToken(ctx context.Context, clientID, clientSecret string) (*oauth2.Token, error)
 	// ValidateToken validates an access token and returns token info.
+	// It must return connect.CodeUnauthenticated when the token is expired.
+	// Other validation failures should return permission-denied style errors.
 	ValidateToken(ctx context.Context, token string) (*TokenInfo, error)
 	// OpenIDConfiguration returns the OIDC configuration for the given base URL.
 	OpenIDConfiguration(baseURL string) *OpenIDConfiguration
