@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/way-platform/ileap-go"
 	"golang.org/x/oauth2"
@@ -66,6 +67,13 @@ func TestDemoServer(t *testing.T) {
 			}
 			if claims.Username != "hello" {
 				t.Errorf("expected username 'hello', got '%s'", claims.Username)
+			}
+			if claims.Expiration <= claims.IssuedAt {
+				t.Errorf(
+					"expected expiration (%d) to be after issued-at (%d)",
+					claims.Expiration,
+					claims.IssuedAt,
+				)
 			}
 		})
 
@@ -244,6 +252,27 @@ func TestDemoServer(t *testing.T) {
 			w := httptest.NewRecorder()
 			server.ServeHTTP(w, req)
 			checkErrorResponse(t, w, http.StatusForbidden, ileap.ErrorCodeAccessDenied)
+		})
+
+		t.Run("expired token returns 401", func(t *testing.T) {
+			keypair, err := LoadKeyPair()
+			if err != nil {
+				t.Fatalf("load keypair: %v", err)
+			}
+			expiredToken, err := keypair.CreateJWT(JWTClaims{
+				Username:   "hello",
+				IssuedAt:   time.Now().Add(-2 * time.Hour).Unix(),
+				Expiration: time.Now().Add(-1 * time.Hour).Unix(),
+			})
+			if err != nil {
+				t.Fatalf("create expired token: %v", err)
+			}
+
+			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
+			req.Header.Set("Authorization", "Bearer "+expiredToken)
+			w := httptest.NewRecorder()
+			server.ServeHTTP(w, req)
+			checkErrorResponse(t, w, http.StatusUnauthorized, ileap.ErrorCodeTokenExpired)
 		})
 	})
 }
