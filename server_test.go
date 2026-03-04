@@ -96,9 +96,13 @@ func (m *mockServiceHandler) HandleEvent(
 type mockAuthHandler struct {
 	validToken   bool
 	expiredToken bool
+	validateErr  error
 }
 
 func (m *mockAuthHandler) ValidateToken(_ context.Context, _ string) (*TokenInfo, error) {
+	if m.validateErr != nil {
+		return nil, m.validateErr
+	}
 	if m.expiredToken {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("token expired"))
 	}
@@ -474,6 +478,22 @@ func TestILeapAuthMiddleware(t *testing.T) {
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeTokenExpired)
+	})
+
+	t.Run("non-unauthenticated error returns 403", func(t *testing.T) {
+		srv := NewServer(
+			WithAuthHandler(&mockAuthHandler{
+				validateErr: connect.NewError(
+					connect.CodePermissionDenied,
+					errors.New("token is expired"),
+				),
+			}),
+		)
+		req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
+		req.Header.Set("Authorization", "Bearer expired-token")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		checkErrorResponse(t, w, http.StatusForbidden, ErrorCodeAccessDenied)
 	})
 }
 
