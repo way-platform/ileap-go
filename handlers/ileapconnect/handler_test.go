@@ -57,13 +57,6 @@ func (f *fakeBackend) GetFootprint(
 	return nil, connect.NewError(connect.CodeNotFound, nil)
 }
 
-func (f *fakeBackend) HandleEvent(
-	_ context.Context,
-	_ *ileapv1.HandleEventRequest,
-) (*ileapv1.HandleEventResponse, error) {
-	return &ileapv1.HandleEventResponse{}, nil
-}
-
 func (f *fakeBackend) ListTransportActivityData(
 	_ context.Context,
 	req *ileapv1.ListTransportActivityDataRequest,
@@ -273,21 +266,5 @@ func TestGetFootprintResponse(t *testing.T) {
 	want.SetVersion(1)
 	if diff := cmp.Diff(want, resp.GetData(), protocmp.Transform()); diff != "" {
 		t.Errorf("GetFootprint() mismatch (-want +got):\n%s", diff)
-	}
-}
-
-func TestHandleEvent(t *testing.T) {
-	client, _ := newTestFixtures(t)
-	event := new(ileapv1.Event)
-	event.SetType("org.wbcsd.pathfinder.ProductFootprint.Published.v1")
-	event.SetSpecversion("1.0")
-	event.SetId("evt-1")
-	event.SetSource("test")
-	event.SetData([]byte(`{}`))
-	req := new(ileapv1.HandleEventRequest)
-	req.SetEvent(event)
-	_, err := client.HandleEvent(context.Background(), req)
-	if err != nil {
-		t.Fatalf("HandleEvent() error: %v", err)
 	}
 }

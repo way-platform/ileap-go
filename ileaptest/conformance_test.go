@@ -40,9 +40,9 @@ func TestConformance(t *testing.T) {
 	t.Cleanup(server.Close)
 
 	ileaptest.RunConformanceTests(t, ileaptest.ConformanceTestConfig{
-		ServerURL: server.URL,
-		Username:  "hello",
-		Password:  "pathfinder",
+		ServerURL:    server.URL,
+		Username:     "hello",
+		Password:     "pathfinder",
 		ExpiredToken: expiredToken,
 	})
 }
@@ -56,9 +56,9 @@ func TestConformanceRemote(t *testing.T) {
 		t.Skip("set ILEAP_SERVER_URL, ILEAP_USERNAME, ILEAP_PASSWORD to run")
 	}
 	ileaptest.RunConformanceTests(t, ileaptest.ConformanceTestConfig{
-		ServerURL: strings.TrimRight(serverURL, "/"),
-		Username:  username,
-		Password:  password,
+		ServerURL:    strings.TrimRight(serverURL, "/"),
+		Username:     username,
+		Password:     password,
 		ExpiredToken: expiredToken,
 	})
 }

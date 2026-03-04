@@ -54,7 +54,7 @@ srv := ileap.NewServer(
 log.Fatal(http.ListenAndServe(":8080", srv))
 ```
 
-`ILeapServiceHandler` is the generated Connect RPC interface with four methods: `ListFootprints`, `GetFootprint`, `ListTransportActivityData`, and `HandleEvent`. `AuthHandler` covers token issuance, validation, and OIDC discovery.
+`ILeapServiceHandler` is the generated Connect RPC interface with three methods: `ListFootprints`, `GetFootprint`, and `ListTransportActivityData`. `AuthHandler` covers token issuance, validation, and OIDC discovery.
 
 #### Pre-built Handlers
 

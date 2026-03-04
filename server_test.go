@@ -17,12 +17,11 @@ import (
 )
 
 // mockServiceHandler embeds the generated unimplemented handler and
-// allows tests to set data for footprints, TADs, and events.
+// allows tests to set data for footprints and TADs.
 type mockServiceHandler struct {
 	ileapv1connect.UnimplementedILeapServiceHandler
 	footprints []*ileapv1.ProductFootprint
 	tads       []*ileapv1.TAD
-	lastEvent  *ileapv1.Event
 }
 
 func (m *mockServiceHandler) GetFootprint(
@@ -83,13 +82,6 @@ func (m *mockServiceHandler) ListTransportActivityData(
 	resp.SetData(result)
 	resp.SetTotal(int32(total))
 	return resp, nil
-}
-
-func (m *mockServiceHandler) HandleEvent(
-	_ context.Context, req *ileapv1.HandleEventRequest,
-) (*ileapv1.HandleEventResponse, error) {
-	m.lastEvent = req.GetEvent()
-	return &ileapv1.HandleEventResponse{}, nil
 }
 
 // mockAuthHandler implements AuthHandler for tests.
@@ -694,10 +686,8 @@ func TestListTads(t *testing.T) {
 }
 
 func TestEvents(t *testing.T) {
-	svc := &mockServiceHandler{}
 	srv := NewServer(
 		WithAuthHandler(&mockAuthHandler{validToken: true}),
-		WithServiceHandler(svc),
 	)
 
 	t.Run("cloudevents content type", func(t *testing.T) {
@@ -709,12 +699,6 @@ func TestEvents(t *testing.T) {
 		srv.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
-		}
-		if svc.lastEvent == nil {
-			t.Fatal("expected event to be handled")
-		}
-		if svc.lastEvent.GetId() != "evt-1" {
-			t.Errorf("expected event ID evt-1, got %s", svc.lastEvent.GetId())
 		}
 	})
 
@@ -764,6 +748,16 @@ func TestEvents(t *testing.T) {
 		req := httptest.NewRequest("POST", "/2/events", strings.NewReader("{}"))
 		req.Header.Set("Authorization", "Bearer valid")
 		req.Header.Set("Content-Type", "text/plain")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
+	})
+
+	t.Run("unknown event type", func(t *testing.T) {
+		body := `{"type":"org.example.UnknownEvent.1","specversion":"1.0","id":"evt-unknown","source":"test","data":"ewo="}`
+		req := httptest.NewRequest("POST", "/2/events", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer valid")
+		req.Header.Set("Content-Type", "application/cloudevents+json")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
@@ -838,7 +832,9 @@ func TestNotImplemented(t *testing.T) {
 			req.Header.Set("Content-Type", "application/cloudevents+json")
 			w := httptest.NewRecorder()
 			srv.ServeHTTP(w, req)
-			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
+			if w.Code != http.StatusOK {
+				t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
+			}
 		})
 	})
 

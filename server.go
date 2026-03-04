@@ -42,7 +42,7 @@ var uuidRegexp = regexp.MustCompile(
 // ServerOption configures the server.
 type ServerOption func(*Server)
 
-// WithServiceHandler sets the ILeapService handler for footprints, TAD, and events.
+// WithServiceHandler sets the ILeapService handler for footprints and TAD.
 func WithServiceHandler(h ileapv1connect.ILeapServiceHandler) ServerOption {
 	return func(s *Server) { s.service = h }
 }
@@ -461,7 +461,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid request body")
 		return
 	}
-	if event.GetSpecversion() != "1.0" || event.GetId() == "" || event.GetSource() == "" {
+	if event.Specversion != "1.0" || event.ID == "" || event.Source == "" {
 		writeError(
 			w,
 			http.StatusBadRequest,
@@ -470,7 +470,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	if len(event.GetData()) == 0 {
+	if len(event.Data) == 0 {
 		writeError(
 			w,
 			http.StatusBadRequest,
@@ -483,10 +483,8 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid request body")
 		return
 	}
-	req := new(ileapv1.HandleEventRequest)
-	req.SetEvent(event)
-	if _, err := s.service.HandleEvent(r.Context(), req); err != nil {
-		writeHandlerError(w, err)
+	if !IsKnownEventType(EventType(event.Type)) {
+		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid event type")
 		return
 	}
 }
@@ -499,7 +497,7 @@ type cloudEventEnvelope struct {
 	Data        json.RawMessage `json:"data"`
 }
 
-func decodeCloudEvent(body []byte) (*ileapv1.Event, error) {
+func decodeCloudEvent(body []byte) (*Event, error) {
 	var envelope cloudEventEnvelope
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		return nil, err
@@ -508,13 +506,13 @@ func decodeCloudEvent(body []byte) (*ileapv1.Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	event := new(ileapv1.Event)
-	event.SetType(envelope.Type)
-	event.SetSpecversion(envelope.Specversion)
-	event.SetId(envelope.ID)
-	event.SetSource(envelope.Source)
-	event.SetData(data)
-	return event, nil
+	return &Event{
+		Type:        envelope.Type,
+		Specversion: envelope.Specversion,
+		ID:          envelope.ID,
+		Source:      envelope.Source,
+		Data:        data,
+	}, nil
 }
 
 func normalizeCloudEventData(raw json.RawMessage) ([]byte, error) {
@@ -549,14 +547,14 @@ func normalizeCloudEventData(raw json.RawMessage) ([]byte, error) {
 	return compact.Bytes(), nil
 }
 
-func validateEventData(event *ileapv1.Event) error {
-	if EventType(event.GetType()) != EventTypePublishedV1 {
+func validateEventData(event *Event) error {
+	if EventType(event.Type) != EventTypePublishedV1 {
 		return nil
 	}
 	var payload struct {
 		PFIDs []string `json:"pfIds"`
 	}
-	if err := json.Unmarshal(event.GetData(), &payload); err != nil {
+	if err := json.Unmarshal(event.Data, &payload); err != nil {
 		return err
 	}
 	for _, id := range payload.PFIDs {
