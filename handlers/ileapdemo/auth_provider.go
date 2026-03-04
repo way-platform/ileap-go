@@ -15,6 +15,8 @@ type AuthProvider struct {
 	keypair *KeyPair
 }
 
+const accessTokenTTL = time.Hour
+
 // NewAuthProvider creates a new AuthProvider with the embedded demo keypair.
 func NewAuthProvider() (*AuthProvider, error) {
 	kp, err := LoadKeyPair()
@@ -41,9 +43,12 @@ func (a *AuthProvider) IssueToken(
 			errors.New("invalid credentials"),
 		)
 	}
+	issuedAt := time.Now()
+	expiresAt := issuedAt.Add(accessTokenTTL)
 	accessToken, err := a.keypair.CreateJWT(JWTClaims{
-		Username: clientID,
-		IssuedAt: time.Now().Unix(),
+		Username:   clientID,
+		IssuedAt:   issuedAt.Unix(),
+		Expiration: expiresAt.Unix(),
 	})
 	if err != nil {
 		return nil, err
@@ -51,6 +56,8 @@ func (a *AuthProvider) IssueToken(
 	return &oauth2.Token{
 		AccessToken: accessToken,
 		TokenType:   "bearer",
+		Expiry:      expiresAt,
+		ExpiresIn:   int64(accessTokenTTL.Seconds()),
 	}, nil
 }
 
