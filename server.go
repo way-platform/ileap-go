@@ -136,20 +136,20 @@ func (s *Server) pactAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		token := strings.TrimPrefix(authHeader, "Bearer ")
-			if token == "" {
-				writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
+		if token == "" {
+			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
+			return
+		}
+		if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
+			if connect.CodeOf(err) == connect.CodeUnimplemented {
+				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 				return
 			}
-			if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
-				if connect.CodeOf(err) == connect.CodeUnimplemented {
-					writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
-					return
-				}
-				slog.WarnContext(r.Context(), "token validation failed", "error", err)
-				// PACT conformance recommendations prefer BadRequest for invalid tokens.
-				writeError(w, http.StatusUnauthorized, ErrorCodeBadRequest, "invalid access token")
-				return
-			}
+			slog.WarnContext(r.Context(), "token validation failed", "error", err)
+			// PACT conformance recommendations prefer BadRequest for invalid tokens.
+			writeError(w, http.StatusUnauthorized, ErrorCodeBadRequest, "invalid access token")
+			return
+		}
 		ctx := WithAuthToken(r.Context(), token)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -179,16 +179,16 @@ func (s *Server) pactEventsAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "missing access token")
 			return
 		}
-			if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
-				if connect.CodeOf(err) == connect.CodeUnimplemented {
-					writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
-					return
-				}
-				slog.WarnContext(r.Context(), "token validation failed", "error", err)
-				// PACT conformance source-of-truth (TC16) expects BadRequest here.
-				writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid access token")
+		if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
+			if connect.CodeOf(err) == connect.CodeUnimplemented {
+				writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
 				return
 			}
+			slog.WarnContext(r.Context(), "token validation failed", "error", err)
+			// PACT conformance source-of-truth (TC16) expects BadRequest here.
+			writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid access token")
+			return
+		}
 		ctx := WithAuthToken(r.Context(), token)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
