@@ -14,6 +14,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
@@ -218,6 +219,16 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 			writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "missing access token")
 			return
 		}
+		if isExpiredJWT(token) {
+			slog.WarnContext(
+				r.Context(),
+				"token expired",
+				"authReason",
+				"expired_precheck",
+			)
+			writeError(w, http.StatusUnauthorized, ErrorCodeTokenExpired, "token expired")
+			return
+		}
 		if _, err := s.auth.ValidateToken(r.Context(), token); err != nil {
 			switch connect.CodeOf(err) {
 			case connect.CodeUnimplemented:
@@ -234,6 +245,39 @@ func (s *Server) ileapAuthMiddleware(next http.Handler) http.Handler {
 		ctx := WithAuthToken(r.Context(), token)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// isExpiredJWT is a fallback for auth handlers that do not return
+// connect.CodeUnauthenticated for expired tokens.
+func isExpiredJWT(token string) bool {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return false
+	}
+	var claims map[string]any
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+		return false
+	}
+	rawExp, ok := claims["exp"]
+	if !ok {
+		return false
+	}
+	switch exp := rawExp.(type) {
+	case float64:
+		return time.Now().Unix() > int64(exp)
+	case string:
+		n, err := strconv.ParseInt(exp, 10, 64)
+		if err != nil {
+			return false
+		}
+		return time.Now().Unix() > n
+	default:
+		return false
+	}
 }
 
 func (s *Server) resolveBaseURL(r *http.Request) string {

@@ -96,6 +96,21 @@ func (a *AuthHandler) ValidateToken(
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("invalid JWT format")
 	}
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("decode JWT payload: %w", err)
+	}
+	var claims map[string]any
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+		return nil, fmt.Errorf("parse JWT claims: %w", err)
+	}
+	now := time.Now().Unix()
+	if exp, ok, err := extractUnixClaim(claims, "exp"); err != nil {
+		return nil, fmt.Errorf("parse exp claim: %w", err)
+	} else if ok && now > exp {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("token expired"))
+	}
+
 	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
 	if err != nil {
 		return nil, fmt.Errorf("decode JWT header: %w", err)
@@ -122,20 +137,6 @@ func (a *AuthHandler) ValidateToken(
 	digest := sha256.Sum256([]byte(message))
 	if err := rsa.VerifyPKCS1v15(pub, crypto.SHA256, digest[:], sigBytes); err != nil {
 		return nil, fmt.Errorf("invalid JWT signature: %w", err)
-	}
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("decode JWT payload: %w", err)
-	}
-	var claims map[string]any
-	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
-		return nil, fmt.Errorf("parse JWT claims: %w", err)
-	}
-	now := time.Now().Unix()
-	if exp, ok, err := extractUnixClaim(claims, "exp"); err != nil {
-		return nil, fmt.Errorf("parse exp claim: %w", err)
-	} else if ok && now > exp {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("token expired"))
 	}
 	if nbf, ok, err := extractUnixClaim(claims, "nbf"); err != nil {
 		return nil, fmt.Errorf("parse nbf claim: %w", err)

@@ -2,12 +2,15 @@ package ileap
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
@@ -487,6 +490,29 @@ func TestILeapAuthMiddleware(t *testing.T) {
 		srv.ServeHTTP(w, req)
 		checkErrorResponse(t, w, http.StatusForbidden, ErrorCodeAccessDenied)
 	})
+
+	t.Run("expired JWT payload fallback returns 401", func(t *testing.T) {
+		srv := NewServer(
+			WithAuthHandler(&mockAuthHandler{
+				validateErr: connect.NewError(
+					connect.CodePermissionDenied,
+					errors.New("invalid signature"),
+				),
+			}),
+		)
+		token := testJWTWithExp(time.Now().Add(-time.Minute).Unix())
+		req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeTokenExpired)
+	})
+}
+
+func testJWTWithExp(exp int64) string {
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf(`{"exp":%d}`, exp)))
+	return header + "." + payload + ".signature"
 }
 
 func TestListFootprints(t *testing.T) {
