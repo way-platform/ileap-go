@@ -45,6 +45,22 @@ func makeTestJWT(t *testing.T, key *rsa.PrivateKey, claims map[string]any) strin
 	return message + "." + base64.RawURLEncoding.EncodeToString(sig)
 }
 
+func makeUnsignedTestJWT(t *testing.T, claims map[string]any) string {
+	t.Helper()
+	header := map[string]string{"typ": "JWT", "alg": "none", "kid": testKID}
+	headerBytes, err := json.Marshal(header)
+	if err != nil {
+		t.Fatalf("marshal header: %v", err)
+	}
+	payloadBytes, err := json.Marshal(claims)
+	if err != nil {
+		t.Fatalf("marshal claims: %v", err)
+	}
+	h := base64.RawURLEncoding.EncodeToString(headerBytes)
+	p := base64.RawURLEncoding.EncodeToString(payloadBytes)
+	return h + "." + p + ".signature"
+}
+
 func jwksServerForKey(t *testing.T, key *rsa.PrivateKey) *httptest.Server {
 	t.Helper()
 	jwks := ileap.JWKSet{
@@ -97,9 +113,11 @@ func testJWKS() ileap.JWKSet {
 }
 
 func TestAuthHandler_IssueToken(t *testing.T) {
-	const wantJWT = "header.payload.signature"
-
 	t.Run("success", func(t *testing.T) {
+		wantExpiry := time.Now().Add(30 * time.Minute).Truncate(time.Second)
+		wantJWT := makeUnsignedTestJWT(t, map[string]any{
+			"exp": wantExpiry.Unix(),
+		})
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			resp := signInResponse{}
@@ -127,6 +145,12 @@ func TestAuthHandler_IssueToken(t *testing.T) {
 		}
 		if creds.AccessToken != wantJWT {
 			t.Errorf("expected access token %q, got %q", wantJWT, creds.AccessToken)
+		}
+		if creds.Expiry.Unix() != wantExpiry.Unix() {
+			t.Errorf("expected expiry %v, got %v", wantExpiry, creds.Expiry)
+		}
+		if creds.ExpiresIn <= 0 {
+			t.Errorf("expected expires_in to be set, got %d", creds.ExpiresIn)
 		}
 	})
 
@@ -189,6 +213,62 @@ func TestAuthHandler_ValidateToken(t *testing.T) {
 		_, err := auth.ValidateToken(context.Background(), token)
 		if err == nil {
 			t.Fatal("expected error for expired token")
+		}
+	})
+
+	t.Run("token not yet valid", func(t *testing.T) {
+		srv := jwksServerForKey(t, key)
+		defer srv.Close()
+		c := NewClient("unused", WithHTTPClient(&http.Client{
+			Transport: &testTransport{target: srv},
+		}))
+		auth := NewAuthHandler(c)
+		claims := map[string]any{
+			"sub": "user@example.com",
+			"exp": float64(time.Now().Add(time.Hour).Unix()),
+			"nbf": float64(time.Now().Add(time.Minute).Unix()),
+		}
+		token := makeTestJWT(t, key, claims)
+		_, err := auth.ValidateToken(context.Background(), token)
+		if err == nil {
+			t.Fatal("expected error for nbf in the future")
+		}
+		if connect.CodeOf(err) != connect.CodeUnauthenticated {
+			t.Errorf("expected CodeUnauthenticated, got: %v", err)
+		}
+	})
+
+	t.Run("missing subject", func(t *testing.T) {
+		srv := jwksServerForKey(t, key)
+		defer srv.Close()
+		c := NewClient("unused", WithHTTPClient(&http.Client{
+			Transport: &testTransport{target: srv},
+		}))
+		auth := NewAuthHandler(c)
+		claims := map[string]any{
+			"exp": float64(time.Now().Add(time.Hour).Unix()),
+		}
+		token := makeTestJWT(t, key, claims)
+		_, err := auth.ValidateToken(context.Background(), token)
+		if err == nil {
+			t.Fatal("expected error for missing sub claim")
+		}
+	})
+
+	t.Run("unsupported alg", func(t *testing.T) {
+		srv := jwksServerForKey(t, key)
+		defer srv.Close()
+		c := NewClient("unused", WithHTTPClient(&http.Client{
+			Transport: &testTransport{target: srv},
+		}))
+		auth := NewAuthHandler(c)
+		token := makeUnsignedTestJWT(t, map[string]any{
+			"sub": "user@example.com",
+			"exp": time.Now().Add(time.Hour).Unix(),
+		})
+		_, err := auth.ValidateToken(context.Background(), token)
+		if err == nil {
+			t.Fatal("expected error for unsupported alg")
 		}
 	})
 

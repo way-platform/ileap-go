@@ -61,7 +61,7 @@ func NewAuthHandler(client *Client, opts ...AuthHandlerOption) *AuthHandler {
 }
 
 func (a *AuthHandler) IssueToken(
-	_ context.Context, clientID, clientSecret string,
+	ctx context.Context, clientID, clientSecret string,
 ) (*oauth2.Token, error) {
 	jwt, err := a.client.SignIn(clientID, clientSecret, a.activeOrgID)
 	if err != nil {
@@ -70,10 +70,23 @@ func (a *AuthHandler) IssueToken(
 			fmt.Errorf("invalid credentials: %w", err),
 		)
 	}
-	return &oauth2.Token{
+	creds := &oauth2.Token{
 		AccessToken: jwt,
 		TokenType:   "bearer",
-	}, nil
+	}
+	expiry, hasExpiry, err := extractJWTExpiry(jwt)
+	if err != nil {
+		slog.WarnContext(ctx, "failed to parse exp claim from issued JWT", "error", err)
+		return creds, nil
+	}
+	if hasExpiry {
+		creds.Expiry = expiry
+		seconds := int64(time.Until(expiry).Seconds())
+		if seconds > 0 {
+			creds.ExpiresIn = seconds
+		}
+	}
+	return creds, nil
 }
 
 func (a *AuthHandler) ValidateToken(
@@ -93,6 +106,9 @@ func (a *AuthHandler) ValidateToken(
 	}
 	if err := json.Unmarshal(headerBytes, &header); err != nil {
 		return nil, fmt.Errorf("parse JWT header: %w", err)
+	}
+	if header.Alg != "RS256" {
+		return nil, fmt.Errorf("unsupported JWT alg: %s", header.Alg)
 	}
 	pub, err := a.findKey(header.Kid)
 	if err != nil {
@@ -115,13 +131,51 @@ func (a *AuthHandler) ValidateToken(
 	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
 		return nil, fmt.Errorf("parse JWT claims: %w", err)
 	}
-	if exp, ok := claims["exp"].(float64); ok {
-		if time.Now().Unix() > int64(exp) {
-			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("token expired"))
-		}
+	now := time.Now().Unix()
+	if exp, ok, err := extractUnixClaim(claims, "exp"); err != nil {
+		return nil, fmt.Errorf("parse exp claim: %w", err)
+	} else if ok && now > exp {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("token expired"))
 	}
-	sub, _ := claims["sub"].(string)
+	if nbf, ok, err := extractUnixClaim(claims, "nbf"); err != nil {
+		return nil, fmt.Errorf("parse nbf claim: %w", err)
+	} else if ok && now < nbf {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("token not yet valid"))
+	}
+	if iat, ok, err := extractUnixClaim(claims, "iat"); err != nil {
+		return nil, fmt.Errorf("parse iat claim: %w", err)
+	} else if ok && now < iat {
+		return nil, connect.NewError(
+			connect.CodeUnauthenticated,
+			errors.New("token issued in the future"),
+		)
+	}
+	sub, ok := claims["sub"].(string)
+	if !ok || sub == "" {
+		return nil, fmt.Errorf("missing or invalid sub claim")
+	}
 	return &ileap.TokenInfo{Subject: sub}, nil
+}
+
+func extractUnixClaim(claims map[string]any, name string) (int64, bool, error) {
+	raw, ok := claims[name]
+	if !ok {
+		return 0, false, nil
+	}
+	switch v := raw.(type) {
+	case float64:
+		return int64(v), true, nil
+	case int64:
+		return v, true, nil
+	case json.Number:
+		n, err := v.Int64()
+		if err != nil {
+			return 0, false, err
+		}
+		return n, true, nil
+	default:
+		return 0, false, fmt.Errorf("unexpected %T", raw)
+	}
 }
 
 func (a *AuthHandler) OpenIDConfiguration(baseURL string) *ileap.OpenIDConfiguration {
@@ -206,4 +260,32 @@ func findKeyInSet(jwks *ileap.JWKSet, kid string) *rsa.PublicKey {
 		}
 	}
 	return nil
+}
+
+func extractJWTExpiry(token string) (time.Time, bool, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return time.Time{}, false, errors.New("invalid JWT format")
+	}
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("decode JWT payload: %w", err)
+	}
+	var claims map[string]json.RawMessage
+	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+		return time.Time{}, false, fmt.Errorf("parse JWT claims: %w", err)
+	}
+	rawExp, ok := claims["exp"]
+	if !ok {
+		return time.Time{}, false, nil
+	}
+	var exp int64
+	if err := json.Unmarshal(rawExp, &exp); err == nil {
+		return time.Unix(exp, 0), true, nil
+	}
+	var expFloat float64
+	if err := json.Unmarshal(rawExp, &expFloat); err == nil {
+		return time.Unix(int64(expFloat), 0), true, nil
+	}
+	return time.Time{}, false, errors.New("exp claim is not a number")
 }
