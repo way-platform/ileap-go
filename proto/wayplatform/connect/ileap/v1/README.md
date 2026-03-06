@@ -157,8 +157,8 @@ Where `{type}` is `shipment`, `toc`, or `hoc`.
 | `GET` | `/2/footprints/{id}` | Get single ProductFootprint |
 | `POST` | `/2/events` | Async event notifications |
 
-Supports `$filter` query parameter (OData v4 subset) and `limit` pagination
-with `Link` header.
+Supports HTTP filtering with server-side translation to request-local
+`field_path`/`value` filters and `limit` pagination with `Link` header.
 
 ### iLEAP Endpoint
 
@@ -167,6 +167,7 @@ GET /2/ileap/tad?[filter params]&limit={n}
 ```
 
 - **Filtering**: query parameters as key-value pairs (e.g., `?mode=Road`)
+- **Handler filter model**: request-local repeated filters with `field_path` + `value`
 - **Pagination**: `limit` param + `Link: <url>; rel="next"` header
 - **Response**: `{ "data": [TAD, ...] }`
 

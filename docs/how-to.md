@@ -8,9 +8,14 @@ or both — via the iLEAP protocol using the ileap-go SDK.
 ## What the SDK provides
 
 The SDK is an `http.Handler` you mount into your existing server or deploy standalone. It handles
-the full PACT/iLEAP protocol: JSON envelopes, OData filtering, `Link` header pagination, the OAuth2
+the full PACT/iLEAP protocol: JSON envelopes, filter translation, `Link` header pagination, the OAuth2
 token endpoint, OIDC discovery, and JWKS. You provide your data (via `ILeapServiceHandler`) and
 your auth (via `AuthHandler`).
+
+Filter translation is the key simplification:
+- Incoming HTTP filters (including legacy OData on `/2/footprints`) are translated by the server.
+- Handler methods receive simple request-local filters: `field_path` + `value`.
+- The filter shape is aligned with iLEAP standalone field-path semantics.
 
 ```go
 import ileap "github.com/way-platform/ileap-go"

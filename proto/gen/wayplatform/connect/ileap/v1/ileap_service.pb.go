@@ -29,10 +29,10 @@ const (
 //
 // See PACT v2.1.0 Section 6.6.3 "Request Syntax".
 type ListFootprintsRequest struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Filter      *string                `protobuf:"bytes,1,opt,name=filter,json=$filter"`
-	xxx_hidden_Limit       int32                  `protobuf:"varint,2,opt,name=limit"`
-	xxx_hidden_Offset      int32                  `protobuf:"varint,3,opt,name=offset"`
+	state                  protoimpl.MessageState           `protogen:"opaque.v1"`
+	xxx_hidden_Filters     *[]*ListFootprintsRequest_Filter `protobuf:"bytes,4,rep,name=filters"`
+	xxx_hidden_Limit       int32                            `protobuf:"varint,2,opt,name=limit"`
+	xxx_hidden_Offset      int32                            `protobuf:"varint,3,opt,name=offset"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -64,14 +64,13 @@ func (x *ListFootprintsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *ListFootprintsRequest) GetFilter() string {
+func (x *ListFootprintsRequest) GetFilters() []*ListFootprintsRequest_Filter {
 	if x != nil {
-		if x.xxx_hidden_Filter != nil {
-			return *x.xxx_hidden_Filter
+		if x.xxx_hidden_Filters != nil {
+			return *x.xxx_hidden_Filters
 		}
-		return ""
 	}
-	return ""
+	return nil
 }
 
 func (x *ListFootprintsRequest) GetLimit() int32 {
@@ -88,9 +87,8 @@ func (x *ListFootprintsRequest) GetOffset() int32 {
 	return 0
 }
 
-func (x *ListFootprintsRequest) SetFilter(v string) {
-	x.xxx_hidden_Filter = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 3)
+func (x *ListFootprintsRequest) SetFilters(v []*ListFootprintsRequest_Filter) {
+	x.xxx_hidden_Filters = &v
 }
 
 func (x *ListFootprintsRequest) SetLimit(v int32) {
@@ -101,13 +99,6 @@ func (x *ListFootprintsRequest) SetLimit(v int32) {
 func (x *ListFootprintsRequest) SetOffset(v int32) {
 	x.xxx_hidden_Offset = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
-}
-
-func (x *ListFootprintsRequest) HasFilter() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
 func (x *ListFootprintsRequest) HasLimit() bool {
@@ -124,11 +115,6 @@ func (x *ListFootprintsRequest) HasOffset() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
-func (x *ListFootprintsRequest) ClearFilter() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Filter = nil
-}
-
 func (x *ListFootprintsRequest) ClearLimit() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
 	x.xxx_hidden_Limit = 0
@@ -142,31 +128,14 @@ func (x *ListFootprintsRequest) ClearOffset() {
 type ListFootprintsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	// OData v4 $filter expression for filtering ProductFootprints.
+	// Filter pairs where each item matches by exact field path and value.
 	//
-	// The $filter statement MUST only include the following operators and
-	// properties:
-	//   - Logical operators eq, lt, le, gt, ge on properties: created,
-	//     updated, productCategoryCpc, pcf/geographyCountry,
-	//     pcf/referencePeriodStart, pcf/referencePeriodEnd.
-	//   - Logical operator "and".
-	//   - Lambda operator "any" on collection-valued properties: companyIds,
-	//     productIds. The expression argument of the operator MUST only
-	//     include the "eq" operator.
+	// A pair follows "field_path=value" semantics where field path is case-sensitive and
+	// value is case-insensitive. Names MAY use dot notation to reference nested
+	// properties.
 	//
-	// Examples:
-	//   - Filter by CPC code: "productCategoryCpc eq '83117'"
-	//   - Filter by country: "pcf/geographyCountry eq 'DE'"
-	//   - Filter by period: "(pcf/referencePeriodStart ge '2023-01-01T00:00:00.000Z') and (pcf/referencePeriodEnd lt '2024-01-01T00:00:00.000Z')"
-	//   - Filter by product: "productIds/any(productId:(productId eq 'urn:...'))"
-	//
-	// Support for filtering by a host system is OPTIONAL. If a host system
-	// does not implement filtering, it MUST process the request as if no
-	// filter was provided. If it implements filtering, it CAN refuse to
-	// process the filter and return an error with code NotImplemented.
-	//
-	// See PACT v2.1.0 Section 6.6.1 "Filtering".
-	Filter *string
+	// See iLEAP "Common HTTP Endpoint Behaviors / Filtering".
+	Filters []*ListFootprintsRequest_Filter
 	// Maximum number of ProductFootprints to return. The host system MAY
 	// return fewer ProductFootprints than requested. If there are additional
 	// ProductFootprints, the response total will exceed offset + len(data).
@@ -189,10 +158,7 @@ func (b0 ListFootprintsRequest_builder) Build() *ListFootprintsRequest {
 	m0 := &ListFootprintsRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.Filter != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 3)
-		x.xxx_hidden_Filter = b.Filter
-	}
+	x.xxx_hidden_Filters = &b.Filters
 	if b.Limit != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
 		x.xxx_hidden_Limit = *b.Limit
@@ -503,16 +469,14 @@ func (b0 GetFootprintResponse_builder) Build() *GetFootprintResponse {
 //
 // See iLEAP Technical Specifications Section 5.1.3 "Request Syntax".
 type ListTransportActivityDataRequest struct {
-	state                          protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Mode                *string                `protobuf:"bytes,1,opt,name=mode"`
-	xxx_hidden_Feedstock           *string                `protobuf:"bytes,2,opt,name=feedstock"`
-	xxx_hidden_PackagingOrTrEqType *string                `protobuf:"bytes,3,opt,name=packaging_or_tr_eq_type,json=packagingOrTrEqType"`
-	xxx_hidden_Limit               int32                  `protobuf:"varint,4,opt,name=limit"`
-	xxx_hidden_Offset              int32                  `protobuf:"varint,5,opt,name=offset"`
-	XXX_raceDetectHookData         protoimpl.RaceDetectHookData
-	XXX_presence                   [1]uint32
-	unknownFields                  protoimpl.UnknownFields
-	sizeCache                      protoimpl.SizeCache
+	state                  protoimpl.MessageState                      `protogen:"opaque.v1"`
+	xxx_hidden_Filters     *[]*ListTransportActivityDataRequest_Filter `protobuf:"bytes,6,rep,name=filters"`
+	xxx_hidden_Limit       int32                                       `protobuf:"varint,4,opt,name=limit"`
+	xxx_hidden_Offset      int32                                       `protobuf:"varint,5,opt,name=offset"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListTransportActivityDataRequest) Reset() {
@@ -540,34 +504,13 @@ func (x *ListTransportActivityDataRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *ListTransportActivityDataRequest) GetMode() string {
+func (x *ListTransportActivityDataRequest) GetFilters() []*ListTransportActivityDataRequest_Filter {
 	if x != nil {
-		if x.xxx_hidden_Mode != nil {
-			return *x.xxx_hidden_Mode
+		if x.xxx_hidden_Filters != nil {
+			return *x.xxx_hidden_Filters
 		}
-		return ""
 	}
-	return ""
-}
-
-func (x *ListTransportActivityDataRequest) GetFeedstock() string {
-	if x != nil {
-		if x.xxx_hidden_Feedstock != nil {
-			return *x.xxx_hidden_Feedstock
-		}
-		return ""
-	}
-	return ""
-}
-
-func (x *ListTransportActivityDataRequest) GetPackagingOrTrEqType() string {
-	if x != nil {
-		if x.xxx_hidden_PackagingOrTrEqType != nil {
-			return *x.xxx_hidden_PackagingOrTrEqType
-		}
-		return ""
-	}
-	return ""
+	return nil
 }
 
 func (x *ListTransportActivityDataRequest) GetLimit() int32 {
@@ -584,108 +527,55 @@ func (x *ListTransportActivityDataRequest) GetOffset() int32 {
 	return 0
 }
 
-func (x *ListTransportActivityDataRequest) SetMode(v string) {
-	x.xxx_hidden_Mode = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 5)
-}
-
-func (x *ListTransportActivityDataRequest) SetFeedstock(v string) {
-	x.xxx_hidden_Feedstock = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 5)
-}
-
-func (x *ListTransportActivityDataRequest) SetPackagingOrTrEqType(v string) {
-	x.xxx_hidden_PackagingOrTrEqType = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 5)
+func (x *ListTransportActivityDataRequest) SetFilters(v []*ListTransportActivityDataRequest_Filter) {
+	x.xxx_hidden_Filters = &v
 }
 
 func (x *ListTransportActivityDataRequest) SetLimit(v int32) {
 	x.xxx_hidden_Limit = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 5)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
 }
 
 func (x *ListTransportActivityDataRequest) SetOffset(v int32) {
 	x.xxx_hidden_Offset = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 5)
-}
-
-func (x *ListTransportActivityDataRequest) HasMode() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
-}
-
-func (x *ListTransportActivityDataRequest) HasFeedstock() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
-}
-
-func (x *ListTransportActivityDataRequest) HasPackagingOrTrEqType() bool {
-	if x == nil {
-		return false
-	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 3)
 }
 
 func (x *ListTransportActivityDataRequest) HasLimit() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
 func (x *ListTransportActivityDataRequest) HasOffset() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
-}
-
-func (x *ListTransportActivityDataRequest) ClearMode() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
-	x.xxx_hidden_Mode = nil
-}
-
-func (x *ListTransportActivityDataRequest) ClearFeedstock() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_Feedstock = nil
-}
-
-func (x *ListTransportActivityDataRequest) ClearPackagingOrTrEqType() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_PackagingOrTrEqType = nil
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
 }
 
 func (x *ListTransportActivityDataRequest) ClearLimit() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
 	x.xxx_hidden_Limit = 0
 }
 
 func (x *ListTransportActivityDataRequest) ClearOffset() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
 	x.xxx_hidden_Offset = 0
 }
 
 type ListTransportActivityDataRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	// Filter by transport mode. Case-insensitive.
+	// Filter pairs where each item matches by exact field path and value.
 	//
-	// Valid values: "Road", "Rail", "Air", "Sea", "InlandWaterway".
-	Mode *string
-	// Filter by feedstock type. Case-insensitive.
+	// A pair follows "field_path=value" semantics where field path is case-sensitive and
+	// value is case-insensitive. Names MAY use dot notation to reference nested
+	// properties.
 	//
-	// Valid values: "Fossil", "Natural gas", "Grid",
-	// "Renewable electricity", "Cooking oil".
-	Feedstock *string
-	// Filter by packaging or transport equipment type. Case-insensitive.
-	//
-	// Valid values: "Box", "Pallet", "Container-TEU", "Container-FEU",
-	// "Container".
-	PackagingOrTrEqType *string
+	// Example: energyCarriers.feedstocks.feedstock=fossil
+	Filters []*ListTransportActivityDataRequest_Filter
 	// Maximum number of TADs to return. The host system MAY return fewer
 	// TADs than requested. If there are additional TADs, the response
 	// total will exceed offset + len(data).
@@ -708,24 +598,13 @@ func (b0 ListTransportActivityDataRequest_builder) Build() *ListTransportActivit
 	m0 := &ListTransportActivityDataRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
-	if b.Mode != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 5)
-		x.xxx_hidden_Mode = b.Mode
-	}
-	if b.Feedstock != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 5)
-		x.xxx_hidden_Feedstock = b.Feedstock
-	}
-	if b.PackagingOrTrEqType != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 5)
-		x.xxx_hidden_PackagingOrTrEqType = b.PackagingOrTrEqType
-	}
+	x.xxx_hidden_Filters = &b.Filters
 	if b.Limit != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 5)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
 		x.xxx_hidden_Limit = *b.Limit
 	}
 	if b.Offset != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 5)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
 		x.xxx_hidden_Offset = *b.Offset
 	}
 	return m0
@@ -841,28 +720,262 @@ func (b0 ListTransportActivityDataResponse_builder) Build() *ListTransportActivi
 	return m0
 }
 
+// Filter is a single name-value filter pair.
+type ListFootprintsRequest_Filter struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_FieldPath   *string                `protobuf:"bytes,1,opt,name=field_path,json=fieldPath"`
+	xxx_hidden_Value       *string                `protobuf:"bytes,2,opt,name=value"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ListFootprintsRequest_Filter) Reset() {
+	*x = ListFootprintsRequest_Filter{}
+	mi := &file_wayplatform_connect_ileap_v1_ileap_service_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListFootprintsRequest_Filter) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListFootprintsRequest_Filter) ProtoMessage() {}
+
+func (x *ListFootprintsRequest_Filter) ProtoReflect() protoreflect.Message {
+	mi := &file_wayplatform_connect_ileap_v1_ileap_service_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListFootprintsRequest_Filter) GetFieldPath() string {
+	if x != nil {
+		if x.xxx_hidden_FieldPath != nil {
+			return *x.xxx_hidden_FieldPath
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ListFootprintsRequest_Filter) GetValue() string {
+	if x != nil {
+		if x.xxx_hidden_Value != nil {
+			return *x.xxx_hidden_Value
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ListFootprintsRequest_Filter) SetFieldPath(v string) {
+	x.xxx_hidden_FieldPath = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+}
+
+func (x *ListFootprintsRequest_Filter) SetValue(v string) {
+	x.xxx_hidden_Value = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *ListFootprintsRequest_Filter) HasFieldPath() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ListFootprintsRequest_Filter) HasValue() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ListFootprintsRequest_Filter) ClearFieldPath() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_FieldPath = nil
+}
+
+func (x *ListFootprintsRequest_Filter) ClearValue() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Value = nil
+}
+
+type ListFootprintsRequest_Filter_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Case-sensitive field path, optionally using dot notation for nesting.
+	FieldPath *string
+	// Case-insensitive filter value.
+	Value *string
+}
+
+func (b0 ListFootprintsRequest_Filter_builder) Build() *ListFootprintsRequest_Filter {
+	m0 := &ListFootprintsRequest_Filter{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.FieldPath != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		x.xxx_hidden_FieldPath = b.FieldPath
+	}
+	if b.Value != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_Value = b.Value
+	}
+	return m0
+}
+
+// Filter is a single name-value filter pair.
+type ListTransportActivityDataRequest_Filter struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_FieldPath   *string                `protobuf:"bytes,1,opt,name=field_path,json=fieldPath"`
+	xxx_hidden_Value       *string                `protobuf:"bytes,2,opt,name=value"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ListTransportActivityDataRequest_Filter) Reset() {
+	*x = ListTransportActivityDataRequest_Filter{}
+	mi := &file_wayplatform_connect_ileap_v1_ileap_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTransportActivityDataRequest_Filter) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTransportActivityDataRequest_Filter) ProtoMessage() {}
+
+func (x *ListTransportActivityDataRequest_Filter) ProtoReflect() protoreflect.Message {
+	mi := &file_wayplatform_connect_ileap_v1_ileap_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListTransportActivityDataRequest_Filter) GetFieldPath() string {
+	if x != nil {
+		if x.xxx_hidden_FieldPath != nil {
+			return *x.xxx_hidden_FieldPath
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ListTransportActivityDataRequest_Filter) GetValue() string {
+	if x != nil {
+		if x.xxx_hidden_Value != nil {
+			return *x.xxx_hidden_Value
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ListTransportActivityDataRequest_Filter) SetFieldPath(v string) {
+	x.xxx_hidden_FieldPath = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+}
+
+func (x *ListTransportActivityDataRequest_Filter) SetValue(v string) {
+	x.xxx_hidden_Value = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *ListTransportActivityDataRequest_Filter) HasFieldPath() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ListTransportActivityDataRequest_Filter) HasValue() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ListTransportActivityDataRequest_Filter) ClearFieldPath() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_FieldPath = nil
+}
+
+func (x *ListTransportActivityDataRequest_Filter) ClearValue() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Value = nil
+}
+
+type ListTransportActivityDataRequest_Filter_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Case-sensitive field path, optionally using dot notation for nesting.
+	FieldPath *string
+	// Case-insensitive filter value.
+	Value *string
+}
+
+func (b0 ListTransportActivityDataRequest_Filter_builder) Build() *ListTransportActivityDataRequest_Filter {
+	m0 := &ListTransportActivityDataRequest_Filter{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.FieldPath != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		x.xxx_hidden_FieldPath = b.FieldPath
+	}
+	if b.Value != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_Value = b.Value
+	}
+	return m0
+}
+
 var File_wayplatform_connect_ileap_v1_ileap_service_proto protoreflect.FileDescriptor
 
 const file_wayplatform_connect_ileap_v1_ileap_service_proto_rawDesc = "" +
 	"\n" +
-	"0wayplatform/connect/ileap/v1/ileap_service.proto\x12\x1cwayplatform.connect.ileap.v1\x1a\x1bbuf/validate/validate.proto\x1a4wayplatform/connect/ileap/v1/product_footprint.proto\x1a&wayplatform/connect/ileap/v1/tad.proto\"p\n" +
-	"\x15ListFootprintsRequest\x12\x17\n" +
-	"\x06filter\x18\x01 \x01(\tR\a$filter\x12\x1d\n" +
+	"0wayplatform/connect/ileap/v1/ileap_service.proto\x12\x1cwayplatform.connect.ileap.v1\x1a\x1bbuf/validate/validate.proto\x1a4wayplatform/connect/ileap/v1/product_footprint.proto\x1a&wayplatform/connect/ileap/v1/tad.proto\"\xec\x01\n" +
+	"\x15ListFootprintsRequest\x12T\n" +
+	"\afilters\x18\x04 \x03(\v2:.wayplatform.connect.ileap.v1.ListFootprintsRequest.FilterR\afilters\x12\x1d\n" +
 	"\x05limit\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05limit\x12\x1f\n" +
-	"\x06offset\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06offset\"r\n" +
+	"\x06offset\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06offset\x1a=\n" +
+	"\x06Filter\x12\x1d\n" +
+	"\n" +
+	"field_path\x18\x01 \x01(\tR\tfieldPath\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"r\n" +
 	"\x16ListFootprintsResponse\x12B\n" +
 	"\x04data\x18\x01 \x03(\v2..wayplatform.connect.ileap.v1.ProductFootprintR\x04data\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\"2\n" +
 	"\x13GetFootprintRequest\x12\x1b\n" +
 	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"b\n" +
 	"\x14GetFootprintResponse\x12J\n" +
-	"\x04data\x18\x01 \x01(\v2..wayplatform.connect.ileap.v1.ProductFootprintB\x06\xbaH\x03\xc8\x01\x01R\x04data\"\xc1\x01\n" +
-	" ListTransportActivityDataRequest\x12\x12\n" +
-	"\x04mode\x18\x01 \x01(\tR\x04mode\x12\x1c\n" +
-	"\tfeedstock\x18\x02 \x01(\tR\tfeedstock\x124\n" +
-	"\x17packaging_or_tr_eq_type\x18\x03 \x01(\tR\x13packagingOrTrEqType\x12\x1d\n" +
+	"\x04data\x18\x01 \x01(\v2..wayplatform.connect.ileap.v1.ProductFootprintB\x06\xbaH\x03\xc8\x01\x01R\x04data\"\xf9\x01\n" +
+	" ListTransportActivityDataRequest\x12_\n" +
+	"\afilters\x18\x06 \x03(\v2E.wayplatform.connect.ileap.v1.ListTransportActivityDataRequest.FilterR\afilters\x12\x1d\n" +
 	"\x05limit\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05limit\x12\x16\n" +
-	"\x06offset\x18\x05 \x01(\x05R\x06offset\"p\n" +
+	"\x06offset\x18\x05 \x01(\x05R\x06offset\x1a=\n" +
+	"\x06Filter\x12\x1d\n" +
+	"\n" +
+	"field_path\x18\x01 \x01(\tR\tfieldPath\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"p\n" +
 	"!ListTransportActivityDataResponse\x125\n" +
 	"\x04data\x18\x01 \x03(\v2!.wayplatform.connect.ileap.v1.TADR\x04data\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total2\xa1\x03\n" +
@@ -872,32 +985,36 @@ const file_wayplatform_connect_ileap_v1_ileap_service_proto_rawDesc = "" +
 	"\x19ListTransportActivityData\x12>.wayplatform.connect.ileap.v1.ListTransportActivityDataRequest\x1a?.wayplatform.connect.ileap.v1.ListTransportActivityDataResponseB\x99\x02\n" +
 	" com.wayplatform.connect.ileap.v1B\x11IleapServiceProtoP\x01ZOgithub.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1;ileapv1\xa2\x02\x03WCI\xaa\x02\x1cWayplatform.Connect.Ileap.V1\xca\x02\x1cWayplatform\\Connect\\Ileap\\V1\xe2\x02(Wayplatform\\Connect\\Ileap\\V1\\GPBMetadata\xea\x02\x1fWayplatform::Connect::Ileap::V1b\beditionsp\xe8\a"
 
-var file_wayplatform_connect_ileap_v1_ileap_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_wayplatform_connect_ileap_v1_ileap_service_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_wayplatform_connect_ileap_v1_ileap_service_proto_goTypes = []any{
-	(*ListFootprintsRequest)(nil),             // 0: wayplatform.connect.ileap.v1.ListFootprintsRequest
-	(*ListFootprintsResponse)(nil),            // 1: wayplatform.connect.ileap.v1.ListFootprintsResponse
-	(*GetFootprintRequest)(nil),               // 2: wayplatform.connect.ileap.v1.GetFootprintRequest
-	(*GetFootprintResponse)(nil),              // 3: wayplatform.connect.ileap.v1.GetFootprintResponse
-	(*ListTransportActivityDataRequest)(nil),  // 4: wayplatform.connect.ileap.v1.ListTransportActivityDataRequest
-	(*ListTransportActivityDataResponse)(nil), // 5: wayplatform.connect.ileap.v1.ListTransportActivityDataResponse
-	(*ProductFootprint)(nil),                  // 6: wayplatform.connect.ileap.v1.ProductFootprint
-	(*TAD)(nil),                               // 7: wayplatform.connect.ileap.v1.TAD
+	(*ListFootprintsRequest)(nil),                   // 0: wayplatform.connect.ileap.v1.ListFootprintsRequest
+	(*ListFootprintsResponse)(nil),                  // 1: wayplatform.connect.ileap.v1.ListFootprintsResponse
+	(*GetFootprintRequest)(nil),                     // 2: wayplatform.connect.ileap.v1.GetFootprintRequest
+	(*GetFootprintResponse)(nil),                    // 3: wayplatform.connect.ileap.v1.GetFootprintResponse
+	(*ListTransportActivityDataRequest)(nil),        // 4: wayplatform.connect.ileap.v1.ListTransportActivityDataRequest
+	(*ListTransportActivityDataResponse)(nil),       // 5: wayplatform.connect.ileap.v1.ListTransportActivityDataResponse
+	(*ListFootprintsRequest_Filter)(nil),            // 6: wayplatform.connect.ileap.v1.ListFootprintsRequest.Filter
+	(*ListTransportActivityDataRequest_Filter)(nil), // 7: wayplatform.connect.ileap.v1.ListTransportActivityDataRequest.Filter
+	(*ProductFootprint)(nil),                        // 8: wayplatform.connect.ileap.v1.ProductFootprint
+	(*TAD)(nil),                                     // 9: wayplatform.connect.ileap.v1.TAD
 }
 var file_wayplatform_connect_ileap_v1_ileap_service_proto_depIdxs = []int32{
-	6, // 0: wayplatform.connect.ileap.v1.ListFootprintsResponse.data:type_name -> wayplatform.connect.ileap.v1.ProductFootprint
-	6, // 1: wayplatform.connect.ileap.v1.GetFootprintResponse.data:type_name -> wayplatform.connect.ileap.v1.ProductFootprint
-	7, // 2: wayplatform.connect.ileap.v1.ListTransportActivityDataResponse.data:type_name -> wayplatform.connect.ileap.v1.TAD
-	0, // 3: wayplatform.connect.ileap.v1.ILeapService.ListFootprints:input_type -> wayplatform.connect.ileap.v1.ListFootprintsRequest
-	2, // 4: wayplatform.connect.ileap.v1.ILeapService.GetFootprint:input_type -> wayplatform.connect.ileap.v1.GetFootprintRequest
-	4, // 5: wayplatform.connect.ileap.v1.ILeapService.ListTransportActivityData:input_type -> wayplatform.connect.ileap.v1.ListTransportActivityDataRequest
-	1, // 6: wayplatform.connect.ileap.v1.ILeapService.ListFootprints:output_type -> wayplatform.connect.ileap.v1.ListFootprintsResponse
-	3, // 7: wayplatform.connect.ileap.v1.ILeapService.GetFootprint:output_type -> wayplatform.connect.ileap.v1.GetFootprintResponse
-	5, // 8: wayplatform.connect.ileap.v1.ILeapService.ListTransportActivityData:output_type -> wayplatform.connect.ileap.v1.ListTransportActivityDataResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	6, // 0: wayplatform.connect.ileap.v1.ListFootprintsRequest.filters:type_name -> wayplatform.connect.ileap.v1.ListFootprintsRequest.Filter
+	8, // 1: wayplatform.connect.ileap.v1.ListFootprintsResponse.data:type_name -> wayplatform.connect.ileap.v1.ProductFootprint
+	8, // 2: wayplatform.connect.ileap.v1.GetFootprintResponse.data:type_name -> wayplatform.connect.ileap.v1.ProductFootprint
+	7, // 3: wayplatform.connect.ileap.v1.ListTransportActivityDataRequest.filters:type_name -> wayplatform.connect.ileap.v1.ListTransportActivityDataRequest.Filter
+	9, // 4: wayplatform.connect.ileap.v1.ListTransportActivityDataResponse.data:type_name -> wayplatform.connect.ileap.v1.TAD
+	0, // 5: wayplatform.connect.ileap.v1.ILeapService.ListFootprints:input_type -> wayplatform.connect.ileap.v1.ListFootprintsRequest
+	2, // 6: wayplatform.connect.ileap.v1.ILeapService.GetFootprint:input_type -> wayplatform.connect.ileap.v1.GetFootprintRequest
+	4, // 7: wayplatform.connect.ileap.v1.ILeapService.ListTransportActivityData:input_type -> wayplatform.connect.ileap.v1.ListTransportActivityDataRequest
+	1, // 8: wayplatform.connect.ileap.v1.ILeapService.ListFootprints:output_type -> wayplatform.connect.ileap.v1.ListFootprintsResponse
+	3, // 9: wayplatform.connect.ileap.v1.ILeapService.GetFootprint:output_type -> wayplatform.connect.ileap.v1.GetFootprintResponse
+	5, // 10: wayplatform.connect.ileap.v1.ILeapService.ListTransportActivityData:output_type -> wayplatform.connect.ileap.v1.ListTransportActivityDataResponse
+	8, // [8:11] is the sub-list for method output_type
+	5, // [5:8] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_wayplatform_connect_ileap_v1_ileap_service_proto_init() }
@@ -913,7 +1030,7 @@ func file_wayplatform_connect_ileap_v1_ileap_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wayplatform_connect_ileap_v1_ileap_service_proto_rawDesc), len(file_wayplatform_connect_ileap_v1_ileap_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

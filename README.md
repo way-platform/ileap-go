@@ -6,7 +6,7 @@
 
 Deploy a fully iLEAP-conformant server in minutes. Implement a standard [Connect RPC](https://connectrpc.com/) handler — the SDK handles the rest.
 
-A Go SDK and server for logistics emissions data compatible with the [iLEAP Technical Specifications](https://sine-fdn.github.io/ileap-extension/). The server translates the iLEAP HTTP protocol (JSON envelopes, OData filtering, Link header pagination, OAuth2 error formats) into standard Connect RPC calls, so you only need to implement a typed service interface.
+A Go SDK and server for logistics emissions data compatible with the [iLEAP Technical Specifications](https://sine-fdn.github.io/ileap-extension/). The server translates the iLEAP HTTP protocol (JSON envelopes, filtering, Link header pagination, OAuth2 error formats) into standard Connect RPC calls, so you only need to implement a typed service interface.
 
 ## SDK
 
@@ -14,6 +14,7 @@ A Go SDK and server for logistics emissions data compatible with the [iLEAP Tech
 
 * Two interfaces, two options: implement `ILeapServiceHandler` for data, `AuthHandler` for auth — done.
 * `ILeapServiceHandler` is the generated Connect RPC interface. Any Connect handler implementation works out of the box.
+* Filter complexity stays at the HTTP boundary: legacy OData is translated to simple request-local filters (`field_path`, `value`) aligned with iLEAP standalone filtering semantics.
 * Go Client and Server for [PACT Product Footprints](https://wbcsd.github.io/tr/2024/data-exchange-protocol-20241024/#dt-pf) with [iLEAP extensions](https://sine-fdn.github.io/ileap-extension/#pcf-mapping).
 * Go Client and Server for [iLEAP Transport Activity Data](https://sine-fdn.github.io/ileap-extension/#dt-tad).
 * Uses `connect.Error` codes throughout for a single, consistent error model.

@@ -134,7 +134,6 @@ service ILeapService {
   // See iLEAP Technical Specifications Section 5.1 "Action TransportActivityData".
   // Reference: https://sine-fdn.github.io/ileap-extension/#action-tad
   rpc ListTransportActivityData(ListTransportActivityDataRequest) returns (ListTransportActivityDataResponse);
-
 }
 
 // ListFootprintsRequest is the request message for ListFootprints.
@@ -144,31 +143,23 @@ service ILeapService {
 //
 // See PACT v2.1.0 Section 6.6.3 "Request Syntax".
 message ListFootprintsRequest {
-  // OData v4 $filter expression for filtering ProductFootprints.
+  // Filter pairs where each item matches by exact field path and value.
   //
-  // The $filter statement MUST only include the following operators and
-  // properties:
-  //   - Logical operators eq, lt, le, gt, ge on properties: created,
-  //     updated, productCategoryCpc, pcf/geographyCountry,
-  //     pcf/referencePeriodStart, pcf/referencePeriodEnd.
-  //   - Logical operator "and".
-  //   - Lambda operator "any" on collection-valued properties: companyIds,
-  //     productIds. The expression argument of the operator MUST only
-  //     include the "eq" operator.
+  // A pair follows "field_path=value" semantics where field path is case-sensitive and
+  // value is case-insensitive. Names MAY use dot notation to reference nested
+  // properties.
   //
-  // Examples:
-  //   - Filter by CPC code: "productCategoryCpc eq '83117'"
-  //   - Filter by country: "pcf/geographyCountry eq 'DE'"
-  //   - Filter by period: "(pcf/referencePeriodStart ge '2023-01-01T00:00:00.000Z') and (pcf/referencePeriodEnd lt '2024-01-01T00:00:00.000Z')"
-  //   - Filter by product: "productIds/any(productId:(productId eq 'urn:...'))"
-  //
-  // Support for filtering by a host system is OPTIONAL. If a host system
-  // does not implement filtering, it MUST process the request as if no
-  // filter was provided. If it implements filtering, it CAN refuse to
-  // process the filter and return an error with code NotImplemented.
-  //
-  // See PACT v2.1.0 Section 6.6.1 "Filtering".
-  string filter = 1 [json_name = "$filter"];
+  // See iLEAP "Common HTTP Endpoint Behaviors / Filtering".
+  repeated Filter filters = 4;
+
+  // Filter is a single name-value filter pair.
+  message Filter {
+    // Case-sensitive field path, optionally using dot notation for nesting.
+    string field_path = 1 [json_name = "fieldPath"];
+
+    // Case-insensitive filter value.
+    string value = 2;
+  }
 
   // Maximum number of ProductFootprints to return. The host system MAY
   // return fewer ProductFootprints than requested. If there are additional
@@ -264,22 +255,14 @@ message GetFootprintResponse {
 //
 // See iLEAP Technical Specifications Section 5.1.3 "Request Syntax".
 message ListTransportActivityDataRequest {
-  // Filter by transport mode. Case-insensitive.
+  // Filter pairs where each item matches by exact field path and value.
   //
-  // Valid values: "Road", "Rail", "Air", "Sea", "InlandWaterway".
-  string mode = 1;
-
-  // Filter by feedstock type. Case-insensitive.
+  // A pair follows "field_path=value" semantics where field path is case-sensitive and
+  // value is case-insensitive. Names MAY use dot notation to reference nested
+  // properties.
   //
-  // Valid values: "Fossil", "Natural gas", "Grid",
-  // "Renewable electricity", "Cooking oil".
-  string feedstock = 2;
-
-  // Filter by packaging or transport equipment type. Case-insensitive.
-  //
-  // Valid values: "Box", "Pallet", "Container-TEU", "Container-FEU",
-  // "Container".
-  string packaging_or_tr_eq_type = 3 [json_name = "packagingOrTrEqType"];
+  // Example: energyCarriers.feedstocks.feedstock=fossil
+  repeated Filter filters = 6;
 
   // Maximum number of TADs to return. The host system MAY return fewer
   // TADs than requested. If there are additional TADs, the response
@@ -298,6 +281,15 @@ message ListTransportActivityDataRequest {
   //
   // See iLEAP Technical Specifications Section 5.1.2 "Pagination".
   int32 offset = 5;
+
+  // Filter is a single name-value filter pair.
+  message Filter {
+    // Case-sensitive field path, optionally using dot notation for nesting.
+    string field_path = 1 [json_name = "fieldPath"];
+
+    // Case-insensitive filter value.
+    string value = 2;
+  }
 }
 
 // ListTransportActivityDataResponse is the response message for

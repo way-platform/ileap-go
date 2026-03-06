@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/way-platform/ileap-go/internal/odata"
 	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
 	"github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1/ileapv1connect"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -399,7 +400,7 @@ func (s *Server) listFootprints(w http.ResponseWriter, r *http.Request) {
 	req := new(ileapv1.ListFootprintsRequest)
 	req.SetLimit(int32(limit))
 	req.SetOffset(int32(offset))
-	req.SetFilter(r.URL.Query().Get("$filter"))
+	req.SetFilters(odataFilterToFootprintFilters(r.URL.Query().Get("$filter")))
 	resp, err := s.service.ListFootprints(r.Context(), req)
 	if err != nil {
 		writeHandlerError(w, err)
@@ -446,15 +447,7 @@ func (s *Server) listTADs(w http.ResponseWriter, r *http.Request) {
 	req.SetLimit(int32(limit))
 	req.SetOffset(int32(offset))
 	q := r.URL.Query()
-	if v := q.Get("mode"); v != "" {
-		req.SetMode(v)
-	}
-	if v := q.Get("feedstock"); v != "" {
-		req.SetFeedstock(v)
-	}
-	if v := q.Get("packagingOrTrEqType"); v != "" {
-		req.SetPackagingOrTrEqType(v)
-	}
+	req.SetFilters(queryToTADFilters(q, "limit", "offset"))
 	resp, err := s.service.ListTransportActivityData(r.Context(), req)
 	if err != nil {
 		writeHandlerError(w, err)
@@ -637,6 +630,44 @@ func parseOffset(r *http.Request) (int, error) {
 		return 0, fmt.Errorf("offset must be non-negative")
 	}
 	return offset, nil
+}
+
+func odataFilterToFootprintFilters(filter string) []*ileapv1.ListFootprintsRequest_Filter {
+	parsed := odata.ParseFilter(filter)
+	filters := make([]*ileapv1.ListFootprintsRequest_Filter, 0, len(parsed))
+	for _, item := range parsed {
+		f := new(ileapv1.ListFootprintsRequest_Filter)
+		f.SetFieldPath(item.FieldPath)
+		f.SetValue(item.Value)
+		filters = append(filters, f)
+	}
+	return filters
+}
+
+func queryToTADFilters(
+	q url.Values,
+	skip ...string,
+) []*ileapv1.ListTransportActivityDataRequest_Filter {
+	skipped := make(map[string]struct{}, len(skip))
+	for _, key := range skip {
+		skipped[key] = struct{}{}
+	}
+	filters := make([]*ileapv1.ListTransportActivityDataRequest_Filter, 0, len(q))
+	for fieldPath, values := range q {
+		if _, ok := skipped[fieldPath]; ok {
+			continue
+		}
+		for _, value := range values {
+			if strings.TrimSpace(value) == "" {
+				continue
+			}
+			filter := new(ileapv1.ListTransportActivityDataRequest_Filter)
+			filter.SetFieldPath(fieldPath)
+			filter.SetValue(value)
+			filters = append(filters, filter)
+		}
+	}
+	return filters
 }
 
 func writeHandlerError(w http.ResponseWriter, err error) {
