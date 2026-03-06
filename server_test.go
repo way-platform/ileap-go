@@ -25,6 +25,9 @@ type mockServiceHandler struct {
 	ileapv1connect.UnimplementedILeapServiceHandler
 	footprints []*ileapv1.ProductFootprint
 	tads       []*ileapv1.TAD
+
+	lastListFootprintsReq *ileapv1.ListFootprintsRequest
+	lastListTADReq        *ileapv1.ListTransportActivityDataRequest
 }
 
 func (m *mockServiceHandler) GetFootprint(
@@ -43,6 +46,7 @@ func (m *mockServiceHandler) GetFootprint(
 func (m *mockServiceHandler) ListFootprints(
 	_ context.Context, req *ileapv1.ListFootprintsRequest,
 ) (*ileapv1.ListFootprintsResponse, error) {
+	m.lastListFootprintsReq = req
 	result := m.footprints
 	total := len(result)
 	offset := int(req.GetOffset())
@@ -67,6 +71,7 @@ func (m *mockServiceHandler) ListTransportActivityData(
 	_ context.Context,
 	req *ileapv1.ListTransportActivityDataRequest,
 ) (*ileapv1.ListTransportActivityDataResponse, error) {
+	m.lastListTADReq = req
 	result := m.tads
 	total := len(result)
 	offset := int(req.GetOffset())
@@ -516,7 +521,16 @@ func testJWTWithExp(exp int64) string {
 }
 
 func TestListFootprints(t *testing.T) {
-	srv := newTestServer()
+	handler := &mockServiceHandler{
+		footprints: []*ileapv1.ProductFootprint{
+			func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-1"); return p }(),
+			func() *ileapv1.ProductFootprint { p := &ileapv1.ProductFootprint{}; p.SetId("fp-2"); return p }(),
+		},
+	}
+	srv := NewServer(
+		WithAuthHandler(&mockAuthHandler{validToken: true}),
+		WithServiceHandler(handler),
+	)
 
 	t.Run("success", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/2/footprints", nil)
@@ -543,6 +557,43 @@ func TestListFootprints(t *testing.T) {
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		checkErrorResponse(t, w, http.StatusBadRequest, ErrorCodeBadRequest)
+	})
+
+	t.Run("odata filter translated to filter pairs", func(t *testing.T) {
+		req := httptest.NewRequest(
+			"GET",
+			"/2/footprints?$filter=(productCategoryCpc%20eq%20'83117')%20and%20(created%20gt%20'2024-01-01T00:00:00.000Z')",
+			nil,
+		)
+		req.Header.Set("Authorization", "Bearer valid")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		got := handler.lastListFootprintsReq.GetFilters()
+		if len(got) != 1 {
+			t.Fatalf("expected 1 translated filter pair, got %d", len(got))
+		}
+		assertFootprintFilterSet(t, got, "productCategoryCpc=83117")
+	})
+
+	t.Run("fully invalid odata translates to empty filter set", func(t *testing.T) {
+		req := httptest.NewRequest(
+			"GET",
+			"/2/footprints?$filter=totally%20invalid%20filter",
+			nil,
+		)
+		req.Header.Set("Authorization", "Bearer valid")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		got := handler.lastListFootprintsReq.GetFilters()
+		if len(got) != 0 {
+			t.Fatalf("expected 0 translated filters, got %d", len(got))
+		}
 	})
 }
 
@@ -627,15 +678,16 @@ func TestGetFootprint(t *testing.T) {
 }
 
 func TestListTads(t *testing.T) {
+	handler := &mockServiceHandler{
+		tads: []*ileapv1.TAD{
+			func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-1"); return t }(),
+			func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-2"); return t }(),
+			func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-3"); return t }(),
+		},
+	}
 	srv := NewServer(
 		WithAuthHandler(&mockAuthHandler{validToken: true}),
-		WithServiceHandler(&mockServiceHandler{
-			tads: []*ileapv1.TAD{
-				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-1"); return t }(),
-				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-2"); return t }(),
-				func() *ileapv1.TAD { t := &ileapv1.TAD{}; t.SetActivityId("tad-3"); return t }(),
-			},
-		}),
+		WithServiceHandler(handler),
 	)
 
 	t.Run("success", func(t *testing.T) {
@@ -701,13 +753,27 @@ func TestListTads(t *testing.T) {
 	})
 
 	t.Run("query params passed as filter", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/2/ileap/tad?mode=Road", nil)
+		req := httptest.NewRequest(
+			"GET",
+			"/2/ileap/tad?mode=Road&energyCarriers.feedstocks.feedstock=fossil&limit=2",
+			nil,
+		)
 		req.Header.Set("Authorization", "Bearer valid")
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
+		got := handler.lastListTADReq.GetFilters()
+		if len(got) != 2 {
+			t.Fatalf("expected 2 filter pairs, got %d", len(got))
+		}
+		assertTADFilterSet(
+			t,
+			got,
+			"mode=Road",
+			"energyCarriers.feedstocks.feedstock=fossil",
+		)
 	})
 }
 
@@ -910,6 +976,102 @@ func TestNotImplemented(t *testing.T) {
 			checkErrorResponse(t, w, http.StatusNotImplemented, ErrorCodeNotImplemented)
 		})
 	})
+}
+
+func TestQueryToTADFilters(t *testing.T) {
+	testCases := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{
+			name: "basic filters with pagination excluded",
+			in:   "mode=Road&feedstock=Fossil&limit=2&offset=1",
+			want: []string{
+				"mode=Road",
+				"feedstock=Fossil",
+			},
+		},
+		{
+			name: "dot notation kept",
+			in:   "energyCarriers.feedstocks.feedstock=fossil",
+			want: []string{
+				"energyCarriers.feedstocks.feedstock=fossil",
+			},
+		},
+		{
+			name: "multi-value key creates multiple filters",
+			in:   "mode=Road&mode=Rail",
+			want: []string{
+				"mode=Road",
+				"mode=Rail",
+			},
+		},
+		{
+			name: "blank values ignored",
+			in:   "mode=&feedstock=%20%20%20&packagingOrTrEqType=box",
+			want: []string{
+				"packagingOrTrEqType=box",
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/2/ileap/tad?"+testCase.in, nil)
+			got := queryToTADFilters(req.URL.Query(), "limit", "offset")
+			assertTADFilterSet(t, got, testCase.want...)
+		})
+	}
+}
+
+func assertFootprintFilterSet(
+	t *testing.T,
+	got []*ileapv1.ListFootprintsRequest_Filter,
+	want ...string,
+) {
+	t.Helper()
+	gotCounts := make(map[string]int, len(got))
+	for _, filter := range got {
+		key := filter.GetFieldPath() + "=" + filter.GetValue()
+		gotCounts[key]++
+	}
+	wantCounts := make(map[string]int, len(want))
+	for _, key := range want {
+		wantCounts[key]++
+	}
+	if len(gotCounts) != len(wantCounts) {
+		t.Fatalf("got %v, want %v", gotCounts, wantCounts)
+	}
+	for key, count := range wantCounts {
+		if gotCounts[key] != count {
+			t.Fatalf("got %v, want %v", gotCounts, wantCounts)
+		}
+	}
+}
+
+func assertTADFilterSet(
+	t *testing.T,
+	got []*ileapv1.ListTransportActivityDataRequest_Filter,
+	want ...string,
+) {
+	t.Helper()
+	gotCounts := make(map[string]int, len(got))
+	for _, filter := range got {
+		key := filter.GetFieldPath() + "=" + filter.GetValue()
+		gotCounts[key]++
+	}
+	wantCounts := make(map[string]int, len(want))
+	for _, key := range want {
+		wantCounts[key]++
+	}
+	if len(gotCounts) != len(wantCounts) {
+		t.Fatalf("got %v, want %v", gotCounts, wantCounts)
+	}
+	for key, count := range wantCounts {
+		if gotCounts[key] != count {
+			t.Fatalf("got %v, want %v", gotCounts, wantCounts)
+		}
+	}
 }
 
 func checkErrorResponse(
