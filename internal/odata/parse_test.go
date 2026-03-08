@@ -1,6 +1,10 @@
 package odata
 
-import "testing"
+import (
+	"testing"
+
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
+)
 
 func TestParseFilter(t *testing.T) {
 	testCases := []struct {
@@ -22,25 +26,25 @@ func TestParseFilter(t *testing.T) {
 			name: "supported and unsupported mixed",
 			in: "(pcf/geographyCountry eq 'DE') and " +
 				"(productIds/any(productId:(productId eq 'urn:test:1'))) and " +
-				"(updated gt '2024-01-01T00:00:00.000Z')",
+				"(updated weird '2024-01-01T00:00:00.000Z')",
 			want: []string{
-				"pcf.geographyCountry=DE",
-				"productIds=urn:test:1",
+				"pcf.geographyCountry|EQ|DE",
+				"productIds|EQ|urn:test:1",
 			},
 		},
 		{
 			name: "mixed keyword casing",
 			in:   "PCF/GeographyCountry EQ 'de' AnD companyIds/AnY(id:(id Eq '123'))",
 			want: []string{
-				"PCF.GeographyCountry=de",
-				"companyIds=123",
+				"PCF.GeographyCountry|EQ|de",
+				"companyIds|EQ|123",
 			},
 		},
 		{
 			name: "any eq with nested alias path",
 			in:   "tces/any(t:(t/origin/city eq 'Berlin'))",
 			want: []string{
-				"tces.origin.city=Berlin",
+				"tces.origin.city|EQ|Berlin",
 			},
 		},
 		{
@@ -52,7 +56,19 @@ func TestParseFilter(t *testing.T) {
 			name: "companyIds any eq",
 			in:   "companyIds/any(companyId:(companyId eq '12345'))",
 			want: []string{
-				"companyIds=12345",
+				"companyIds|EQ|12345",
+			},
+		},
+		{
+			name: "all comparison operators",
+			in:   "a eq '1' and b ne '2' and c lt '3' and d le '4' and e gt '5' and f ge '6'",
+			want: []string{
+				"a|EQ|1",
+				"b|NE|2",
+				"c|LT|3",
+				"d|LE|4",
+				"e|GT|5",
+				"f|GE|6",
 			},
 		},
 	}
@@ -74,23 +90,29 @@ func TestParseClause(t *testing.T) {
 		{
 			name: "simple eq",
 			in:   "productCategoryCpc eq '83117'",
-			want: "productCategoryCpc=83117",
+			want: "productCategoryCpc|EQ|83117",
 			ok:   true,
 		},
 		{
 			name: "nested any eq",
 			in:   "tces/any(t:(t/origin/city eq 'Berlin'))",
-			want: "tces.origin.city=Berlin",
+			want: "tces.origin.city|EQ|Berlin",
+			ok:   true,
+		},
+		{
+			name: "gt operator",
+			in:   "updated gt '2024-01-01T00:00:00.000Z'",
+			want: "updated|GT|2024-01-01T00:00:00.000Z",
 			ok:   true,
 		},
 		{
 			name: "unsupported operator",
-			in:   "updated gt '2024-01-01T00:00:00.000Z'",
+			in:   "updated weird '2024-01-01T00:00:00.000Z'",
 			ok:   false,
 		},
 		{
 			name: "unsupported any body",
-			in:   "productIds/any(p:(p ne 'x'))",
+			in:   "productIds/any(p:(p weird 'x'))",
 			ok:   false,
 		},
 	}
@@ -103,7 +125,7 @@ func TestParseClause(t *testing.T) {
 			if !testCase.ok {
 				return
 			}
-			assertFilterSet(t, []Filter{got}, testCase.want)
+			assertFilterSet(t, []*ileapv1.Filter{got}, testCase.want)
 		})
 	}
 }
@@ -145,11 +167,11 @@ func TestSplitTopLevelAndClauses(t *testing.T) {
 	}
 }
 
-func assertFilterSet(t *testing.T, got []Filter, want ...string) {
+func assertFilterSet(t *testing.T, got []*ileapv1.Filter, want ...string) {
 	t.Helper()
 	gotCounts := make(map[string]int, len(got))
 	for _, filter := range got {
-		key := filter.FieldPath + "=" + filter.Value
+		key := filter.GetFieldPath() + "|" + filter.GetOperator().String() + "|" + filter.GetValue()
 		gotCounts[key]++
 	}
 	wantCounts := make(map[string]int, len(want))

@@ -158,7 +158,8 @@ Where `{type}` is `shipment`, `toc`, or `hoc`.
 | `POST` | `/2/events` | Async event notifications |
 
 Supports HTTP filtering with server-side translation to request-local
-`field_path`/`value` filters and `limit` pagination with `Link` header.
+`field_path`/`operator`/`value` filters and `limit` pagination with `Link`
+header.
 
 ### iLEAP Endpoint
 
@@ -167,7 +168,8 @@ GET /2/ileap/tad?[filter params]&limit={n}
 ```
 
 - **Filtering**: query parameters as key-value pairs (e.g., `?mode=Road`)
-- **Handler filter model**: request-local repeated filters with `field_path` + `value`
+- **Handler filter model**: request-local repeated filters with
+  `field_path` + `operator` + `value`
 - **Pagination**: `limit` param + `Link: <url>; rel="next"` header
 - **Response**: `{ "data": [TAD, ...] }`
 

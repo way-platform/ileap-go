@@ -632,27 +632,20 @@ func parseOffset(r *http.Request) (int, error) {
 	return offset, nil
 }
 
-func odataFilterToFootprintFilters(filter string) []*ileapv1.ListFootprintsRequest_Filter {
+func odataFilterToFootprintFilters(filter string) []*ileapv1.Filter {
 	parsed := odata.ParseFilter(filter)
-	filters := make([]*ileapv1.ListFootprintsRequest_Filter, 0, len(parsed))
-	for _, item := range parsed {
-		f := new(ileapv1.ListFootprintsRequest_Filter)
-		f.SetFieldPath(item.FieldPath)
-		f.SetValue(item.Value)
-		filters = append(filters, f)
-	}
-	return filters
+	return parsed
 }
 
 func queryToTADFilters(
 	q url.Values,
 	skip ...string,
-) []*ileapv1.ListTransportActivityDataRequest_Filter {
+) []*ileapv1.Filter {
 	skipped := make(map[string]struct{}, len(skip))
 	for _, key := range skip {
 		skipped[key] = struct{}{}
 	}
-	filters := make([]*ileapv1.ListTransportActivityDataRequest_Filter, 0, len(q))
+	filters := make([]*ileapv1.Filter, 0, len(q))
 	for fieldPath, values := range q {
 		if _, ok := skipped[fieldPath]; ok {
 			continue
@@ -661,8 +654,9 @@ func queryToTADFilters(
 			if strings.TrimSpace(value) == "" {
 				continue
 			}
-			filter := new(ileapv1.ListTransportActivityDataRequest_Filter)
+			filter := new(ileapv1.Filter)
 			filter.SetFieldPath(fieldPath)
+			filter.SetOperator(ileapv1.Filter_EQ)
 			filter.SetValue(value)
 			filters = append(filters, filter)
 		}

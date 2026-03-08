@@ -1,21 +1,19 @@
 package odata
 
-import "strings"
+import (
+	"strings"
 
-// Filter is a standalone filter pair extracted from an OData-compatible input.
-type Filter struct {
-	FieldPath string
-	Value     string
-}
+	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
+)
 
 // ParseFilter parses a best-effort OData subset into standalone filter pairs.
 // Unsupported or invalid clauses are ignored.
-func ParseFilter(raw string) []Filter {
+func ParseFilter(raw string) []*ileapv1.Filter {
 	data := strings.TrimSpace(raw)
 	if data == "" {
 		return nil
 	}
-	filters := make([]Filter, 0)
+	filters := make([]*ileapv1.Filter, 0)
 	for _, clause := range splitTopLevelAndClauses(data) {
 		clause = strings.TrimSpace(clause)
 		if clause == "" {
@@ -89,10 +87,10 @@ func isSeparator(b byte) bool {
 	return b == ' ' || b == '\t' || b == '\n' || b == '\r' || b == '(' || b == ')'
 }
 
-func parseClause(clause string) (Filter, bool) {
+func parseClause(clause string) (*ileapv1.Filter, bool) {
 	tokens, ok := lexClause(clause)
 	if !ok {
-		return Filter{}, false
+		return nil, false
 	}
 	parser := clauseParser{tokens: tokens}
 	return parser.parse()
@@ -200,7 +198,7 @@ type clauseParser struct {
 	pos    int
 }
 
-func (p *clauseParser) parse() (Filter, bool) {
+func (p *clauseParser) parse() (*ileapv1.Filter, bool) {
 	openParens := 0
 	for p.matchKind(tokenLParen) {
 		openParens++
@@ -211,11 +209,11 @@ func (p *clauseParser) parse() (Filter, bool) {
 		return filter, true
 	}
 	p.pos = mark
-	filter, ok = p.parseSimpleEq()
+	filter, ok = p.parseSimple()
 	if ok && p.consumeClosing(openParens) && p.peek().kind == tokenEOF {
 		return filter, true
 	}
-	return Filter{}, false
+	return nil, false
 }
 
 func (p *clauseParser) consumeClosing(n int) bool {
@@ -227,53 +225,57 @@ func (p *clauseParser) consumeClosing(n int) bool {
 	return true
 }
 
-func (p *clauseParser) parseSimpleEq() (Filter, bool) {
+func (p *clauseParser) parseSimple() (*ileapv1.Filter, bool) {
 	path, ok := p.parsePath(false)
 	if !ok {
-		return Filter{}, false
+		return nil, false
 	}
-	if !p.matchKeyword("eq") {
-		return Filter{}, false
+	operator, ok := p.matchOperator()
+	if !ok {
+		return nil, false
 	}
 	valueToken, ok := p.matchString()
 	if !ok {
-		return Filter{}, false
+		return nil, false
 	}
-	return Filter{
-		FieldPath: strings.Join(path, "."),
-		Value:     valueToken.text,
-	}, true
+	filter := new(ileapv1.Filter)
+	filter.SetFieldPath(strings.Join(path, "."))
+	filter.SetOperator(operator)
+	filter.SetValue(valueToken.text)
+	return filter, true
 }
 
-func (p *clauseParser) parseAnyEq() (Filter, bool) {
+func (p *clauseParser) parseAnyEq() (*ileapv1.Filter, bool) {
 	collectionPath, ok := p.parsePath(true)
 	if !ok || !p.matchKind(tokenSlash) || !p.matchKeyword("any") {
-		return Filter{}, false
+		return nil, false
 	}
 	if !p.matchKind(tokenLParen) {
-		return Filter{}, false
+		return nil, false
 	}
 	alias, ok := p.matchIdent()
 	if !ok || !p.matchKind(tokenColon) || !p.matchKind(tokenLParen) {
-		return Filter{}, false
+		return nil, false
 	}
 	innerPath, ok := p.parsePath(false)
 	if !ok || len(innerPath) == 0 || !strings.EqualFold(innerPath[0], alias.text) {
-		return Filter{}, false
+		return nil, false
 	}
-	if !p.matchKeyword("eq") {
-		return Filter{}, false
+	operator, ok := p.matchOperator()
+	if !ok {
+		return nil, false
 	}
 	valueToken, ok := p.matchString()
 	if !ok || !p.matchKind(tokenRParen) || !p.matchKind(tokenRParen) {
-		return Filter{}, false
+		return nil, false
 	}
 	fieldPath := append([]string{}, collectionPath...)
 	fieldPath = append(fieldPath, innerPath[1:]...)
-	return Filter{
-		FieldPath: strings.Join(fieldPath, "."),
-		Value:     valueToken.text,
-	}, true
+	filter := new(ileapv1.Filter)
+	filter.SetFieldPath(strings.Join(fieldPath, "."))
+	filter.SetOperator(operator)
+	filter.SetValue(valueToken.text)
+	return filter, true
 }
 
 func (p *clauseParser) parsePath(stopBeforeAny bool) ([]string, bool) {
@@ -310,6 +312,38 @@ func (p *clauseParser) matchKeyword(keyword string) bool {
 	}
 	p.pos++
 	return true
+}
+
+func (p *clauseParser) matchOperator() (ileapv1.Filter_Operator, bool) {
+	tok := p.peek()
+	if tok.kind != tokenIdent {
+		return ileapv1.Filter_OPERATOR_UNSPECIFIED, false
+	}
+	operator, ok := operatorFromToken(tok.text)
+	if !ok {
+		return ileapv1.Filter_OPERATOR_UNSPECIFIED, false
+	}
+	p.pos++
+	return operator, true
+}
+
+func operatorFromToken(raw string) (ileapv1.Filter_Operator, bool) {
+	switch {
+	case strings.EqualFold(raw, "eq"):
+		return ileapv1.Filter_EQ, true
+	case strings.EqualFold(raw, "ne"):
+		return ileapv1.Filter_NE, true
+	case strings.EqualFold(raw, "lt"):
+		return ileapv1.Filter_LT, true
+	case strings.EqualFold(raw, "le"):
+		return ileapv1.Filter_LE, true
+	case strings.EqualFold(raw, "gt"):
+		return ileapv1.Filter_GT, true
+	case strings.EqualFold(raw, "ge"):
+		return ileapv1.Filter_GE, true
+	default:
+		return ileapv1.Filter_OPERATOR_UNSPECIFIED, false
+	}
 }
 
 func (p *clauseParser) matchKind(kind tokenKind) bool {

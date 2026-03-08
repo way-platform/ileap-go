@@ -572,10 +572,15 @@ func TestListFootprints(t *testing.T) {
 			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 		}
 		got := handler.lastListFootprintsReq.GetFilters()
-		if len(got) != 1 {
-			t.Fatalf("expected 1 translated filter pair, got %d", len(got))
+		if len(got) != 2 {
+			t.Fatalf("expected 2 translated filter pairs, got %d", len(got))
 		}
-		assertFootprintFilterSet(t, got, "productCategoryCpc=83117")
+		assertFootprintFilterSet(
+			t,
+			got,
+			"productCategoryCpc|EQ|83117",
+			"created|GT|2024-01-01T00:00:00.000Z",
+		)
 	})
 
 	t.Run("fully invalid odata translates to empty filter set", func(t *testing.T) {
@@ -771,8 +776,8 @@ func TestListTads(t *testing.T) {
 		assertTADFilterSet(
 			t,
 			got,
-			"mode=Road",
-			"energyCarriers.feedstocks.feedstock=fossil",
+			"mode|EQ|Road",
+			"energyCarriers.feedstocks.feedstock|EQ|fossil",
 		)
 	})
 }
@@ -988,30 +993,30 @@ func TestQueryToTADFilters(t *testing.T) {
 			name: "basic filters with pagination excluded",
 			in:   "mode=Road&feedstock=Fossil&limit=2&offset=1",
 			want: []string{
-				"mode=Road",
-				"feedstock=Fossil",
+				"mode|EQ|Road",
+				"feedstock|EQ|Fossil",
 			},
 		},
 		{
 			name: "dot notation kept",
 			in:   "energyCarriers.feedstocks.feedstock=fossil",
 			want: []string{
-				"energyCarriers.feedstocks.feedstock=fossil",
+				"energyCarriers.feedstocks.feedstock|EQ|fossil",
 			},
 		},
 		{
 			name: "multi-value key creates multiple filters",
 			in:   "mode=Road&mode=Rail",
 			want: []string{
-				"mode=Road",
-				"mode=Rail",
+				"mode|EQ|Road",
+				"mode|EQ|Rail",
 			},
 		},
 		{
 			name: "blank values ignored",
 			in:   "mode=&feedstock=%20%20%20&packagingOrTrEqType=box",
 			want: []string{
-				"packagingOrTrEqType=box",
+				"packagingOrTrEqType|EQ|box",
 			},
 		},
 	}
@@ -1026,13 +1031,13 @@ func TestQueryToTADFilters(t *testing.T) {
 
 func assertFootprintFilterSet(
 	t *testing.T,
-	got []*ileapv1.ListFootprintsRequest_Filter,
+	got []*ileapv1.Filter,
 	want ...string,
 ) {
 	t.Helper()
 	gotCounts := make(map[string]int, len(got))
 	for _, filter := range got {
-		key := filter.GetFieldPath() + "=" + filter.GetValue()
+		key := filter.GetFieldPath() + "|" + filter.GetOperator().String() + "|" + filter.GetValue()
 		gotCounts[key]++
 	}
 	wantCounts := make(map[string]int, len(want))
@@ -1051,13 +1056,13 @@ func assertFootprintFilterSet(
 
 func assertTADFilterSet(
 	t *testing.T,
-	got []*ileapv1.ListTransportActivityDataRequest_Filter,
+	got []*ileapv1.Filter,
 	want ...string,
 ) {
 	t.Helper()
 	gotCounts := make(map[string]int, len(got))
 	for _, filter := range got {
-		key := filter.GetFieldPath() + "=" + filter.GetValue()
+		key := filter.GetFieldPath() + "|" + filter.GetOperator().String() + "|" + filter.GetValue()
 		gotCounts[key]++
 	}
 	wantCounts := make(map[string]int, len(want))

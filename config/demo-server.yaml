@@ -8,8 +8,8 @@ spec:
   template:
     spec:
       containers:
-      - image: europe-north1-docker.pkg.dev/way-ileap-demo-prod/ghcr/way-platform/ileap-go/ileap@sha256:90d447238d95fccf83012174fa84be41c1b3b4f93fdb83cc9e41d8692114a74d
-        args:
-        - demo-server
-        ports:
-        - containerPort: 8080
+        - image: europe-north1-docker.pkg.dev/way-ileap-demo-prod/ghcr/way-platform/ileap-go/ileap@sha256:886177db3caa444cb53ce8939d5680277ab0d294b0bb7fb74405613b14a6a75b
+          args:
+            - demo-server
+          ports:
+            - containerPort: 8080
