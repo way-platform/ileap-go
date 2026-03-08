@@ -8,7 +8,7 @@ spec:
   template:
     spec:
       containers:
-        - image: europe-north1-docker.pkg.dev/way-ileap-demo-prod/ghcr/way-platform/ileap-go/ileap@sha256:886177db3caa444cb53ce8939d5680277ab0d294b0bb7fb74405613b14a6a75b
+        - image: europe-north1-docker.pkg.dev/way-ileap-demo-prod/ghcr/way-platform/ileap-go/ileap@sha256:b69f1e49d3d9c7da959fc0580754a6590f6ae8d5f7893e5313ca4dc85b68a1d4
           args:
             - demo-server
           ports:

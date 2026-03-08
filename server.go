@@ -520,7 +520,7 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid request body")
 		return
 	}
-	if !IsKnownEventType(EventType(event.Type)) {
+	if !isKnownEventType(eventType(event.Type)) {
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "invalid event type")
 		return
 	}
@@ -534,7 +534,7 @@ type cloudEventEnvelope struct {
 	Data        json.RawMessage `json:"data"`
 }
 
-func decodeCloudEvent(body []byte) (*Event, error) {
+func decodeCloudEvent(body []byte) (*event, error) {
 	var envelope cloudEventEnvelope
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		return nil, err
@@ -543,7 +543,7 @@ func decodeCloudEvent(body []byte) (*Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Event{
+	return &event{
 		Type:        envelope.Type,
 		Specversion: envelope.Specversion,
 		ID:          envelope.ID,
@@ -584,8 +584,8 @@ func normalizeCloudEventData(raw json.RawMessage) ([]byte, error) {
 	return compact.Bytes(), nil
 }
 
-func validateEventData(event *Event) error {
-	if EventType(event.Type) != EventTypePublishedV1 {
+func validateEventData(event *event) error {
+	if eventType(event.Type) != eventTypePublishedV1 {
 		return nil
 	}
 	var payload struct {
