@@ -1,0 +1,46 @@
+edition = "2023";
+
+package wayplatform.connect.ileap.v1;
+
+// Filter is a single filter pair with an explicit operator.
+//
+// Filtering semantics are best-effort:
+// - A host system can ignore the filter statement or parts of it.
+// - A host system can return an error response (for example, NotImplemented)
+//   if it does not support a specific filter pair.
+// - A host system can treat concatenated filters disjunctively, returning the
+//   union of results from individual filters.
+message Filter {
+  // Case-sensitive field path, optionally using dot notation for nesting.
+  string field_path = 1 [json_name = "fieldPath"];
+
+  // Operator applied to the field path.
+  Operator operator = 2;
+
+  // A filter operator.
+  enum Operator {
+    // Unspecified filter operator. This value is not used.
+    OPERATOR_UNSPECIFIED = 0;
+
+    // Equal (=) operator.
+    EQ = 1;
+
+    // Not equal (!=) operator.
+    NE = 2;
+
+    // Less than (<) operator.
+    LT = 3;
+
+    // Less than or equal (<=) operator.
+    LE = 4;
+
+    // Greater than (>) operator.
+    GT = 5;
+
+    // Greater than or equal (<=) operator.
+    GE = 6;
+  }
+
+  // Case-insensitive filter value.
+  string value = 3;
+}

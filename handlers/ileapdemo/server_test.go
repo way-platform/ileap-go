@@ -224,6 +224,48 @@ func TestDemoServer(t *testing.T) {
 		}
 	})
 
+	t.Run("list footprints with created ge filter enforces datetime predicate", func(t *testing.T) {
+		token := getAccessToken(t, server)
+		req := httptest.NewRequest(
+			"GET",
+			"/2/footprints?$filter=created+ge+'2022-03-01T09:32:20Z'",
+			nil,
+		)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		}
+		var resp struct {
+			Data []struct {
+				ID      string `json:"id"`
+				Created string `json:"created"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode response: %v", err)
+		}
+		if len(resp.Data) == 0 {
+			t.Fatal("expected at least one footprint in filtered response")
+		}
+		threshold := time.Date(2022, 3, 1, 9, 32, 20, 0, time.UTC)
+		for _, item := range resp.Data {
+			created, err := time.Parse(time.RFC3339, item.Created)
+			if err != nil {
+				t.Fatalf("parse created timestamp for %q: %v", item.ID, err)
+			}
+			if created.Before(threshold) {
+				t.Fatalf(
+					"footprint %q has created=%s before threshold %s",
+					item.ID,
+					created.Format(time.RFC3339),
+					threshold.Format(time.RFC3339),
+				)
+			}
+		}
+	})
+
 	t.Run("GET /2/ileap/tad", func(t *testing.T) {
 		t.Run("authenticated", func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/2/ileap/tad", nil)

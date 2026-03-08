@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
@@ -111,7 +112,7 @@ func hasFilter(req *ileapv1.ListTransportActivityDataRequest) bool {
 
 func filterTADs(
 	tads []*ileapv1.TAD,
-	filters []*ileapv1.ListTransportActivityDataRequest_Filter,
+	filters []*ileapv1.Filter,
 ) []*ileapv1.TAD {
 	result := make([]*ileapv1.TAD, 0, len(tads))
 	for _, tad := range tads {
@@ -124,80 +125,189 @@ func filterTADs(
 
 func tadMatchesFilter(
 	tad *ileapv1.TAD,
-	filters []*ileapv1.ListTransportActivityDataRequest_Filter,
+	filters []*ileapv1.Filter,
 ) bool {
+	// Concatenated filters are evaluated disjunctively (OR). Unsupported
+	// field/operator pairs are ignored.
+	supported := false
 	for _, filter := range filters {
-		name := strings.ToLower(filter.GetFieldPath())
-		value := filter.GetValue()
-		switch name {
-		case "activityid":
-			if !strings.EqualFold(tad.GetActivityId(), value) {
-				return false
-			}
-		case "mode":
-			if !strings.EqualFold(tad.GetMode(), value) {
-				return false
-			}
-		case "packagingortreqtype":
-			if !strings.EqualFold(tad.GetPackagingOrTrEqType(), value) {
-				return false
-			}
-		case "feedstock", "energycarriers.feedstocks.feedstock":
-			if !tadHasFeedstock(tad, value) {
-				return false
-			}
-		default:
+		ok, match := tadMatchesSingleFilter(tad, filter)
+		if !ok {
 			continue
 		}
+		supported = true
+		if match {
+			return true
+		}
 	}
-	return true
+	return !supported
 }
 
-func tadHasFeedstock(tad *ileapv1.TAD, feedstock string) bool {
+func tadMatchesSingleFilter(tad *ileapv1.TAD, filter *ileapv1.Filter) (bool, bool) {
+	name := strings.ToLower(filter.GetFieldPath())
+	value := filter.GetValue()
+	switch name {
+	case "activityid":
+		return matchesStringFilter(tad.GetActivityId(), value, filter.GetOperator())
+	case "mode":
+		return matchesStringFilter(tad.GetMode(), value, filter.GetOperator())
+	case "packagingortreqtype":
+		return matchesStringFilter(tad.GetPackagingOrTrEqType(), value, filter.GetOperator())
+	case "feedstock", "energycarriers.feedstocks.feedstock":
+		return matchesFeedstockFilter(tad, value, filter.GetOperator())
+	default:
+		return false, false
+	}
+}
+
+func matchesFeedstockFilter(
+	tad *ileapv1.TAD,
+	feedstock string,
+	operator ileapv1.Filter_Operator,
+) (bool, bool) {
+	if operator != ileapv1.Filter_OPERATOR_UNSPECIFIED &&
+		operator != ileapv1.Filter_EQ &&
+		operator != ileapv1.Filter_NE {
+		return false, false
+	}
+	found := false
 	for _, ec := range tad.GetEnergyCarriers() {
 		for _, fs := range ec.GetFeedstocks() {
 			if strings.EqualFold(fs.GetFeedstock(), feedstock) {
-				return true
+				found = true
+				break
 			}
 		}
 	}
-	return false
+	if operator == ileapv1.Filter_NE {
+		return true, !found
+	}
+	return true, found
 }
 
 func footprintMatchesFilters(
 	fp *ileapv1.ProductFootprint,
-	filters []*ileapv1.ListFootprintsRequest_Filter,
+	filters []*ileapv1.Filter,
 ) bool {
+	// Concatenated filters are evaluated disjunctively (OR). Unsupported
+	// field/operator pairs are ignored.
+	supported := false
 	for _, filter := range filters {
-		name := strings.ToLower(filter.GetFieldPath())
-		value := filter.GetValue()
-		switch name {
-		case "productcategorycpc":
-			if !strings.EqualFold(fp.GetProductCategoryCpc(), value) {
-				return false
-			}
-		case "pcf.geographycountry":
-			pcf := fp.GetPcf()
-			if pcf == nil || !strings.EqualFold(pcf.GetGeographyCountry(), value) {
-				return false
-			}
-		case "productids":
-			if !containsFold(fp.GetProductIds(), value) {
-				return false
-			}
-		case "companyids":
-			if !containsFold(fp.GetCompanyIds(), value) {
-				return false
-			}
-		default:
+		ok, match := footprintMatchesSingleFilter(fp, filter)
+		if !ok {
 			continue
 		}
+		supported = true
+		if match {
+			return true
+		}
 	}
-	return true
+	return !supported
 }
 
-func containsFold(values []string, value string) bool {
-	return slices.ContainsFunc(values, func(candidate string) bool {
+func footprintMatchesSingleFilter(
+	fp *ileapv1.ProductFootprint,
+	filter *ileapv1.Filter,
+) (bool, bool) {
+	name := strings.ToLower(filter.GetFieldPath())
+	value := filter.GetValue()
+	switch name {
+	case "productcategorycpc":
+		return matchesStringFilter(fp.GetProductCategoryCpc(), value, filter.GetOperator())
+	case "pcf.geographycountry":
+		pcf := fp.GetPcf()
+		if pcf == nil {
+			return true, false
+		}
+		return matchesStringFilter(
+			pcf.GetGeographyCountry(),
+			value,
+			filter.GetOperator(),
+		)
+	case "productids":
+		return containsFold(fp.GetProductIds(), value, filter.GetOperator())
+	case "companyids":
+		return containsFold(fp.GetCompanyIds(), value, filter.GetOperator())
+	case "created":
+		return matchesTimestampFilter(fp.GetCreated(), value, filter.GetOperator())
+	case "updated":
+		return matchesTimestampFilter(fp.GetUpdated(), value, filter.GetOperator())
+	default:
+		return false, false
+	}
+}
+
+func containsFold(
+	values []string,
+	value string,
+	operator ileapv1.Filter_Operator,
+) (bool, bool) {
+	contains := slices.ContainsFunc(values, func(candidate string) bool {
 		return strings.EqualFold(candidate, value)
 	})
+	switch operator {
+	case ileapv1.Filter_OPERATOR_UNSPECIFIED, ileapv1.Filter_EQ:
+		return true, contains
+	case ileapv1.Filter_NE:
+		return true, !contains
+	default:
+		return false, false
+	}
+}
+
+func matchesStringFilter(
+	candidate string,
+	value string,
+	operator ileapv1.Filter_Operator,
+) (bool, bool) {
+	switch operator {
+	case ileapv1.Filter_OPERATOR_UNSPECIFIED, ileapv1.Filter_EQ:
+		return true, strings.EqualFold(candidate, value)
+	case ileapv1.Filter_NE:
+		return true, !strings.EqualFold(candidate, value)
+	default:
+		return false, false
+	}
+}
+
+func matchesTimestampFilter(
+	candidate interface{ AsTime() time.Time },
+	value string,
+	operator ileapv1.Filter_Operator,
+) (bool, bool) {
+	if candidate == nil {
+		return false, false
+	}
+	want, err := parseRFC3339Value(value)
+	if err != nil {
+		return false, false
+	}
+	left := candidate.AsTime().UTC()
+	switch operator {
+	case ileapv1.Filter_OPERATOR_UNSPECIFIED, ileapv1.Filter_EQ:
+		return true, left.Equal(want)
+	case ileapv1.Filter_NE:
+		return true, !left.Equal(want)
+	case ileapv1.Filter_LT:
+		return true, left.Before(want)
+	case ileapv1.Filter_LE:
+		return true, left.Before(want) || left.Equal(want)
+	case ileapv1.Filter_GT:
+		return true, left.After(want)
+	case ileapv1.Filter_GE:
+		return true, left.After(want) || left.Equal(want)
+	default:
+		return false, false
+	}
+}
+
+func parseRFC3339Value(value string) (time.Time, error) {
+	if parsed, err := time.Parse(time.RFC3339Nano, value); err == nil {
+		return parsed.UTC(), nil
+	}
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return parsed.UTC(), nil
 }

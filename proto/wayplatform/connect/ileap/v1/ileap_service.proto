@@ -3,6 +3,7 @@ edition = "2023";
 package wayplatform.connect.ileap.v1;
 
 import "buf/validate/validate.proto";
+import "wayplatform/connect/ileap/v1/filter.proto";
 import "wayplatform/connect/ileap/v1/product_footprint.proto";
 import "wayplatform/connect/ileap/v1/tad.proto";
 
@@ -143,23 +144,21 @@ service ILeapService {
 //
 // See PACT v2.1.0 Section 6.6.3 "Request Syntax".
 message ListFootprintsRequest {
-  // Filter pairs where each item matches by exact field path and value.
+  // Filter pairs where each item matches by field path, operator, and value.
   //
-  // A pair follows "field_path=value" semantics where field path is case-sensitive and
-  // value is case-insensitive. Names MAY use dot notation to reference nested
-  // properties.
+  // A pair follows "field_path + operator + value" semantics where field path
+  // is case-sensitive and value is case-insensitive. Names MAY use dot notation
+  // to reference nested properties.
+  //
+  // Filtering semantics are best-effort:
+  // - A host system can ignore the filter statement or parts of it.
+  // - A host system can return an error response (for example, NotImplemented)
+  //   if it does not support a specific filter pair.
+  // - A host system can treat concatenated filters disjunctively, returning the
+  //   union of results from individual filters.
   //
   // See iLEAP "Common HTTP Endpoint Behaviors / Filtering".
   repeated Filter filters = 4;
-
-  // Filter is a single name-value filter pair.
-  message Filter {
-    // Case-sensitive field path, optionally using dot notation for nesting.
-    string field_path = 1 [json_name = "fieldPath"];
-
-    // Case-insensitive filter value.
-    string value = 2;
-  }
 
   // Maximum number of ProductFootprints to return. The host system MAY
   // return fewer ProductFootprints than requested. If there are additional
@@ -255,11 +254,18 @@ message GetFootprintResponse {
 //
 // See iLEAP Technical Specifications Section 5.1.3 "Request Syntax".
 message ListTransportActivityDataRequest {
-  // Filter pairs where each item matches by exact field path and value.
+  // Filter pairs where each item matches by field path, operator, and value.
   //
-  // A pair follows "field_path=value" semantics where field path is case-sensitive and
-  // value is case-insensitive. Names MAY use dot notation to reference nested
-  // properties.
+  // A pair follows "field_path + operator + value" semantics where field path
+  // is case-sensitive and value is case-insensitive. Names MAY use dot notation
+  // to reference nested properties.
+  //
+  // Filtering semantics are best-effort:
+  // - A host system can ignore the filter statement or parts of it.
+  // - A host system can return an error response (for example, NotImplemented)
+  //   if it does not support a specific filter pair.
+  // - A host system can treat concatenated filters disjunctively, returning the
+  //   union of results from individual filters.
   //
   // Example: energyCarriers.feedstocks.feedstock=fossil
   repeated Filter filters = 6;
@@ -282,14 +288,6 @@ message ListTransportActivityDataRequest {
   // See iLEAP Technical Specifications Section 5.1.2 "Pagination".
   int32 offset = 5;
 
-  // Filter is a single name-value filter pair.
-  message Filter {
-    // Case-sensitive field path, optionally using dot notation for nesting.
-    string field_path = 1 [json_name = "fieldPath"];
-
-    // Case-insensitive filter value.
-    string value = 2;
-  }
 }
 
 // ListTransportActivityDataResponse is the response message for
