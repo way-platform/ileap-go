@@ -38,6 +38,17 @@ func WithHTTPClient(hc *http.Client) ClientOption {
 	return func(c *Client) { c.httpClient = hc }
 }
 
+// APIError is an error returned by the Clerk Frontend API.
+type APIError struct {
+	Operation  string
+	StatusCode int
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("%s failed: HTTP %d: %s", e.Operation, e.StatusCode, e.Body)
+}
+
 // signInResponse is the response from Clerk's sign_in endpoint.
 type signInResponse struct {
 	Response struct {
@@ -76,7 +87,11 @@ func (c *Client) SignIn(identifier, password, activeOrgID string) (string, error
 		if resp.Body != nil {
 			body, _ = io.ReadAll(resp.Body)
 		}
-		return "", fmt.Errorf("clerk sign_in failed: HTTP %d: %s", resp.StatusCode, string(body))
+		return "", &APIError{
+			Operation:  "clerk sign_in",
+			StatusCode: resp.StatusCode,
+			Body:       string(body),
+		}
 	}
 	var result signInResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -126,7 +141,15 @@ func (c *Client) TouchSession(sessionID, activeOrgID, authHeader string) (string
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("clerk touch_session failed: HTTP %d", resp.StatusCode)
+		var body []byte
+		if resp.Body != nil {
+			body, _ = io.ReadAll(resp.Body)
+		}
+		return "", &APIError{
+			Operation:  "clerk touch_session",
+			StatusCode: resp.StatusCode,
+			Body:       string(body),
+		}
 	}
 	var result signInResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

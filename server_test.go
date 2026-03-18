@@ -97,6 +97,7 @@ type mockAuthHandler struct {
 	validToken   bool
 	expiredToken bool
 	validateErr  error
+	issueErr     error
 }
 
 func (m *mockAuthHandler) ValidateToken(_ context.Context, _ string) (*TokenInfo, error) {
@@ -115,6 +116,9 @@ func (m *mockAuthHandler) ValidateToken(_ context.Context, _ string) (*TokenInfo
 func (m *mockAuthHandler) IssueToken(
 	_ context.Context, clientID, clientSecret string,
 ) (*oauth2.Token, error) {
+	if m.issueErr != nil {
+		return nil, m.issueErr
+	}
 	if clientID == "hello" && clientSecret == "pathfinder" {
 		return &oauth2.Token{AccessToken: "mock-token", TokenType: "bearer"}, nil
 	}
@@ -245,6 +249,22 @@ func TestAuthToken(t *testing.T) {
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, req)
 		checkOAuthError(t, w, http.StatusBadRequest, OAuthErrorCodeInvalidRequest)
+	})
+
+	t.Run("rate limited", func(t *testing.T) {
+		srv := authTestServer(WithAuthHandler(&mockAuthHandler{
+			issueErr: connect.NewError(connect.CodeResourceExhausted, errors.New("rate limited")),
+		}))
+		req := httptest.NewRequest(
+			"POST",
+			"/auth/token",
+			strings.NewReader("grant_type=client_credentials"),
+		)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("hello", "pathfinder")
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		checkOAuthError(t, w, http.StatusTooManyRequests, OAuthErrorCodeTemporarilyUnavailable)
 	})
 }
 

@@ -172,6 +172,29 @@ func TestAuthHandler_IssueToken(t *testing.T) {
 			t.Errorf("expected CodePermissionDenied, got: %v", err)
 		}
 	})
+
+	t.Run("rate limited", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write(
+				[]byte(
+					`{"errors":[{"code":"too_many_requests","message":"Too many requests. Please try again in a bit."}]}`,
+				),
+			)
+		}))
+		defer srv.Close()
+		client := NewClient("unused", WithHTTPClient(&http.Client{
+			Transport: &testTransport{target: srv},
+		}))
+		auth := NewAuthHandler(client)
+		_, err := auth.IssueToken(context.Background(), "user@example.com", "password")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if connect.CodeOf(err) != connect.CodeResourceExhausted {
+			t.Errorf("expected CodeResourceExhausted, got: %v", err)
+		}
+	})
 }
 
 func TestAuthHandler_ValidateToken(t *testing.T) {
