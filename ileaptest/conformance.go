@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/way-platform/ileap-go"
 	ileapv1 "github.com/way-platform/ileap-go/proto/gen/wayplatform/connect/ileap/v1"
@@ -598,22 +599,53 @@ func RunConformanceTests(t *testing.T, cfg ConformanceTestConfig) {
 	})
 
 	t.Run("PACT_TC20_FilteredListFootprints", func(t *testing.T) {
-		body := getJSON(
-			t,
-			cfg.ServerURL,
-			"/2/footprints?$filter=productCategoryCpc+eq+'83117'",
-			token,
-		)
-		fps := parseFootprintList(t, body)
-		for i, fp := range fps {
-			if fp.GetProductCategoryCpc() != "83117" {
-				t.Errorf(
-					"footprint[%d]: productCategoryCpc = %q, want 83117",
-					i,
-					fp.GetProductCategoryCpc(),
-				)
+		t.Run("productCategoryCpc", func(t *testing.T) {
+			body := getJSON(
+				t,
+				cfg.ServerURL,
+				"/2/footprints?$filter=productCategoryCpc+eq+'83117'",
+				token,
+			)
+			fps := parseFootprintList(t, body)
+			for i, fp := range fps {
+				if fp.GetProductCategoryCpc() != "83117" {
+					t.Errorf(
+						"footprint[%d]: productCategoryCpc = %q, want 83117",
+						i,
+						fp.GetProductCategoryCpc(),
+					)
+				}
 			}
-		}
+		})
+
+		t.Run("created ge", func(t *testing.T) {
+			threshold := time.Date(2022, 3, 1, 9, 32, 20, 0, time.UTC)
+			body := getJSON(
+				t,
+				cfg.ServerURL,
+				"/2/footprints?$filter=created+ge+'2022-03-01T09:32:20Z'",
+				token,
+			)
+			fps := parseFootprintList(t, body)
+			if len(fps) == 0 {
+				t.Fatal("filtered footprint list is empty")
+			}
+			for i, fp := range fps {
+				if !fp.HasCreated() {
+					t.Errorf("footprint[%d]: missing created", i)
+					continue
+				}
+				created := fp.GetCreated().AsTime().UTC()
+				if created.Before(threshold) {
+					t.Errorf(
+						"footprint[%d]: created = %s, want >= %s",
+						i,
+						created.Format(time.RFC3339),
+						threshold.Format(time.RFC3339),
+					)
+				}
+			}
+		})
 	})
 }
 

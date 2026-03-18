@@ -124,11 +124,14 @@ func ACT(baseURL, username, password string) error {
 	if err != nil {
 		return err
 	}
-	// Run ACT.
-	return cmd(
-		root(), actBin,
+	args := []string{
 		"test", "-b", baseURL, "-u", username, "-p", password,
-	).Run()
+	}
+	if expiredToken := os.Getenv("ILEAP_EXPIRED_TOKEN"); expiredToken != "" {
+		args = append(args, "--expired-token", expiredToken)
+	}
+	// Run ACT.
+	return cmd(root(), actBin, args...).Run()
 }
 
 // ACTLocal runs the ACT conformance test suite against a local server.
