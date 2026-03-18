@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -173,6 +174,12 @@ func extractUnixClaim(claims map[string]any, name string) (int64, bool, error) {
 		return int64(v), true, nil
 	case int64:
 		return v, true, nil
+	case string:
+		n, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return 0, false, err
+		}
+		return n, true, nil
 	case json.Number:
 		n, err := v.Int64()
 		if err != nil {
