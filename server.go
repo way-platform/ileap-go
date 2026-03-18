@@ -346,6 +346,14 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 		switch connect.CodeOf(err) {
 		case connect.CodeUnimplemented:
 			writeError(w, http.StatusNotImplemented, ErrorCodeNotImplemented, "not implemented")
+		case connect.CodeResourceExhausted:
+			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
+			writeOAuthError(
+				w,
+				http.StatusTooManyRequests,
+				OAuthErrorCodeTemporarilyUnavailable,
+				"temporarily unavailable",
+			)
 		case connect.CodePermissionDenied:
 			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
 			writeOAuthError(

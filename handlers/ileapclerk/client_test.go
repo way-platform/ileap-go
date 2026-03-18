@@ -71,6 +71,35 @@ func TestSignIn(t *testing.T) {
 		}
 	})
 
+	t.Run("rate limited", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write(
+				[]byte(
+					`{"errors":[{"code":"too_many_requests","message":"Too many requests. Please try again in a bit."}]}`,
+				),
+			)
+		}))
+		defer srv.Close()
+		c := NewClient("unused", WithHTTPClient(&http.Client{
+			Transport: &testTransport{target: srv},
+		}))
+		jwt, err := c.SignIn("user@example.com", "secret", "")
+		if err == nil {
+			t.Fatal("expected error for rate limiting")
+		}
+		if jwt != "" {
+			t.Errorf("expected empty JWT, got %q", jwt)
+		}
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			t.Fatalf("expected *APIError, got %T", err)
+		}
+		if apiErr.StatusCode != http.StatusTooManyRequests {
+			t.Errorf("expected status 429, got %d", apiErr.StatusCode)
+		}
+	})
+
 	t.Run("incomplete status", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

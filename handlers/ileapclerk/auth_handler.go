@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -65,6 +66,10 @@ func (a *AuthHandler) IssueToken(
 ) (*oauth2.Token, error) {
 	jwt, err := a.client.SignIn(clientID, clientSecret, a.activeOrgID)
 	if err != nil {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusTooManyRequests {
+			return nil, connect.NewError(connect.CodeResourceExhausted, err)
+		}
 		return nil, connect.NewError(
 			connect.CodePermissionDenied,
 			fmt.Errorf("invalid credentials: %w", err),
