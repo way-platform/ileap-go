@@ -242,6 +242,27 @@ func TestAuthHandler_ValidateToken(t *testing.T) {
 		}
 	})
 
+	t.Run("expired token with string exp", func(t *testing.T) {
+		srv := jwksServerForKey(t, key)
+		defer srv.Close()
+		c := NewClient("unused", WithHTTPClient(&http.Client{
+			Transport: &testTransport{target: srv},
+		}))
+		auth := NewAuthHandler(c)
+		claims := map[string]any{
+			"sub": "user@example.com",
+			"exp": "1",
+		}
+		token := makeTestJWT(t, key, claims)
+		_, err := auth.ValidateToken(context.Background(), token)
+		if err == nil {
+			t.Fatal("expected error for expired token")
+		}
+		if connect.CodeOf(err) != connect.CodeUnauthenticated {
+			t.Errorf("expected CodeUnauthenticated, got: %v", err)
+		}
+	})
+
 	t.Run("token not yet valid", func(t *testing.T) {
 		srv := jwksServerForKey(t, key)
 		defer srv.Close()

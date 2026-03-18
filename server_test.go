@@ -532,11 +532,83 @@ func TestILeapAuthMiddleware(t *testing.T) {
 		srv.ServeHTTP(w, req)
 		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeTokenExpired)
 	})
+
+	t.Run("expired clerk-like JWT payload fallback returns 401", func(t *testing.T) {
+		srv := NewServer(
+			WithAuthHandler(&mockAuthHandler{
+				validateErr: connect.NewError(
+					connect.CodePermissionDenied,
+					errors.New("invalid signature"),
+				),
+			}),
+		)
+		token := testClerkStyleJWT(map[string]any{
+			"exp": time.Now().Add(-time.Minute).Unix(),
+			"iat": time.Now().Add(-2 * time.Minute).Unix(),
+			"nbf": time.Now().Add(-2 * time.Minute).Unix(),
+			"iss": "https://clerk.way.cloud",
+			"sid": "sess_test",
+			"sts": "active",
+			"sub": "user_test",
+			"v":   2,
+			"o": map[string]any{
+				"id":  "org_test",
+				"rol": "editor",
+			},
+		})
+		req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeTokenExpired)
+	})
+
+	t.Run("expired clerk-like JWT with string exp fallback returns 401", func(t *testing.T) {
+		srv := NewServer(
+			WithAuthHandler(&mockAuthHandler{
+				validateErr: connect.NewError(
+					connect.CodePermissionDenied,
+					errors.New("invalid signature"),
+				),
+			}),
+		)
+		token := testClerkStyleJWT(map[string]any{
+			"exp": "1",
+			"iat": "1",
+			"nbf": "1",
+			"iss": "https://clerk.way.cloud",
+			"sub": "user_test",
+		})
+		req := httptest.NewRequest("GET", "/2/ileap/tad", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+		checkErrorResponse(t, w, http.StatusUnauthorized, ErrorCodeTokenExpired)
+	})
 }
 
 func testJWTWithExp(exp int64) string {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256","typ":"JWT"}`))
 	payload := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf(`{"exp":%d}`, exp)))
+	return header + "." + payload + ".signature"
+}
+
+func testClerkStyleJWT(claims map[string]any) string {
+	headerBytes, err := json.Marshal(map[string]any{
+		"alg": "RS256",
+		"cat": "cl_B7d4PD111PAAA",
+		"kid": "ins_test_key",
+		"typ": "JWT",
+	})
+	if err != nil {
+		panic(err)
+	}
+	payloadBytes, err := json.Marshal(claims)
+	if err != nil {
+		panic(err)
+	}
+	header := base64.RawURLEncoding.EncodeToString(headerBytes)
+	payload := base64.RawURLEncoding.EncodeToString(payloadBytes)
 	return header + "." + payload + ".signature"
 }
 
