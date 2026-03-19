@@ -22,19 +22,24 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const defaultJWKSCacheTTL = 15 * time.Minute
+const (
+	defaultJWKSCacheTTL  = 15 * time.Minute
+	defaultTokenCacheTTL = 5 * time.Minute
+)
 
 var _ ileap.AuthHandler = (*AuthHandler)(nil)
 
 // AuthHandler implements ileap.AuthHandler using Clerk for token issuance,
 // validation, and OIDC discovery.
 type AuthHandler struct {
-	client       *Client
-	activeOrgID  string
-	mu           sync.RWMutex
-	cachedJWKS   *ileap.JWKSet
-	cachedAt     time.Time
-	jwksCacheTTL time.Duration
+	client        *Client
+	activeOrgID   string
+	mu            sync.RWMutex
+	cachedJWKS    *ileap.JWKSet
+	cachedAt      time.Time
+	jwksCacheTTL  time.Duration
+	tokenCache    map[string]*oauth2.Token
+	tokenCacheTTL time.Duration
 }
 
 // AuthHandlerOption configures the AuthHandler.
@@ -50,11 +55,19 @@ func WithJWKSCacheTTL(d time.Duration) AuthHandlerOption {
 	return func(a *AuthHandler) { a.jwksCacheTTL = d }
 }
 
+// WithTokenCacheTTL sets the minimum remaining token lifetime to serve from cache.
+// Default is 5 minutes.
+func WithTokenCacheTTL(d time.Duration) AuthHandlerOption {
+	return func(a *AuthHandler) { a.tokenCacheTTL = d }
+}
+
 // NewAuthHandler creates an AuthHandler backed by the given Clerk client.
 func NewAuthHandler(client *Client, opts ...AuthHandlerOption) *AuthHandler {
 	a := &AuthHandler{
-		client:       client,
-		jwksCacheTTL: defaultJWKSCacheTTL,
+		client:        client,
+		jwksCacheTTL:  defaultJWKSCacheTTL,
+		tokenCache:    make(map[string]*oauth2.Token),
+		tokenCacheTTL: defaultTokenCacheTTL,
 	}
 	for _, opt := range opts {
 		opt(a)
@@ -62,9 +75,35 @@ func NewAuthHandler(client *Client, opts ...AuthHandlerOption) *AuthHandler {
 	return a
 }
 
+func tokenCacheKey(clientID, clientSecret string) string {
+	h := sha256.Sum256([]byte(clientID + ":" + clientSecret))
+	return clientID + ":" + fmt.Sprintf("%x", h)
+}
+
 func (a *AuthHandler) IssueToken(
 	ctx context.Context, clientID, clientSecret string,
 ) (*oauth2.Token, error) {
+	cacheKey := tokenCacheKey(clientID, clientSecret)
+
+	// Fast path: return cached token if still fresh.
+	if a.tokenCacheTTL > 0 {
+		a.mu.RLock()
+		if cached, ok := a.tokenCache[cacheKey]; ok && time.Until(cached.Expiry) > a.tokenCacheTTL {
+			tok := &oauth2.Token{
+				AccessToken: cached.AccessToken,
+				TokenType:   cached.TokenType,
+				Expiry:      cached.Expiry,
+			}
+			seconds := int64(time.Until(cached.Expiry).Seconds())
+			if seconds > 0 {
+				tok.ExpiresIn = seconds
+			}
+			a.mu.RUnlock()
+			return tok, nil
+		}
+		a.mu.RUnlock()
+	}
+
 	jwt, err := a.client.SignIn(clientID, clientSecret, a.activeOrgID)
 	if err != nil {
 		var apiErr *APIError
@@ -90,6 +129,11 @@ func (a *AuthHandler) IssueToken(
 		seconds := int64(time.Until(expiry).Seconds())
 		if seconds > 0 {
 			creds.ExpiresIn = seconds
+		}
+		if a.tokenCacheTTL > 0 {
+			a.mu.Lock()
+			a.tokenCache[cacheKey] = creds
+			a.mu.Unlock()
 		}
 	}
 	return creds, nil
