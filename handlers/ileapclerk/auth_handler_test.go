@@ -197,6 +197,171 @@ func TestAuthHandler_IssueToken(t *testing.T) {
 	})
 }
 
+func TestAuthHandler_IssueToken_CachesToken(t *testing.T) {
+	var signInCount int
+	wantExpiry := time.Now().Add(30 * time.Minute).Truncate(time.Second)
+	wantJWT := makeUnsignedTestJWT(t, map[string]any{
+		"exp": wantExpiry.Unix(),
+	})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		signInCount++
+		w.Header().Set("Content-Type", "application/json")
+		resp := signInResponse{}
+		resp.Response.Status = "complete"
+		resp.Client.Sessions = []struct {
+			ID              string `json:"id"`
+			LastActiveToken struct {
+				JWT string `json:"jwt"`
+			} `json:"last_active_token"`
+		}{{}}
+		resp.Client.Sessions[0].LastActiveToken.JWT = wantJWT
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer srv.Close()
+	client := NewClient("unused", WithHTTPClient(&http.Client{
+		Transport: &testTransport{target: srv},
+	}))
+	auth := NewAuthHandler(client)
+
+	// First call hits the server.
+	tok1, err := auth.IssueToken(context.Background(), "user@example.com", "password")
+	if err != nil {
+		t.Fatalf("first call: %v", err)
+	}
+	// Second call with same credentials should be cached.
+	tok2, err := auth.IssueToken(context.Background(), "user@example.com", "password")
+	if err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+	if signInCount != 1 {
+		t.Errorf("expected 1 sign-in call, got %d", signInCount)
+	}
+	if tok2.AccessToken != tok1.AccessToken {
+		t.Errorf("cached token mismatch")
+	}
+}
+
+func TestAuthHandler_IssueToken_CacheMissOnDifferentCredentials(t *testing.T) {
+	var signInCount int
+	wantExpiry := time.Now().Add(30 * time.Minute).Truncate(time.Second)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		signInCount++
+		jwt := makeUnsignedTestJWT(t, map[string]any{
+			"exp": wantExpiry.Unix(),
+		})
+		w.Header().Set("Content-Type", "application/json")
+		resp := signInResponse{}
+		resp.Response.Status = "complete"
+		resp.Client.Sessions = []struct {
+			ID              string `json:"id"`
+			LastActiveToken struct {
+				JWT string `json:"jwt"`
+			} `json:"last_active_token"`
+		}{{}}
+		resp.Client.Sessions[0].LastActiveToken.JWT = jwt
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer srv.Close()
+	client := NewClient("unused", WithHTTPClient(&http.Client{
+		Transport: &testTransport{target: srv},
+	}))
+	auth := NewAuthHandler(client)
+
+	_, err := auth.IssueToken(context.Background(), "user1@example.com", "password1")
+	if err != nil {
+		t.Fatalf("first call: %v", err)
+	}
+	_, err = auth.IssueToken(context.Background(), "user2@example.com", "password2")
+	if err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+	if signInCount != 2 {
+		t.Errorf("expected 2 sign-in calls for different credentials, got %d", signInCount)
+	}
+}
+
+func TestAuthHandler_IssueToken_CacheMissWhenExpiringSoon(t *testing.T) {
+	var signInCount int
+	// Token expires in 2 minutes — less than default 5-minute TTL.
+	wantExpiry := time.Now().Add(2 * time.Minute).Truncate(time.Second)
+	wantJWT := makeUnsignedTestJWT(t, map[string]any{
+		"exp": wantExpiry.Unix(),
+	})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		signInCount++
+		w.Header().Set("Content-Type", "application/json")
+		resp := signInResponse{}
+		resp.Response.Status = "complete"
+		resp.Client.Sessions = []struct {
+			ID              string `json:"id"`
+			LastActiveToken struct {
+				JWT string `json:"jwt"`
+			} `json:"last_active_token"`
+		}{{}}
+		resp.Client.Sessions[0].LastActiveToken.JWT = wantJWT
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer srv.Close()
+	client := NewClient("unused", WithHTTPClient(&http.Client{
+		Transport: &testTransport{target: srv},
+	}))
+	auth := NewAuthHandler(client)
+
+	_, err := auth.IssueToken(context.Background(), "user@example.com", "password")
+	if err != nil {
+		t.Fatalf("first call: %v", err)
+	}
+	// Second call should miss cache because token expires within TTL margin.
+	_, err = auth.IssueToken(context.Background(), "user@example.com", "password")
+	if err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+	if signInCount != 2 {
+		t.Errorf("expected 2 sign-in calls for expiring-soon token, got %d", signInCount)
+	}
+}
+
+func TestAuthHandler_IssueToken_WithTokenCacheTTL(t *testing.T) {
+	var signInCount int
+	// Token expires in 2 minutes.
+	wantExpiry := time.Now().Add(2 * time.Minute).Truncate(time.Second)
+	wantJWT := makeUnsignedTestJWT(t, map[string]any{
+		"exp": wantExpiry.Unix(),
+	})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		signInCount++
+		w.Header().Set("Content-Type", "application/json")
+		resp := signInResponse{}
+		resp.Response.Status = "complete"
+		resp.Client.Sessions = []struct {
+			ID              string `json:"id"`
+			LastActiveToken struct {
+				JWT string `json:"jwt"`
+			} `json:"last_active_token"`
+		}{{}}
+		resp.Client.Sessions[0].LastActiveToken.JWT = wantJWT
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer srv.Close()
+	client := NewClient("unused", WithHTTPClient(&http.Client{
+		Transport: &testTransport{target: srv},
+	}))
+	// Set TTL to 1 minute — token with 2 min remaining should be cached.
+	auth := NewAuthHandler(client, WithTokenCacheTTL(1*time.Minute))
+
+	_, err := auth.IssueToken(context.Background(), "user@example.com", "password")
+	if err != nil {
+		t.Fatalf("first call: %v", err)
+	}
+	_, err = auth.IssueToken(context.Background(), "user@example.com", "password")
+	if err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+	if signInCount != 1 {
+		t.Errorf("expected 1 sign-in call with short TTL, got %d", signInCount)
+	}
+}
+
 func TestAuthHandler_ValidateToken(t *testing.T) {
 	key := generateTestKey(t)
 
