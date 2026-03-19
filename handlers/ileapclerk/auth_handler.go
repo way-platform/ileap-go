@@ -24,7 +24,7 @@ import (
 
 const (
 	defaultJWKSCacheTTL  = 15 * time.Minute
-	defaultTokenCacheTTL = 5 * time.Minute
+	defaultTokenCacheTTL = 30 * time.Second
 )
 
 var _ ileap.AuthHandler = (*AuthHandler)(nil)
@@ -32,14 +32,15 @@ var _ ileap.AuthHandler = (*AuthHandler)(nil)
 // AuthHandler implements ileap.AuthHandler using Clerk for token issuance,
 // validation, and OIDC discovery.
 type AuthHandler struct {
-	client        *Client
-	activeOrgID   string
-	mu            sync.RWMutex
-	cachedJWKS    *ileap.JWKSet
-	cachedAt      time.Time
-	jwksCacheTTL  time.Duration
-	tokenCache    map[string]*oauth2.Token
-	tokenCacheTTL time.Duration
+	client          *Client
+	activeOrgID     string
+	jwtTemplateName string
+	mu              sync.RWMutex
+	cachedJWKS      *ileap.JWKSet
+	cachedAt        time.Time
+	jwksCacheTTL    time.Duration
+	tokenCache      map[string]*oauth2.Token
+	tokenCacheTTL   time.Duration
 }
 
 // AuthHandlerOption configures the AuthHandler.
@@ -56,9 +57,16 @@ func WithJWKSCacheTTL(d time.Duration) AuthHandlerOption {
 }
 
 // WithTokenCacheTTL sets the minimum remaining token lifetime to serve from cache.
-// Default is 5 minutes.
+// Default is 30 seconds.
 func WithTokenCacheTTL(d time.Duration) AuthHandlerOption {
 	return func(a *AuthHandler) { a.tokenCacheTTL = d }
+}
+
+// WithJWTTemplate sets the Clerk JWT template name to use when issuing tokens.
+// When set, after sign-in, a separate call is made to create a token from this
+// template, which can have a longer lifetime than the default 60-second session token.
+func WithJWTTemplate(name string) AuthHandlerOption {
+	return func(a *AuthHandler) { a.jwtTemplateName = name }
 }
 
 // NewAuthHandler creates an AuthHandler backed by the given Clerk client.
@@ -104,7 +112,7 @@ func (a *AuthHandler) IssueToken(
 		a.mu.RUnlock()
 	}
 
-	jwt, err := a.client.SignIn(clientID, clientSecret, a.activeOrgID)
+	result, err := a.client.SignIn(clientID, clientSecret, a.activeOrgID)
 	if err != nil {
 		var apiErr *APIError
 		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusTooManyRequests {
@@ -114,6 +122,18 @@ func (a *AuthHandler) IssueToken(
 			connect.CodePermissionDenied,
 			fmt.Errorf("invalid credentials: %w", err),
 		)
+	}
+	jwt := result.JWT
+	if a.jwtTemplateName != "" {
+		templateJWT, err := a.client.CreateSessionToken(
+			result.SessionID, a.jwtTemplateName, result.AuthHeader,
+		)
+		if err != nil {
+			slog.WarnContext(ctx, "failed to create token from JWT template, using default",
+				"template", a.jwtTemplateName, "error", err)
+		} else {
+			jwt = templateJWT
+		}
 	}
 	creds := &oauth2.Token{
 		AccessToken: jwt,

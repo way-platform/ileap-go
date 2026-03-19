@@ -44,12 +44,12 @@ func TestSignIn(t *testing.T) {
 		c := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		jwt, err := c.SignIn("user@example.com", "secret", "")
+		result, err := c.SignIn("user@example.com", "secret", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if jwt != wantJWT {
-			t.Errorf("expected JWT %q, got %q", wantJWT, jwt)
+		if result.JWT != wantJWT {
+			t.Errorf("expected JWT %q, got %q", wantJWT, result.JWT)
 		}
 	})
 
@@ -62,12 +62,12 @@ func TestSignIn(t *testing.T) {
 		c := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		jwt, err := c.SignIn("bad@example.com", "wrong", "")
+		result, err := c.SignIn("bad@example.com", "wrong", "")
 		if err == nil {
 			t.Fatal("expected error for invalid credentials")
 		}
-		if jwt != "" {
-			t.Errorf("expected empty JWT, got %q", jwt)
+		if result != nil {
+			t.Errorf("expected nil result, got %+v", result)
 		}
 	})
 
@@ -84,12 +84,12 @@ func TestSignIn(t *testing.T) {
 		c := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		jwt, err := c.SignIn("user@example.com", "secret", "")
+		result, err := c.SignIn("user@example.com", "secret", "")
 		if err == nil {
 			t.Fatal("expected error for rate limiting")
 		}
-		if jwt != "" {
-			t.Errorf("expected empty JWT, got %q", jwt)
+		if result != nil {
+			t.Errorf("expected nil result, got %+v", result)
 		}
 		apiErr, ok := err.(*APIError)
 		if !ok {
@@ -111,12 +111,12 @@ func TestSignIn(t *testing.T) {
 		c := NewClient("unused", WithHTTPClient(&http.Client{
 			Transport: &testTransport{target: srv},
 		}))
-		jwt, err := c.SignIn("user@example.com", "secret", "")
+		result, err := c.SignIn("user@example.com", "secret", "")
 		if err == nil {
 			t.Fatal("expected error for incomplete sign-in")
 		}
-		if jwt != "" {
-			t.Errorf("expected empty JWT, got %q", jwt)
+		if result != nil {
+			t.Errorf("expected nil result, got %+v", result)
 		}
 	})
 }
