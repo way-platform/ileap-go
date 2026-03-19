@@ -282,8 +282,8 @@ func TestAuthHandler_IssueToken_CacheMissOnDifferentCredentials(t *testing.T) {
 
 func TestAuthHandler_IssueToken_CacheMissWhenExpiringSoon(t *testing.T) {
 	var signInCount int
-	// Token expires in 2 minutes — less than default 5-minute TTL.
-	wantExpiry := time.Now().Add(2 * time.Minute).Truncate(time.Second)
+	// Token expires in 10 seconds — less than default 30-second TTL.
+	wantExpiry := time.Now().Add(10 * time.Second).Truncate(time.Second)
 	wantJWT := makeUnsignedTestJWT(t, map[string]any{
 		"exp": wantExpiry.Unix(),
 	})
@@ -323,8 +323,8 @@ func TestAuthHandler_IssueToken_CacheMissWhenExpiringSoon(t *testing.T) {
 
 func TestAuthHandler_IssueToken_WithTokenCacheTTL(t *testing.T) {
 	var signInCount int
-	// Token expires in 2 minutes.
-	wantExpiry := time.Now().Add(2 * time.Minute).Truncate(time.Second)
+	// Token expires in 10 seconds.
+	wantExpiry := time.Now().Add(10 * time.Second).Truncate(time.Second)
 	wantJWT := makeUnsignedTestJWT(t, map[string]any{
 		"exp": wantExpiry.Unix(),
 	})
@@ -346,8 +346,8 @@ func TestAuthHandler_IssueToken_WithTokenCacheTTL(t *testing.T) {
 	client := NewClient("unused", WithHTTPClient(&http.Client{
 		Transport: &testTransport{target: srv},
 	}))
-	// Set TTL to 1 minute — token with 2 min remaining should be cached.
-	auth := NewAuthHandler(client, WithTokenCacheTTL(1*time.Minute))
+	// Set TTL to 5 seconds — token with 10s remaining should be cached.
+	auth := NewAuthHandler(client, WithTokenCacheTTL(5*time.Second))
 
 	_, err := auth.IssueToken(context.Background(), "user@example.com", "password")
 	if err != nil {
