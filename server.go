@@ -680,6 +680,8 @@ func writeHandlerError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusNotFound, ErrorCodeNoSuchFootprint, "%s", err)
 	case connect.CodeInvalidArgument:
 		writeError(w, http.StatusBadRequest, ErrorCodeBadRequest, "%s", err)
+	case connect.CodePermissionDenied:
+		writeError(w, http.StatusForbidden, ErrorCodeAccessDenied, "%s", err)
 	default:
 		slog.Error("handler error", "error", err)
 		writeError(
