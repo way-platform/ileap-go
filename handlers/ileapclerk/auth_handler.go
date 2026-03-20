@@ -270,7 +270,7 @@ func (a *AuthHandler) OpenIDConfiguration(baseURL string) *ileap.OpenIDConfigura
 func (a *AuthHandler) JWKS() *ileap.JWKSet {
 	// Fast path: serve from cache if fresh.
 	a.mu.RLock()
-	if a.cachedJWKS != nil && time.Since(a.cachedAt) < a.jwksCacheTTL {
+	if a.cacheFreshLocked() {
 		cached := a.cachedJWKS
 		a.mu.RUnlock()
 		return cached
@@ -280,7 +280,7 @@ func (a *AuthHandler) JWKS() *ileap.JWKSet {
 	// Slow path: fetch and update cache.
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.cachedJWKS != nil && time.Since(a.cachedAt) < a.jwksCacheTTL {
+	if a.cacheFreshLocked() {
 		return a.cachedJWKS
 	}
 	jwks, err := a.client.FetchJWKS()
@@ -296,13 +296,35 @@ func (a *AuthHandler) JWKS() *ileap.JWKSet {
 	return a.cachedJWKS
 }
 
+func (a *AuthHandler) cacheFreshLocked() bool {
+	return a.cachedJWKS != nil && time.Since(a.cachedAt) < a.jwksCacheTTL
+}
+
 func (a *AuthHandler) findKey(kid string) (*rsa.PublicKey, error) {
-	jwks := a.JWKS()
+	a.mu.RLock()
+	jwks := a.cachedJWKS
+	cacheFresh := a.cacheFreshLocked()
+	if pub := findKeyInSet(jwks, kid); pub != nil {
+		a.mu.RUnlock()
+		return pub, nil
+	}
+	a.mu.RUnlock()
+
+	if cacheFresh {
+		return nil, fmt.Errorf("key %q not found in JWKS cache", kid)
+	}
+
+	jwks = a.JWKS()
 	if pub := findKeyInSet(jwks, kid); pub != nil {
 		return pub, nil
 	}
+
 	// Key not in cache (e.g. key rotation); fetch and retry.
 	a.mu.Lock()
+	if pub := findKeyInSet(a.cachedJWKS, kid); pub != nil {
+		a.mu.Unlock()
+		return pub, nil
+	}
 	jwks, err := a.client.FetchJWKS()
 	if err != nil {
 		a.mu.Unlock()
@@ -319,6 +341,9 @@ func (a *AuthHandler) findKey(kid string) (*rsa.PublicKey, error) {
 }
 
 func findKeyInSet(jwks *ileap.JWKSet, kid string) *rsa.PublicKey {
+	if jwks == nil {
+		return nil
+	}
 	for _, jwk := range jwks.Keys {
 		if jwk.KeyID != kid {
 			continue

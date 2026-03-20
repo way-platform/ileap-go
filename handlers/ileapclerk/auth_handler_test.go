@@ -634,3 +634,59 @@ func TestAuthHandler_JWKS_EmptyOnErrorWithNoCache(t *testing.T) {
 		t.Errorf("expected empty JWKSet on error with no cache, got %d keys", len(got.Keys))
 	}
 }
+
+func TestAuthHandler_FindKey_DoesNotRefetchUnknownKidWithFreshCache(t *testing.T) {
+	var callCount int
+	jwks := testJWKS()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		callCount++
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(jwks)
+	}))
+	defer srv.Close()
+	c := NewClient("unused", WithHTTPClient(&http.Client{
+		Transport: &testTransport{target: srv},
+	}))
+	auth := NewAuthHandler(c)
+
+	_ = auth.JWKS()
+	if callCount != 1 {
+		t.Fatalf("after priming cache: endpoint called %d times, want 1", callCount)
+	}
+
+	if _, err := auth.findKey("missing-key"); err == nil {
+		t.Fatal("expected missing key error")
+	}
+	if callCount != 1 {
+		t.Fatalf("endpoint called %d times, want 1", callCount)
+	}
+}
+
+func TestAuthHandler_FindKey_RefetchesUnknownKidWhenCacheStale(t *testing.T) {
+	var callCount int
+	jwks := testJWKS()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		callCount++
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(jwks)
+	}))
+	defer srv.Close()
+	c := NewClient("unused", WithHTTPClient(&http.Client{
+		Transport: &testTransport{target: srv},
+	}))
+	auth := NewAuthHandler(c, WithJWKSCacheTTL(time.Millisecond))
+
+	_ = auth.JWKS()
+	if callCount != 1 {
+		t.Fatalf("after priming cache: endpoint called %d times, want 1", callCount)
+	}
+
+	time.Sleep(2 * time.Millisecond)
+
+	if _, err := auth.findKey("missing-key"); err == nil {
+		t.Fatal("expected missing key error")
+	}
+	if callCount != 3 {
+		t.Fatalf("endpoint called %d times, want 3", callCount)
+	}
+}
