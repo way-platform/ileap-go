@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -115,8 +116,17 @@ func (a *AuthHandler) IssueToken(
 	result, err := a.client.SignIn(clientID, clientSecret, a.activeOrgID)
 	if err != nil {
 		var apiErr *APIError
-		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusTooManyRequests {
-			return nil, connect.NewError(connect.CodeResourceExhausted, err)
+		if errors.As(err, &apiErr) {
+			switch {
+			case apiErr.StatusCode == http.StatusTooManyRequests:
+				return nil, connect.NewError(connect.CodeResourceExhausted, err)
+			case apiErr.StatusCode >= http.StatusInternalServerError:
+				return nil, connect.NewError(connect.CodeUnavailable, err)
+			}
+		}
+		var netErr net.Error
+		if errors.As(err, &netErr) {
+			return nil, connect.NewError(connect.CodeUnavailable, err)
 		}
 		return nil, connect.NewError(
 			connect.CodePermissionDenied,

@@ -354,6 +354,14 @@ func (s *Server) authToken(w http.ResponseWriter, r *http.Request) {
 				OAuthErrorCodeTemporarilyUnavailable,
 				"temporarily unavailable",
 			)
+		case connect.CodeUnavailable:
+			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
+			writeOAuthError(
+				w,
+				http.StatusServiceUnavailable,
+				OAuthErrorCodeTemporarilyUnavailable,
+				"temporarily unavailable",
+			)
 		case connect.CodePermissionDenied:
 			slog.WarnContext(r.Context(), "failed to issue token", "error", err)
 			writeOAuthError(
