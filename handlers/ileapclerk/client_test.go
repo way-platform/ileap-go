@@ -164,6 +164,18 @@ func TestNewClient_DefaultTimeout(t *testing.T) {
 	}
 }
 
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+type timeoutError struct{}
+
+func (timeoutError) Error() string   { return "timeout" }
+func (timeoutError) Timeout() bool   { return true }
+func (timeoutError) Temporary() bool { return true }
+
 // testTransport redirects all HTTPS requests to the httptest server.
 type testTransport struct {
 	target *httptest.Server

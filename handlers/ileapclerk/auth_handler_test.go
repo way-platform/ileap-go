@@ -195,6 +195,41 @@ func TestAuthHandler_IssueToken(t *testing.T) {
 			t.Errorf("expected CodeResourceExhausted, got: %v", err)
 		}
 	})
+
+	t.Run("upstream server error", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"errors":[{"message":"Server error"}]}`))
+		}))
+		defer srv.Close()
+		client := NewClient("unused", WithHTTPClient(&http.Client{
+			Transport: &testTransport{target: srv},
+		}))
+		auth := NewAuthHandler(client)
+		_, err := auth.IssueToken(context.Background(), "user@example.com", "password")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if connect.CodeOf(err) != connect.CodeUnavailable {
+			t.Errorf("expected CodeUnavailable, got: %v", err)
+		}
+	})
+
+	t.Run("upstream timeout", func(t *testing.T) {
+		client := NewClient("unused", WithHTTPClient(&http.Client{
+			Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return nil, timeoutError{}
+			}),
+		}))
+		auth := NewAuthHandler(client)
+		_, err := auth.IssueToken(context.Background(), "user@example.com", "password")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if connect.CodeOf(err) != connect.CodeUnavailable {
+			t.Errorf("expected CodeUnavailable, got: %v", err)
+		}
+	})
 }
 
 func TestAuthHandler_IssueToken_CachesToken(t *testing.T) {
