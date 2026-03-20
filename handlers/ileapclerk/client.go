@@ -8,9 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/way-platform/ileap-go"
 )
+
+const defaultHTTPTimeout = 5 * time.Second
 
 // Client is an HTTP client for the Clerk Frontend API.
 type Client struct {
@@ -22,7 +25,7 @@ type Client struct {
 func NewClient(fapiDomain string, opts ...ClientOption) *Client {
 	c := &Client{
 		fapiDomain: fapiDomain,
-		httpClient: http.DefaultClient,
+		httpClient: &http.Client{Timeout: defaultHTTPTimeout},
 	}
 	for _, opt := range opts {
 		opt(c)

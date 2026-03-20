@@ -154,6 +154,16 @@ func TestFetchJWKS(t *testing.T) {
 	}
 }
 
+func TestNewClient_DefaultTimeout(t *testing.T) {
+	c := NewClient("example.clerk.accounts.dev")
+	if c.httpClient == nil {
+		t.Fatal("expected http client")
+	}
+	if c.httpClient.Timeout != defaultHTTPTimeout {
+		t.Fatalf("timeout = %v, want %v", c.httpClient.Timeout, defaultHTTPTimeout)
+	}
+}
+
 // testTransport redirects all HTTPS requests to the httptest server.
 type testTransport struct {
 	target *httptest.Server
