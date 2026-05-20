@@ -1,0 +1,98 @@
+# ileap-go mise configuration
+#
+# Usage examples:
+#   mise install                # Install all tools
+#   mise run build              # Full CI build
+#   mise run lint               # Run linter
+#   mise run test               # Run tests
+#   mise run cli                # Build ileap CLI
+
+[tools]
+go = "1.26"
+golangci-lint = "2.10"
+"go:github.com/bufbuild/buf/cmd/buf" = "v1.55.1"
+"go:google.golang.org/protobuf/cmd/protoc-gen-go" = "v1.36.11"
+"go:connectrpc.com/connect/cmd/protoc-gen-connect-go" = "v1.19.1"
+"go:github.com/google/ko" = "v0.18.1"
+"go:github.com/charmbracelet/vhs" = "v0.10.0"
+
+[tasks.build]
+description = "run full CI build"
+run = "mise run download && mise run format && mise run lint && mise run generate && mise run test && mise run tidy && mise run cli && mise run diff"
+
+[tasks.download]
+description = "download Go dependencies"
+run = """
+for dir in $(find . -name go.mod -exec dirname {} \\;); do
+  echo "downloading $dir"
+  (cd "$dir" && go mod download)
+done
+"""
+
+[tasks.format]
+description = "format proto files"
+run = "buf format -w proto"
+
+[tasks.lint]
+description = "lint Go code"
+run = """
+find . -name go.mod -exec dirname {} \\; | while IFS= read -r dir; do
+  echo "linting $dir"
+  (cd "$dir" && GOFLAGS=-mod=mod golangci-lint run --fix --path-prefix "$dir")
+done
+"""
+
+[tasks.generate]
+description = "run code generators"
+run = """
+(cd proto && buf generate --template buf.gen.go.yaml)
+for dir in $(find . -name go.mod -exec dirname {} \\;); do
+  echo "generating $dir"
+  (cd "$dir" && go generate -v ./...)
+done
+"""
+
+[tasks.test]
+description = "run Go tests"
+run = "go test -v -cover ./..."
+
+[tasks.tidy]
+description = "tidy Go mod files"
+run = """
+for dir in $(find . -name go.mod -exec dirname {} \\;); do
+  echo "tidying $dir"
+  (cd "$dir" && go mod tidy -v)
+done
+"""
+
+[tasks.cli]
+description = "build ileap CLI"
+run = "cd cmd/ileap && go install ."
+
+[tasks.diff]
+description = "check for git diffs"
+run = """
+if git rev-parse --is-inside-work-tree &>/dev/null && ! jj root &>/dev/null; then
+  git diff --exit-code
+fi
+"""
+
+[tasks.vhs]
+description = "record CLI GIF"
+run = "mise run cli && cd docs && vhs cli.tape"
+
+[tasks.docker-build]
+description = "build ileap Docker image locally"
+run = "KO_DOCKER_REPO=ko.local ko build --base-import-paths --platform linux/amd64 ./cmd/ileap"
+
+[tasks.docker-push]
+description = "push ileap Docker image to GHCR"
+run = "KO_DOCKER_REPO=ghcr.io/way-platform/ileap-go ko build --base-import-paths --tags latest --platform linux/amd64 ./cmd/ileap"
+
+[tasks.deploy-demo]
+description = "deploy ileap demo server to Cloud Run"
+run = "gcloud run services replace config/demo-server.yaml --project way-ileap-demo-prod --region europe-north1"
+
+[tasks.act]
+description = "run ACT conformance tests against remote server (args: baseURL username password)"
+run = "mise run cli && act test -b $1 -u $2 -p $3"

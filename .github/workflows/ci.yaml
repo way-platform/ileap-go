@@ -12,11 +12,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: tools/go.sum
+      - name: Install mise
+        uses: jdx/mise-action@v2
 
       - name: Build
-        run: ./tools/mage build
+        run: mise run build

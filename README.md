@@ -12,12 +12,12 @@ A Go SDK and server for logistics emissions data compatible with the [iLEAP Tech
 
 ### Features
 
-* Two interfaces, two options: implement `ILeapServiceHandler` for data, `AuthHandler` for auth — done.
-* `ILeapServiceHandler` is the generated Connect RPC interface. Any Connect handler implementation works out of the box.
-* Filter complexity stays at the HTTP boundary: legacy OData is translated to simple request-local filters (`field_path`, `value`) aligned with iLEAP standalone filtering semantics.
-* Go Client and Server for [PACT Product Footprints](https://wbcsd.github.io/tr/2024/data-exchange-protocol-20241024/#dt-pf) with [iLEAP extensions](https://sine-fdn.github.io/ileap-extension/#pcf-mapping).
-* Go Client and Server for [iLEAP Transport Activity Data](https://sine-fdn.github.io/ileap-extension/#dt-tad).
-* Uses `connect.Error` codes throughout for a single, consistent error model.
+- Two interfaces, two options: implement `ILeapServiceHandler` for data, `AuthHandler` for auth — done.
+- `ILeapServiceHandler` is the generated Connect RPC interface. Any Connect handler implementation works out of the box.
+- Filter complexity stays at the HTTP boundary: legacy OData is translated to simple request-local filters (`field_path`, `value`) aligned with iLEAP standalone filtering semantics.
+- Go Client and Server for [PACT Product Footprints](https://wbcsd.github.io/tr/2024/data-exchange-protocol-20241024/#dt-pf) with [iLEAP extensions](https://sine-fdn.github.io/ileap-extension/#pcf-mapping).
+- Go Client and Server for [iLEAP Transport Activity Data](https://sine-fdn.github.io/ileap-extension/#dt-tad).
+- Uses `connect.Error` codes throughout for a single, consistent error model.
 
 ### Installing
 
@@ -61,9 +61,9 @@ log.Fatal(http.ListenAndServe(":8080", srv))
 
 The `handlers/` directory provides pre-built implementations that can be plugged directly into the server:
 
-* **`ileapdemo`**: Demo `ILeapServiceHandler` and `AuthHandler` loaded with sample data and static credentials. Ideal for testing and local development.
-* **`ileapclerk`**: `AuthHandler` implementation that delegates authentication to [Clerk](https://clerk.com/) via the Clerk Frontend API.
-* **`ileapconnect`**: Connect RPC client that forwards requests to an existing Connect backend. The client satisfies `ILeapServiceHandler` directly — point your iLEAP server at a Connect service and get conformance for free.
+- **`ileapdemo`**: Demo `ILeapServiceHandler` and `AuthHandler` loaded with sample data and static credentials. Ideal for testing and local development.
+- **`ileapclerk`**: `AuthHandler` implementation that delegates authentication to [Clerk](https://clerk.com/) via the Clerk Frontend API.
+- **`ileapconnect`**: Connect RPC client that forwards requests to an existing Connect backend. The client satisfies `ILeapServiceHandler` directly — point your iLEAP server at a Connect service and get conformance for free.
 
 ### Conformance Testing
 
@@ -93,16 +93,17 @@ $ ILEAP_SERVER_URL=https://demo.ileap.way.cloud ILEAP_USERNAME=hello ILEAP_PASSW
 
 #### Build project
 
-The project is built using [Mage](https://magefile.org). See [magefile.go](./magefile.go).
+The project uses [mise](https://mise.jdx.dev) for tool management and build tasks.
 
 ```bash
-$ ./tools/mage build
+$ mise install
+$ mise run build
 ```
 
 For all available build tasks, see:
 
 ```bash
-$ ./tools/mage
+$ mise tasks
 ```
 
 ## CLI tool
