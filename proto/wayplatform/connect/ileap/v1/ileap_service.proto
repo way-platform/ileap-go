@@ -287,7 +287,6 @@ message ListTransportActivityDataRequest {
   //
   // See iLEAP Technical Specifications Section 5.1.2 "Pagination".
   int32 offset = 5;
-
 }
 
 // ListTransportActivityDataResponse is the response message for
