@@ -21,7 +21,7 @@ func TestConformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create demo auth provider: %v", err)
 	}
-	keypair, err := ileapdemo.LoadKeyPair()
+	keypair, err := ileapdemo.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("load demo keypair: %v", err)
 	}
