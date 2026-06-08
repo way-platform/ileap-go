@@ -5,11 +5,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
-	_ "embed"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -19,9 +16,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/way-platform/ileap-go"
 )
-
-//go:embed testdata/keypair.pem
-var keypairData []byte
 
 // KeyPair represents an RSA keypair for JWT operations.
 type KeyPair struct {
@@ -77,24 +71,13 @@ func (k *KeyPair) CreateJWT(claims JWTClaims) (string, error) {
 	return token, nil
 }
 
-// LoadKeyPair parses the embedded PEM data and returns a KeyPair.
-func LoadKeyPair() (*KeyPair, error) {
-	defer slog.Debug("loaded demo keypair")
-	block, _ := pem.Decode(keypairData)
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
-	}
-	if block.Type != "PRIVATE KEY" {
-		return nil, fmt.Errorf("unsupported PEM block type: %s", block.Type)
-	}
-	parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+// GenerateKeyPair generates a fresh RSA keypair for JWT operations.
+func GenerateKeyPair() (*KeyPair, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse PKCS8 private key: %w", err)
+		return nil, fmt.Errorf("generate RSA key: %w", err)
 	}
-	privateKey, ok := parsedKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("parsed key is not an RSA private key")
-	}
+	slog.Debug("generated demo keypair")
 	return &KeyPair{
 		PrivateKey: privateKey,
 		PublicKey:  &privateKey.PublicKey,

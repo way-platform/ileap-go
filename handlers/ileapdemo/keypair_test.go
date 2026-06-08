@@ -7,7 +7,7 @@ import (
 )
 
 func TestKeyPair(t *testing.T) {
-	keypair, err := LoadKeyPair()
+	keypair, err := GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("Failed to load keypair: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestKeyPair(t *testing.T) {
 }
 
 func TestKeyPair_ValidateJWT(t *testing.T) {
-	keypair, err := LoadKeyPair()
+	keypair, err := GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("failed to load keypair: %v", err)
 	}

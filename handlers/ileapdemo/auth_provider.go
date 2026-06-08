@@ -17,9 +17,9 @@ type AuthProvider struct {
 
 const accessTokenTTL = time.Hour
 
-// NewAuthProvider creates a new AuthProvider with the embedded demo keypair.
+// NewAuthProvider creates a new AuthProvider with a generated RSA keypair.
 func NewAuthProvider() (*AuthProvider, error) {
-	kp, err := LoadKeyPair()
+	kp, err := GenerateKeyPair()
 	if err != nil {
 		return nil, err
 	}

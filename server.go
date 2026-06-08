@@ -776,76 +776,47 @@ func writeGetFootprintResponse(w http.ResponseWriter, fp *ileapv1.ProductFootpri
 		writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
 		return
 	}
-	if _, err := w.Write([]byte(`{"data":`)); err != nil {
+	if err := json.NewEncoder(w).Encode(struct {
+		Data json.RawMessage `json:"data"`
+	}{Data: data}); err != nil {
 		slog.Error("failed to write response", "error", err)
-		return
-	}
-	if _, err := w.Write(data); err != nil {
-		slog.Error("failed to write response", "error", err)
-		return
-	}
-	if _, err := w.Write([]byte(`}`)); err != nil {
-		slog.Error("failed to write response", "error", err)
-		return
 	}
 }
 
 func writeListFootprintsResponse(w http.ResponseWriter, fps []*ileapv1.ProductFootprint) {
 	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write([]byte(`{"data":[`)); err != nil {
-		slog.Error("failed to write response", "error", err)
-		return
-	}
-	for i, fp := range fps {
-		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
-				slog.Error("failed to write response", "error", err)
-				return
-			}
-		}
+	items := make([]json.RawMessage, 0, len(fps))
+	for _, fp := range fps {
 		data, err := protojson.Marshal(fp)
 		if err != nil {
 			slog.Error("failed to marshal footprint", "error", err)
 			writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
 			return
 		}
-		if _, err := w.Write(data); err != nil {
-			slog.Error("failed to write response", "error", err)
-			return
-		}
+		items = append(items, data)
 	}
-	if _, err := w.Write([]byte(`]}`)); err != nil {
+	if err := json.NewEncoder(w).Encode(struct {
+		Data []json.RawMessage `json:"data"`
+	}{Data: items}); err != nil {
 		slog.Error("failed to write response", "error", err)
-		return
 	}
 }
 
 func writeListTADsResponse(w http.ResponseWriter, tads []*ileapv1.TAD) {
 	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write([]byte(`{"data":[`)); err != nil {
-		slog.Error("failed to write response", "error", err)
-		return
-	}
-	for i, tad := range tads {
-		if i > 0 {
-			if _, err := w.Write([]byte(",")); err != nil {
-				slog.Error("failed to write response", "error", err)
-				return
-			}
-		}
+	items := make([]json.RawMessage, 0, len(tads))
+	for _, tad := range tads {
 		data, err := protojson.Marshal(tad)
 		if err != nil {
 			slog.Error("failed to marshal TAD", "error", err)
 			writeError(w, http.StatusInternalServerError, ErrorCodeInternalError, "internal error")
 			return
 		}
-		if _, err := w.Write(data); err != nil {
-			slog.Error("failed to write response", "error", err)
-			return
-		}
+		items = append(items, data)
 	}
-	if _, err := w.Write([]byte(`]}`)); err != nil {
+	if err := json.NewEncoder(w).Encode(struct {
+		Data []json.RawMessage `json:"data"`
+	}{Data: items}); err != nil {
 		slog.Error("failed to write response", "error", err)
-		return
 	}
 }

@@ -297,7 +297,7 @@ func TestDemoServer(t *testing.T) {
 		})
 
 		t.Run("expired token returns 401", func(t *testing.T) {
-			keypair, err := LoadKeyPair()
+			keypair, err := GenerateKeyPair()
 			if err != nil {
 				t.Fatalf("load keypair: %v", err)
 			}
