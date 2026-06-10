@@ -1,0 +1,3 @@
+# Cloud Run service YAMLs — gcloud rejects fields added by security scanners
+# (e.g. securityContext.runAsNonRoot is not supported by Cloud Run).
+config/
