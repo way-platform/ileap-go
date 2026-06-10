@@ -1,3 +1,6 @@
 # Cloud Run service YAMLs — gcloud rejects fields added by security scanners
 # (e.g. securityContext.runAsNonRoot is not supported by Cloud Run).
 config/
+
+# Test files with intentionally invalid/tampered JWTs for signature verification tests.
+handlers/ileapdemo/keypair_test.go
